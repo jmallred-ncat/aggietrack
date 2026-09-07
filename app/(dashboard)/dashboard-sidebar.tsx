@@ -10,11 +10,12 @@ import {
     SidebarMenuButton,
     SidebarMenuItem
 } from "@/components/ui/sidebar";
-import { CalendarIcon, ChartBarIcon, SignInIcon, UserListIcon } from "@phosphor-icons/react/dist/ssr";
+import { BookOpenIcon, CalendarIcon, ChartBarIcon, SignInIcon, UserListIcon } from "@phosphor-icons/react/dist/ssr";
 import Link from "next/link";
 
 const navigation = [
     { href: "/dashboard/progress", label: "Progress", icon: <ChartBarIcon weight="duotone" /> },
+    { href: "/dashboard/courses", label: "Courses", icon: <BookOpenIcon weight="duotone" /> },
     { href: "/dashboard/planner", label: "Planner", icon: <CalendarIcon weight="duotone" /> },
     { href: "/dashboard/advising", label: "Advising", icon: <UserListIcon weight="duotone" /> },
 ]

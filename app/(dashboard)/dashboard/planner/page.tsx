@@ -1,3 +1,3 @@
-export default function AdvisingPage() {
-    return <div>Advising Page</div>;
+export default function PlannerPage() {
+    return <div>Planner Page</div>;
 }
