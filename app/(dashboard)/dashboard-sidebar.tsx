@@ -27,7 +27,7 @@ export default function DashboardSidebar() {
                 <Avatar>
                     <AvatarFallback>SN</AvatarFallback>
                 </Avatar>
-                <div className="flex flex-col -space-y-0.5 text-xs">
+                <div className="flex flex-col not-typeset text-xs">
                     <span className="font-bold">Student Name</span>
                     <span className="text-white/50">Graduating in '{new Date().getFullYear().toString().slice(-2)}</span>
                 </div>
@@ -48,7 +48,7 @@ export default function DashboardSidebar() {
             </SidebarGroup>
         </SidebarContent>
         <SidebarFooter>
-            <Button nativeButton={false} variant="destructive" render={<Link href="/login" className="not-typeset">
+            <Button nativeButton={false} variant="destructive" render={<Link href="/login" className="not-typeset bg-red-500 dark:bg-red-700 text-white">
                 <SignInIcon weight="duotone" />
                 Log Out
             </Link>} />
