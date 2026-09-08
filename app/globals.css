@@ -8,7 +8,7 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: Inter, system-ui, sans-serif;
+  --font-sans: Montserrat, system-ui, sans-serif;
   --font-mono: monospace;
   --font-heading: var(--font-sans);
   --color-sidebar-ring: var(--sidebar-ring);
@@ -108,7 +108,7 @@
   --sidebar-border: oklch(0.4453 0.1077 261.6175);
   --sidebar-ring: oklch(0.8277 0.1667 79.5956);
   --destructive-foreground: oklch(1.0000 0 0);
-  --font-sans: Inter, system-ui, sans-serif;
+  --font-sans: Montserrat, system-ui, sans-serif;
   --font-serif: Georgia, serif;
   --font-mono: monospace;
   --shadow-color: #000000;
@@ -164,7 +164,7 @@
   --sidebar-ring: oklch(0.8277 0.1667 79.5956);
   --destructive-foreground: oklch(0.9653 0.0069 247.8959);
   --radius: 0.75rem;
-  --font-sans: Inter, system-ui, sans-serif;
+  --font-sans: Montserrat, system-ui, sans-serif;
   --font-serif: Georgia, serif;
   --font-mono: monospace;
   --shadow-color: #000000;
