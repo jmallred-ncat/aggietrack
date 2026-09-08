@@ -4,13 +4,20 @@ import { createAuthClient as createReactAuthClient } from "better-auth/react";
 import "dotenv/config";
 import type { auth } from "./auth";
 
+const getBaseUrl = () => {
+    if (process.env.BETTER_AUTH_URL) {
+        return process.env.BETTER_AUTH_URL;
+    }
+    if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`;
+    return `http://localhost:3000`;
+};
 
 export const authClient = createAuthClient({
-    baseURL: `${process.env.BETTER_AUTH_URL}`,
+    baseURL: getBaseUrl(),
     plugins: [inferAdditionalFields<typeof auth>()],
 });
 
 export const authReactClient = createReactAuthClient({
-    baseURL: `${process.env.BETTER_AUTH_URL}`,
+    baseURL: getBaseUrl(),
     plugins: [inferAdditionalFields<typeof auth>()],
 });
