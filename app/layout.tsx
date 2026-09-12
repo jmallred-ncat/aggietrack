@@ -18,7 +18,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "AggieTrack",
-  description: "AggieTrack is a platform for tracking and managing your Information Technology degree progress at North Carolina A&T State University",
+  description: "Know exactly where you stand. AggieTrack maps the B.S. in Information Technology at North Carolina A&T.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

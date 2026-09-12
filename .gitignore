@@ -44,3 +44,7 @@ dist/
 .env
 
 /prisma/lib/prisma
+
+# local sample data model notes
+SAMPLE_DATA_MODEL.md
+SAMPLE_DATA_MODEL.pdf
