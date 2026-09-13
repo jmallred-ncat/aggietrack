@@ -1,8 +1,11 @@
 "use client";
 
+import { authReactClient } from "@/lib/auth-client";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { EyeIcon, EyeSlashIcon } from "@phosphor-icons/react/dist/ssr";
-import { useState } from "react";
+import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { z } from "zod";
 import { Button } from "../ui/button";
@@ -16,20 +19,37 @@ const schema = z.object({
     password: z.string().min(8, "Passwords must be at least 8 characters long"),
 })
 export default function LoginDialog() {
+    const router = useRouter();
     const [open, setOpen] = useState(false);
     const [passwordType, setPasswordType] = useState<"password" | "text">("password");
+    const pathname = usePathname();
     const form = useForm<z.infer<typeof schema>>({
         resolver: zodResolver(schema),
         defaultValues: {
             email: "",
             password: "",
         },
-        mode: "onTouched",
+        mode: "onSubmit",
         reValidateMode: "onBlur",
     })
 
-    function onSubmit(data: z.infer<typeof schema>) {
-        console.log(data);
+    useEffect(() => {
+        setOpen(false);
+    }, [pathname]);
+
+    async function onSubmit(data: z.infer<typeof schema>) {
+        const { error, data: user } = await authReactClient.signIn.email({
+            email: data.email,
+            password: data.password,
+        }, {
+            onSuccess: () => {
+                setOpen(false);
+                router.push("/dashboard");
+            },
+            onError: (error) => {
+                console.error(error);
+            }
+        });
     }
 
     function onDialogOpenChangeComplete(open: boolean) {
@@ -65,7 +85,10 @@ export default function LoginDialog() {
                             control={form.control}
                             render={({ field, fieldState }) => (
                                 <Field data-invalid={fieldState.invalid}>
-                                    <FieldLabel>Password</FieldLabel>
+                                    <FieldLabel className="flex items-center justify-between">
+                                        <span>Password</span>
+                                        <Link href="/reset" className="text-sm text-muted-foreground" onClick={() => setOpen(false)}>Forgot password?</Link>
+                                    </FieldLabel>
                                     <InputGroup>
                                         <InputGroupInput {...field} id={field.name} aria-invalid={fieldState.invalid} placeholder="Password" autoComplete="new-password"
                                             type={passwordType} />

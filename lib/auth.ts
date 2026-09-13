@@ -1,5 +1,7 @@
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
+import { admin } from "better-auth/plugins";
+import { ac, admin as adminRole, advisor, student } from "./permissions";
 import { prisma } from "./prisma";
 
 export const auth = betterAuth({
@@ -21,5 +23,16 @@ export const auth = betterAuth({
             firstName: { type: "string", required: true },
             lastName: { type: "string", required: true },
         }
-    }
+    },
+    plugins: [admin({
+        ac,
+        roles: {
+            STUDENT: student,
+            ADVISOR: advisor,
+            ADMIN: adminRole
+        },
+        defaultRole: "STUDENT",
+        adminRoles: ["ADMIN"]
+
+    })]
 });

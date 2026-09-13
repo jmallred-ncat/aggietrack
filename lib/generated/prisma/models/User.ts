@@ -30,6 +30,12 @@ export type UserMinAggregateOutputType = {
   email: string | null
   emailVerified: boolean | null
   image: string | null
+  firstName: string | null
+  lastName: string | null
+  role: $Enums.UserRole | null
+  banned: boolean | null
+  banReason: string | null
+  banExpires: Date | null
   createdAt: Date | null
   updatedAt: Date | null
 }
@@ -40,6 +46,12 @@ export type UserMaxAggregateOutputType = {
   email: string | null
   emailVerified: boolean | null
   image: string | null
+  firstName: string | null
+  lastName: string | null
+  role: $Enums.UserRole | null
+  banned: boolean | null
+  banReason: string | null
+  banExpires: Date | null
   createdAt: Date | null
   updatedAt: Date | null
 }
@@ -50,6 +62,12 @@ export type UserCountAggregateOutputType = {
   email: number
   emailVerified: number
   image: number
+  firstName: number
+  lastName: number
+  role: number
+  banned: number
+  banReason: number
+  banExpires: number
   createdAt: number
   updatedAt: number
   _all: number
@@ -62,6 +80,12 @@ export type UserMinAggregateInputType = {
   email?: true
   emailVerified?: true
   image?: true
+  firstName?: true
+  lastName?: true
+  role?: true
+  banned?: true
+  banReason?: true
+  banExpires?: true
   createdAt?: true
   updatedAt?: true
 }
@@ -72,6 +96,12 @@ export type UserMaxAggregateInputType = {
   email?: true
   emailVerified?: true
   image?: true
+  firstName?: true
+  lastName?: true
+  role?: true
+  banned?: true
+  banReason?: true
+  banExpires?: true
   createdAt?: true
   updatedAt?: true
 }
@@ -82,6 +112,12 @@ export type UserCountAggregateInputType = {
   email?: true
   emailVerified?: true
   image?: true
+  firstName?: true
+  lastName?: true
+  role?: true
+  banned?: true
+  banReason?: true
+  banExpires?: true
   createdAt?: true
   updatedAt?: true
   _all?: true
@@ -165,6 +201,12 @@ export type UserGroupByOutputType = {
   email: string
   emailVerified: boolean
   image: string | null
+  firstName: string
+  lastName: string
+  role: $Enums.UserRole
+  banned: boolean | null
+  banReason: string | null
+  banExpires: Date | null
   createdAt: Date
   updatedAt: Date
   _count: UserCountAggregateOutputType | null
@@ -196,10 +238,20 @@ export type UserWhereInput = {
   email?: Prisma.StringFilter<"User"> | string
   emailVerified?: Prisma.BoolFilter<"User"> | boolean
   image?: Prisma.StringNullableFilter<"User"> | string | null
+  firstName?: Prisma.StringFilter<"User"> | string
+  lastName?: Prisma.StringFilter<"User"> | string
+  role?: Prisma.EnumUserRoleFilter<"User"> | $Enums.UserRole
+  banned?: Prisma.BoolNullableFilter<"User"> | boolean | null
+  banReason?: Prisma.StringNullableFilter<"User"> | string | null
+  banExpires?: Prisma.DateTimeNullableFilter<"User"> | Date | string | null
   createdAt?: Prisma.DateTimeFilter<"User"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"User"> | Date | string
   sessions?: Prisma.SessionListRelationFilter
   accounts?: Prisma.AccountListRelationFilter
+  studentProfile?: Prisma.XOR<Prisma.StudentProfileNullableScalarRelationFilter, Prisma.StudentProfileWhereInput> | null
+  advisees?: Prisma.StudentProfileListRelationFilter
+  advisingNotes?: Prisma.AdvisingNoteListRelationFilter
+  appointmentsAsAdvisor?: Prisma.AdvisingAppointmentListRelationFilter
 }
 
 export type UserOrderByWithRelationInput = {
@@ -208,10 +260,20 @@ export type UserOrderByWithRelationInput = {
   email?: Prisma.SortOrder
   emailVerified?: Prisma.SortOrder
   image?: Prisma.SortOrderInput | Prisma.SortOrder
+  firstName?: Prisma.SortOrder
+  lastName?: Prisma.SortOrder
+  role?: Prisma.SortOrder
+  banned?: Prisma.SortOrderInput | Prisma.SortOrder
+  banReason?: Prisma.SortOrderInput | Prisma.SortOrder
+  banExpires?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   sessions?: Prisma.SessionOrderByRelationAggregateInput
   accounts?: Prisma.AccountOrderByRelationAggregateInput
+  studentProfile?: Prisma.StudentProfileOrderByWithRelationInput
+  advisees?: Prisma.StudentProfileOrderByRelationAggregateInput
+  advisingNotes?: Prisma.AdvisingNoteOrderByRelationAggregateInput
+  appointmentsAsAdvisor?: Prisma.AdvisingAppointmentOrderByRelationAggregateInput
 }
 
 export type UserWhereUniqueInput = Prisma.AtLeast<{
@@ -223,10 +285,20 @@ export type UserWhereUniqueInput = Prisma.AtLeast<{
   name?: Prisma.StringFilter<"User"> | string
   emailVerified?: Prisma.BoolFilter<"User"> | boolean
   image?: Prisma.StringNullableFilter<"User"> | string | null
+  firstName?: Prisma.StringFilter<"User"> | string
+  lastName?: Prisma.StringFilter<"User"> | string
+  role?: Prisma.EnumUserRoleFilter<"User"> | $Enums.UserRole
+  banned?: Prisma.BoolNullableFilter<"User"> | boolean | null
+  banReason?: Prisma.StringNullableFilter<"User"> | string | null
+  banExpires?: Prisma.DateTimeNullableFilter<"User"> | Date | string | null
   createdAt?: Prisma.DateTimeFilter<"User"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"User"> | Date | string
   sessions?: Prisma.SessionListRelationFilter
   accounts?: Prisma.AccountListRelationFilter
+  studentProfile?: Prisma.XOR<Prisma.StudentProfileNullableScalarRelationFilter, Prisma.StudentProfileWhereInput> | null
+  advisees?: Prisma.StudentProfileListRelationFilter
+  advisingNotes?: Prisma.AdvisingNoteListRelationFilter
+  appointmentsAsAdvisor?: Prisma.AdvisingAppointmentListRelationFilter
 }, "id" | "email">
 
 export type UserOrderByWithAggregationInput = {
@@ -235,6 +307,12 @@ export type UserOrderByWithAggregationInput = {
   email?: Prisma.SortOrder
   emailVerified?: Prisma.SortOrder
   image?: Prisma.SortOrderInput | Prisma.SortOrder
+  firstName?: Prisma.SortOrder
+  lastName?: Prisma.SortOrder
+  role?: Prisma.SortOrder
+  banned?: Prisma.SortOrderInput | Prisma.SortOrder
+  banReason?: Prisma.SortOrderInput | Prisma.SortOrder
+  banExpires?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   _count?: Prisma.UserCountOrderByAggregateInput
@@ -251,6 +329,12 @@ export type UserScalarWhereWithAggregatesInput = {
   email?: Prisma.StringWithAggregatesFilter<"User"> | string
   emailVerified?: Prisma.BoolWithAggregatesFilter<"User"> | boolean
   image?: Prisma.StringNullableWithAggregatesFilter<"User"> | string | null
+  firstName?: Prisma.StringWithAggregatesFilter<"User"> | string
+  lastName?: Prisma.StringWithAggregatesFilter<"User"> | string
+  role?: Prisma.EnumUserRoleWithAggregatesFilter<"User"> | $Enums.UserRole
+  banned?: Prisma.BoolNullableWithAggregatesFilter<"User"> | boolean | null
+  banReason?: Prisma.StringNullableWithAggregatesFilter<"User"> | string | null
+  banExpires?: Prisma.DateTimeNullableWithAggregatesFilter<"User"> | Date | string | null
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"User"> | Date | string
   updatedAt?: Prisma.DateTimeWithAggregatesFilter<"User"> | Date | string
 }
@@ -261,10 +345,20 @@ export type UserCreateInput = {
   email: string
   emailVerified?: boolean
   image?: string | null
+  firstName: string
+  lastName: string
+  role?: $Enums.UserRole
+  banned?: boolean | null
+  banReason?: string | null
+  banExpires?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   sessions?: Prisma.SessionCreateNestedManyWithoutUserInput
   accounts?: Prisma.AccountCreateNestedManyWithoutUserInput
+  studentProfile?: Prisma.StudentProfileCreateNestedOneWithoutUserInput
+  advisees?: Prisma.StudentProfileCreateNestedManyWithoutAdvisorInput
+  advisingNotes?: Prisma.AdvisingNoteCreateNestedManyWithoutAdvisorInput
+  appointmentsAsAdvisor?: Prisma.AdvisingAppointmentCreateNestedManyWithoutAdvisorInput
 }
 
 export type UserUncheckedCreateInput = {
@@ -273,10 +367,20 @@ export type UserUncheckedCreateInput = {
   email: string
   emailVerified?: boolean
   image?: string | null
+  firstName: string
+  lastName: string
+  role?: $Enums.UserRole
+  banned?: boolean | null
+  banReason?: string | null
+  banExpires?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutUserInput
   accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutUserInput
+  studentProfile?: Prisma.StudentProfileUncheckedCreateNestedOneWithoutUserInput
+  advisees?: Prisma.StudentProfileUncheckedCreateNestedManyWithoutAdvisorInput
+  advisingNotes?: Prisma.AdvisingNoteUncheckedCreateNestedManyWithoutAdvisorInput
+  appointmentsAsAdvisor?: Prisma.AdvisingAppointmentUncheckedCreateNestedManyWithoutAdvisorInput
 }
 
 export type UserUpdateInput = {
@@ -285,10 +389,20 @@ export type UserUpdateInput = {
   email?: Prisma.StringFieldUpdateOperationsInput | string
   emailVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
   image?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  firstName?: Prisma.StringFieldUpdateOperationsInput | string
+  lastName?: Prisma.StringFieldUpdateOperationsInput | string
+  role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
+  banned?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
+  banReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  banExpires?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   sessions?: Prisma.SessionUpdateManyWithoutUserNestedInput
   accounts?: Prisma.AccountUpdateManyWithoutUserNestedInput
+  studentProfile?: Prisma.StudentProfileUpdateOneWithoutUserNestedInput
+  advisees?: Prisma.StudentProfileUpdateManyWithoutAdvisorNestedInput
+  advisingNotes?: Prisma.AdvisingNoteUpdateManyWithoutAdvisorNestedInput
+  appointmentsAsAdvisor?: Prisma.AdvisingAppointmentUpdateManyWithoutAdvisorNestedInput
 }
 
 export type UserUncheckedUpdateInput = {
@@ -297,10 +411,20 @@ export type UserUncheckedUpdateInput = {
   email?: Prisma.StringFieldUpdateOperationsInput | string
   emailVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
   image?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  firstName?: Prisma.StringFieldUpdateOperationsInput | string
+  lastName?: Prisma.StringFieldUpdateOperationsInput | string
+  role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
+  banned?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
+  banReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  banExpires?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   sessions?: Prisma.SessionUncheckedUpdateManyWithoutUserNestedInput
   accounts?: Prisma.AccountUncheckedUpdateManyWithoutUserNestedInput
+  studentProfile?: Prisma.StudentProfileUncheckedUpdateOneWithoutUserNestedInput
+  advisees?: Prisma.StudentProfileUncheckedUpdateManyWithoutAdvisorNestedInput
+  advisingNotes?: Prisma.AdvisingNoteUncheckedUpdateManyWithoutAdvisorNestedInput
+  appointmentsAsAdvisor?: Prisma.AdvisingAppointmentUncheckedUpdateManyWithoutAdvisorNestedInput
 }
 
 export type UserCreateManyInput = {
@@ -309,6 +433,12 @@ export type UserCreateManyInput = {
   email: string
   emailVerified?: boolean
   image?: string | null
+  firstName: string
+  lastName: string
+  role?: $Enums.UserRole
+  banned?: boolean | null
+  banReason?: string | null
+  banExpires?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -319,6 +449,12 @@ export type UserUpdateManyMutationInput = {
   email?: Prisma.StringFieldUpdateOperationsInput | string
   emailVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
   image?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  firstName?: Prisma.StringFieldUpdateOperationsInput | string
+  lastName?: Prisma.StringFieldUpdateOperationsInput | string
+  role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
+  banned?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
+  banReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  banExpires?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -329,8 +465,19 @@ export type UserUncheckedUpdateManyInput = {
   email?: Prisma.StringFieldUpdateOperationsInput | string
   emailVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
   image?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  firstName?: Prisma.StringFieldUpdateOperationsInput | string
+  lastName?: Prisma.StringFieldUpdateOperationsInput | string
+  role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
+  banned?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
+  banReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  banExpires?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+}
+
+export type UserScalarRelationFilter = {
+  is?: Prisma.UserWhereInput
+  isNot?: Prisma.UserWhereInput
 }
 
 export type UserCountOrderByAggregateInput = {
@@ -339,6 +486,12 @@ export type UserCountOrderByAggregateInput = {
   email?: Prisma.SortOrder
   emailVerified?: Prisma.SortOrder
   image?: Prisma.SortOrder
+  firstName?: Prisma.SortOrder
+  lastName?: Prisma.SortOrder
+  role?: Prisma.SortOrder
+  banned?: Prisma.SortOrder
+  banReason?: Prisma.SortOrder
+  banExpires?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -349,6 +502,12 @@ export type UserMaxOrderByAggregateInput = {
   email?: Prisma.SortOrder
   emailVerified?: Prisma.SortOrder
   image?: Prisma.SortOrder
+  firstName?: Prisma.SortOrder
+  lastName?: Prisma.SortOrder
+  role?: Prisma.SortOrder
+  banned?: Prisma.SortOrder
+  banReason?: Prisma.SortOrder
+  banExpires?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -359,29 +518,59 @@ export type UserMinOrderByAggregateInput = {
   email?: Prisma.SortOrder
   emailVerified?: Prisma.SortOrder
   image?: Prisma.SortOrder
+  firstName?: Prisma.SortOrder
+  lastName?: Prisma.SortOrder
+  role?: Prisma.SortOrder
+  banned?: Prisma.SortOrder
+  banReason?: Prisma.SortOrder
+  banExpires?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
 
-export type UserScalarRelationFilter = {
-  is?: Prisma.UserWhereInput
-  isNot?: Prisma.UserWhereInput
+export type UserNullableScalarRelationFilter = {
+  is?: Prisma.UserWhereInput | null
+  isNot?: Prisma.UserWhereInput | null
 }
 
-export type StringFieldUpdateOperationsInput = {
-  set?: string
+export type UserCreateNestedOneWithoutAppointmentsAsAdvisorInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutAppointmentsAsAdvisorInput, Prisma.UserUncheckedCreateWithoutAppointmentsAsAdvisorInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutAppointmentsAsAdvisorInput
+  connect?: Prisma.UserWhereUniqueInput
 }
 
-export type BoolFieldUpdateOperationsInput = {
-  set?: boolean
+export type UserUpdateOneRequiredWithoutAppointmentsAsAdvisorNestedInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutAppointmentsAsAdvisorInput, Prisma.UserUncheckedCreateWithoutAppointmentsAsAdvisorInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutAppointmentsAsAdvisorInput
+  upsert?: Prisma.UserUpsertWithoutAppointmentsAsAdvisorInput
+  connect?: Prisma.UserWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.UserUpdateToOneWithWhereWithoutAppointmentsAsAdvisorInput, Prisma.UserUpdateWithoutAppointmentsAsAdvisorInput>, Prisma.UserUncheckedUpdateWithoutAppointmentsAsAdvisorInput>
 }
 
-export type NullableStringFieldUpdateOperationsInput = {
-  set?: string | null
+export type UserCreateNestedOneWithoutAdvisingNotesInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutAdvisingNotesInput, Prisma.UserUncheckedCreateWithoutAdvisingNotesInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutAdvisingNotesInput
+  connect?: Prisma.UserWhereUniqueInput
 }
 
-export type DateTimeFieldUpdateOperationsInput = {
-  set?: Date | string
+export type UserUpdateOneRequiredWithoutAdvisingNotesNestedInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutAdvisingNotesInput, Prisma.UserUncheckedCreateWithoutAdvisingNotesInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutAdvisingNotesInput
+  upsert?: Prisma.UserUpsertWithoutAdvisingNotesInput
+  connect?: Prisma.UserWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.UserUpdateToOneWithWhereWithoutAdvisingNotesInput, Prisma.UserUpdateWithoutAdvisingNotesInput>, Prisma.UserUncheckedUpdateWithoutAdvisingNotesInput>
+}
+
+export type EnumUserRoleFieldUpdateOperationsInput = {
+  set?: $Enums.UserRole
+}
+
+export type NullableBoolFieldUpdateOperationsInput = {
+  set?: boolean | null
+}
+
+export type NullableDateTimeFieldUpdateOperationsInput = {
+  set?: Date | string | null
 }
 
 export type UserCreateNestedOneWithoutSessionsInput = {
@@ -412,15 +601,255 @@ export type UserUpdateOneRequiredWithoutAccountsNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.UserUpdateToOneWithWhereWithoutAccountsInput, Prisma.UserUpdateWithoutAccountsInput>, Prisma.UserUncheckedUpdateWithoutAccountsInput>
 }
 
+export type UserCreateNestedOneWithoutStudentProfileInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutStudentProfileInput, Prisma.UserUncheckedCreateWithoutStudentProfileInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutStudentProfileInput
+  connect?: Prisma.UserWhereUniqueInput
+}
+
+export type UserCreateNestedOneWithoutAdviseesInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutAdviseesInput, Prisma.UserUncheckedCreateWithoutAdviseesInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutAdviseesInput
+  connect?: Prisma.UserWhereUniqueInput
+}
+
+export type UserUpdateOneRequiredWithoutStudentProfileNestedInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutStudentProfileInput, Prisma.UserUncheckedCreateWithoutStudentProfileInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutStudentProfileInput
+  upsert?: Prisma.UserUpsertWithoutStudentProfileInput
+  connect?: Prisma.UserWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.UserUpdateToOneWithWhereWithoutStudentProfileInput, Prisma.UserUpdateWithoutStudentProfileInput>, Prisma.UserUncheckedUpdateWithoutStudentProfileInput>
+}
+
+export type UserUpdateOneWithoutAdviseesNestedInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutAdviseesInput, Prisma.UserUncheckedCreateWithoutAdviseesInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutAdviseesInput
+  upsert?: Prisma.UserUpsertWithoutAdviseesInput
+  disconnect?: Prisma.UserWhereInput | boolean
+  delete?: Prisma.UserWhereInput | boolean
+  connect?: Prisma.UserWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.UserUpdateToOneWithWhereWithoutAdviseesInput, Prisma.UserUpdateWithoutAdviseesInput>, Prisma.UserUncheckedUpdateWithoutAdviseesInput>
+}
+
+export type UserCreateWithoutAppointmentsAsAdvisorInput = {
+  id: string
+  name: string
+  email: string
+  emailVerified?: boolean
+  image?: string | null
+  firstName: string
+  lastName: string
+  role?: $Enums.UserRole
+  banned?: boolean | null
+  banReason?: string | null
+  banExpires?: Date | string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  sessions?: Prisma.SessionCreateNestedManyWithoutUserInput
+  accounts?: Prisma.AccountCreateNestedManyWithoutUserInput
+  studentProfile?: Prisma.StudentProfileCreateNestedOneWithoutUserInput
+  advisees?: Prisma.StudentProfileCreateNestedManyWithoutAdvisorInput
+  advisingNotes?: Prisma.AdvisingNoteCreateNestedManyWithoutAdvisorInput
+}
+
+export type UserUncheckedCreateWithoutAppointmentsAsAdvisorInput = {
+  id: string
+  name: string
+  email: string
+  emailVerified?: boolean
+  image?: string | null
+  firstName: string
+  lastName: string
+  role?: $Enums.UserRole
+  banned?: boolean | null
+  banReason?: string | null
+  banExpires?: Date | string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutUserInput
+  accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutUserInput
+  studentProfile?: Prisma.StudentProfileUncheckedCreateNestedOneWithoutUserInput
+  advisees?: Prisma.StudentProfileUncheckedCreateNestedManyWithoutAdvisorInput
+  advisingNotes?: Prisma.AdvisingNoteUncheckedCreateNestedManyWithoutAdvisorInput
+}
+
+export type UserCreateOrConnectWithoutAppointmentsAsAdvisorInput = {
+  where: Prisma.UserWhereUniqueInput
+  create: Prisma.XOR<Prisma.UserCreateWithoutAppointmentsAsAdvisorInput, Prisma.UserUncheckedCreateWithoutAppointmentsAsAdvisorInput>
+}
+
+export type UserUpsertWithoutAppointmentsAsAdvisorInput = {
+  update: Prisma.XOR<Prisma.UserUpdateWithoutAppointmentsAsAdvisorInput, Prisma.UserUncheckedUpdateWithoutAppointmentsAsAdvisorInput>
+  create: Prisma.XOR<Prisma.UserCreateWithoutAppointmentsAsAdvisorInput, Prisma.UserUncheckedCreateWithoutAppointmentsAsAdvisorInput>
+  where?: Prisma.UserWhereInput
+}
+
+export type UserUpdateToOneWithWhereWithoutAppointmentsAsAdvisorInput = {
+  where?: Prisma.UserWhereInput
+  data: Prisma.XOR<Prisma.UserUpdateWithoutAppointmentsAsAdvisorInput, Prisma.UserUncheckedUpdateWithoutAppointmentsAsAdvisorInput>
+}
+
+export type UserUpdateWithoutAppointmentsAsAdvisorInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  emailVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  image?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  firstName?: Prisma.StringFieldUpdateOperationsInput | string
+  lastName?: Prisma.StringFieldUpdateOperationsInput | string
+  role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
+  banned?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
+  banReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  banExpires?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  sessions?: Prisma.SessionUpdateManyWithoutUserNestedInput
+  accounts?: Prisma.AccountUpdateManyWithoutUserNestedInput
+  studentProfile?: Prisma.StudentProfileUpdateOneWithoutUserNestedInput
+  advisees?: Prisma.StudentProfileUpdateManyWithoutAdvisorNestedInput
+  advisingNotes?: Prisma.AdvisingNoteUpdateManyWithoutAdvisorNestedInput
+}
+
+export type UserUncheckedUpdateWithoutAppointmentsAsAdvisorInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  emailVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  image?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  firstName?: Prisma.StringFieldUpdateOperationsInput | string
+  lastName?: Prisma.StringFieldUpdateOperationsInput | string
+  role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
+  banned?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
+  banReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  banExpires?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  sessions?: Prisma.SessionUncheckedUpdateManyWithoutUserNestedInput
+  accounts?: Prisma.AccountUncheckedUpdateManyWithoutUserNestedInput
+  studentProfile?: Prisma.StudentProfileUncheckedUpdateOneWithoutUserNestedInput
+  advisees?: Prisma.StudentProfileUncheckedUpdateManyWithoutAdvisorNestedInput
+  advisingNotes?: Prisma.AdvisingNoteUncheckedUpdateManyWithoutAdvisorNestedInput
+}
+
+export type UserCreateWithoutAdvisingNotesInput = {
+  id: string
+  name: string
+  email: string
+  emailVerified?: boolean
+  image?: string | null
+  firstName: string
+  lastName: string
+  role?: $Enums.UserRole
+  banned?: boolean | null
+  banReason?: string | null
+  banExpires?: Date | string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  sessions?: Prisma.SessionCreateNestedManyWithoutUserInput
+  accounts?: Prisma.AccountCreateNestedManyWithoutUserInput
+  studentProfile?: Prisma.StudentProfileCreateNestedOneWithoutUserInput
+  advisees?: Prisma.StudentProfileCreateNestedManyWithoutAdvisorInput
+  appointmentsAsAdvisor?: Prisma.AdvisingAppointmentCreateNestedManyWithoutAdvisorInput
+}
+
+export type UserUncheckedCreateWithoutAdvisingNotesInput = {
+  id: string
+  name: string
+  email: string
+  emailVerified?: boolean
+  image?: string | null
+  firstName: string
+  lastName: string
+  role?: $Enums.UserRole
+  banned?: boolean | null
+  banReason?: string | null
+  banExpires?: Date | string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutUserInput
+  accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutUserInput
+  studentProfile?: Prisma.StudentProfileUncheckedCreateNestedOneWithoutUserInput
+  advisees?: Prisma.StudentProfileUncheckedCreateNestedManyWithoutAdvisorInput
+  appointmentsAsAdvisor?: Prisma.AdvisingAppointmentUncheckedCreateNestedManyWithoutAdvisorInput
+}
+
+export type UserCreateOrConnectWithoutAdvisingNotesInput = {
+  where: Prisma.UserWhereUniqueInput
+  create: Prisma.XOR<Prisma.UserCreateWithoutAdvisingNotesInput, Prisma.UserUncheckedCreateWithoutAdvisingNotesInput>
+}
+
+export type UserUpsertWithoutAdvisingNotesInput = {
+  update: Prisma.XOR<Prisma.UserUpdateWithoutAdvisingNotesInput, Prisma.UserUncheckedUpdateWithoutAdvisingNotesInput>
+  create: Prisma.XOR<Prisma.UserCreateWithoutAdvisingNotesInput, Prisma.UserUncheckedCreateWithoutAdvisingNotesInput>
+  where?: Prisma.UserWhereInput
+}
+
+export type UserUpdateToOneWithWhereWithoutAdvisingNotesInput = {
+  where?: Prisma.UserWhereInput
+  data: Prisma.XOR<Prisma.UserUpdateWithoutAdvisingNotesInput, Prisma.UserUncheckedUpdateWithoutAdvisingNotesInput>
+}
+
+export type UserUpdateWithoutAdvisingNotesInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  emailVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  image?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  firstName?: Prisma.StringFieldUpdateOperationsInput | string
+  lastName?: Prisma.StringFieldUpdateOperationsInput | string
+  role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
+  banned?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
+  banReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  banExpires?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  sessions?: Prisma.SessionUpdateManyWithoutUserNestedInput
+  accounts?: Prisma.AccountUpdateManyWithoutUserNestedInput
+  studentProfile?: Prisma.StudentProfileUpdateOneWithoutUserNestedInput
+  advisees?: Prisma.StudentProfileUpdateManyWithoutAdvisorNestedInput
+  appointmentsAsAdvisor?: Prisma.AdvisingAppointmentUpdateManyWithoutAdvisorNestedInput
+}
+
+export type UserUncheckedUpdateWithoutAdvisingNotesInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  emailVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  image?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  firstName?: Prisma.StringFieldUpdateOperationsInput | string
+  lastName?: Prisma.StringFieldUpdateOperationsInput | string
+  role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
+  banned?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
+  banReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  banExpires?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  sessions?: Prisma.SessionUncheckedUpdateManyWithoutUserNestedInput
+  accounts?: Prisma.AccountUncheckedUpdateManyWithoutUserNestedInput
+  studentProfile?: Prisma.StudentProfileUncheckedUpdateOneWithoutUserNestedInput
+  advisees?: Prisma.StudentProfileUncheckedUpdateManyWithoutAdvisorNestedInput
+  appointmentsAsAdvisor?: Prisma.AdvisingAppointmentUncheckedUpdateManyWithoutAdvisorNestedInput
+}
+
 export type UserCreateWithoutSessionsInput = {
   id: string
   name: string
   email: string
   emailVerified?: boolean
   image?: string | null
+  firstName: string
+  lastName: string
+  role?: $Enums.UserRole
+  banned?: boolean | null
+  banReason?: string | null
+  banExpires?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   accounts?: Prisma.AccountCreateNestedManyWithoutUserInput
+  studentProfile?: Prisma.StudentProfileCreateNestedOneWithoutUserInput
+  advisees?: Prisma.StudentProfileCreateNestedManyWithoutAdvisorInput
+  advisingNotes?: Prisma.AdvisingNoteCreateNestedManyWithoutAdvisorInput
+  appointmentsAsAdvisor?: Prisma.AdvisingAppointmentCreateNestedManyWithoutAdvisorInput
 }
 
 export type UserUncheckedCreateWithoutSessionsInput = {
@@ -429,9 +858,19 @@ export type UserUncheckedCreateWithoutSessionsInput = {
   email: string
   emailVerified?: boolean
   image?: string | null
+  firstName: string
+  lastName: string
+  role?: $Enums.UserRole
+  banned?: boolean | null
+  banReason?: string | null
+  banExpires?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutUserInput
+  studentProfile?: Prisma.StudentProfileUncheckedCreateNestedOneWithoutUserInput
+  advisees?: Prisma.StudentProfileUncheckedCreateNestedManyWithoutAdvisorInput
+  advisingNotes?: Prisma.AdvisingNoteUncheckedCreateNestedManyWithoutAdvisorInput
+  appointmentsAsAdvisor?: Prisma.AdvisingAppointmentUncheckedCreateNestedManyWithoutAdvisorInput
 }
 
 export type UserCreateOrConnectWithoutSessionsInput = {
@@ -456,9 +895,19 @@ export type UserUpdateWithoutSessionsInput = {
   email?: Prisma.StringFieldUpdateOperationsInput | string
   emailVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
   image?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  firstName?: Prisma.StringFieldUpdateOperationsInput | string
+  lastName?: Prisma.StringFieldUpdateOperationsInput | string
+  role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
+  banned?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
+  banReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  banExpires?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   accounts?: Prisma.AccountUpdateManyWithoutUserNestedInput
+  studentProfile?: Prisma.StudentProfileUpdateOneWithoutUserNestedInput
+  advisees?: Prisma.StudentProfileUpdateManyWithoutAdvisorNestedInput
+  advisingNotes?: Prisma.AdvisingNoteUpdateManyWithoutAdvisorNestedInput
+  appointmentsAsAdvisor?: Prisma.AdvisingAppointmentUpdateManyWithoutAdvisorNestedInput
 }
 
 export type UserUncheckedUpdateWithoutSessionsInput = {
@@ -467,9 +916,19 @@ export type UserUncheckedUpdateWithoutSessionsInput = {
   email?: Prisma.StringFieldUpdateOperationsInput | string
   emailVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
   image?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  firstName?: Prisma.StringFieldUpdateOperationsInput | string
+  lastName?: Prisma.StringFieldUpdateOperationsInput | string
+  role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
+  banned?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
+  banReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  banExpires?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   accounts?: Prisma.AccountUncheckedUpdateManyWithoutUserNestedInput
+  studentProfile?: Prisma.StudentProfileUncheckedUpdateOneWithoutUserNestedInput
+  advisees?: Prisma.StudentProfileUncheckedUpdateManyWithoutAdvisorNestedInput
+  advisingNotes?: Prisma.AdvisingNoteUncheckedUpdateManyWithoutAdvisorNestedInput
+  appointmentsAsAdvisor?: Prisma.AdvisingAppointmentUncheckedUpdateManyWithoutAdvisorNestedInput
 }
 
 export type UserCreateWithoutAccountsInput = {
@@ -478,9 +937,19 @@ export type UserCreateWithoutAccountsInput = {
   email: string
   emailVerified?: boolean
   image?: string | null
+  firstName: string
+  lastName: string
+  role?: $Enums.UserRole
+  banned?: boolean | null
+  banReason?: string | null
+  banExpires?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   sessions?: Prisma.SessionCreateNestedManyWithoutUserInput
+  studentProfile?: Prisma.StudentProfileCreateNestedOneWithoutUserInput
+  advisees?: Prisma.StudentProfileCreateNestedManyWithoutAdvisorInput
+  advisingNotes?: Prisma.AdvisingNoteCreateNestedManyWithoutAdvisorInput
+  appointmentsAsAdvisor?: Prisma.AdvisingAppointmentCreateNestedManyWithoutAdvisorInput
 }
 
 export type UserUncheckedCreateWithoutAccountsInput = {
@@ -489,9 +958,19 @@ export type UserUncheckedCreateWithoutAccountsInput = {
   email: string
   emailVerified?: boolean
   image?: string | null
+  firstName: string
+  lastName: string
+  role?: $Enums.UserRole
+  banned?: boolean | null
+  banReason?: string | null
+  banExpires?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutUserInput
+  studentProfile?: Prisma.StudentProfileUncheckedCreateNestedOneWithoutUserInput
+  advisees?: Prisma.StudentProfileUncheckedCreateNestedManyWithoutAdvisorInput
+  advisingNotes?: Prisma.AdvisingNoteUncheckedCreateNestedManyWithoutAdvisorInput
+  appointmentsAsAdvisor?: Prisma.AdvisingAppointmentUncheckedCreateNestedManyWithoutAdvisorInput
 }
 
 export type UserCreateOrConnectWithoutAccountsInput = {
@@ -516,9 +995,19 @@ export type UserUpdateWithoutAccountsInput = {
   email?: Prisma.StringFieldUpdateOperationsInput | string
   emailVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
   image?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  firstName?: Prisma.StringFieldUpdateOperationsInput | string
+  lastName?: Prisma.StringFieldUpdateOperationsInput | string
+  role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
+  banned?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
+  banReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  banExpires?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   sessions?: Prisma.SessionUpdateManyWithoutUserNestedInput
+  studentProfile?: Prisma.StudentProfileUpdateOneWithoutUserNestedInput
+  advisees?: Prisma.StudentProfileUpdateManyWithoutAdvisorNestedInput
+  advisingNotes?: Prisma.AdvisingNoteUpdateManyWithoutAdvisorNestedInput
+  appointmentsAsAdvisor?: Prisma.AdvisingAppointmentUpdateManyWithoutAdvisorNestedInput
 }
 
 export type UserUncheckedUpdateWithoutAccountsInput = {
@@ -527,9 +1016,219 @@ export type UserUncheckedUpdateWithoutAccountsInput = {
   email?: Prisma.StringFieldUpdateOperationsInput | string
   emailVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
   image?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  firstName?: Prisma.StringFieldUpdateOperationsInput | string
+  lastName?: Prisma.StringFieldUpdateOperationsInput | string
+  role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
+  banned?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
+  banReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  banExpires?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   sessions?: Prisma.SessionUncheckedUpdateManyWithoutUserNestedInput
+  studentProfile?: Prisma.StudentProfileUncheckedUpdateOneWithoutUserNestedInput
+  advisees?: Prisma.StudentProfileUncheckedUpdateManyWithoutAdvisorNestedInput
+  advisingNotes?: Prisma.AdvisingNoteUncheckedUpdateManyWithoutAdvisorNestedInput
+  appointmentsAsAdvisor?: Prisma.AdvisingAppointmentUncheckedUpdateManyWithoutAdvisorNestedInput
+}
+
+export type UserCreateWithoutStudentProfileInput = {
+  id: string
+  name: string
+  email: string
+  emailVerified?: boolean
+  image?: string | null
+  firstName: string
+  lastName: string
+  role?: $Enums.UserRole
+  banned?: boolean | null
+  banReason?: string | null
+  banExpires?: Date | string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  sessions?: Prisma.SessionCreateNestedManyWithoutUserInput
+  accounts?: Prisma.AccountCreateNestedManyWithoutUserInput
+  advisees?: Prisma.StudentProfileCreateNestedManyWithoutAdvisorInput
+  advisingNotes?: Prisma.AdvisingNoteCreateNestedManyWithoutAdvisorInput
+  appointmentsAsAdvisor?: Prisma.AdvisingAppointmentCreateNestedManyWithoutAdvisorInput
+}
+
+export type UserUncheckedCreateWithoutStudentProfileInput = {
+  id: string
+  name: string
+  email: string
+  emailVerified?: boolean
+  image?: string | null
+  firstName: string
+  lastName: string
+  role?: $Enums.UserRole
+  banned?: boolean | null
+  banReason?: string | null
+  banExpires?: Date | string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutUserInput
+  accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutUserInput
+  advisees?: Prisma.StudentProfileUncheckedCreateNestedManyWithoutAdvisorInput
+  advisingNotes?: Prisma.AdvisingNoteUncheckedCreateNestedManyWithoutAdvisorInput
+  appointmentsAsAdvisor?: Prisma.AdvisingAppointmentUncheckedCreateNestedManyWithoutAdvisorInput
+}
+
+export type UserCreateOrConnectWithoutStudentProfileInput = {
+  where: Prisma.UserWhereUniqueInput
+  create: Prisma.XOR<Prisma.UserCreateWithoutStudentProfileInput, Prisma.UserUncheckedCreateWithoutStudentProfileInput>
+}
+
+export type UserCreateWithoutAdviseesInput = {
+  id: string
+  name: string
+  email: string
+  emailVerified?: boolean
+  image?: string | null
+  firstName: string
+  lastName: string
+  role?: $Enums.UserRole
+  banned?: boolean | null
+  banReason?: string | null
+  banExpires?: Date | string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  sessions?: Prisma.SessionCreateNestedManyWithoutUserInput
+  accounts?: Prisma.AccountCreateNestedManyWithoutUserInput
+  studentProfile?: Prisma.StudentProfileCreateNestedOneWithoutUserInput
+  advisingNotes?: Prisma.AdvisingNoteCreateNestedManyWithoutAdvisorInput
+  appointmentsAsAdvisor?: Prisma.AdvisingAppointmentCreateNestedManyWithoutAdvisorInput
+}
+
+export type UserUncheckedCreateWithoutAdviseesInput = {
+  id: string
+  name: string
+  email: string
+  emailVerified?: boolean
+  image?: string | null
+  firstName: string
+  lastName: string
+  role?: $Enums.UserRole
+  banned?: boolean | null
+  banReason?: string | null
+  banExpires?: Date | string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutUserInput
+  accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutUserInput
+  studentProfile?: Prisma.StudentProfileUncheckedCreateNestedOneWithoutUserInput
+  advisingNotes?: Prisma.AdvisingNoteUncheckedCreateNestedManyWithoutAdvisorInput
+  appointmentsAsAdvisor?: Prisma.AdvisingAppointmentUncheckedCreateNestedManyWithoutAdvisorInput
+}
+
+export type UserCreateOrConnectWithoutAdviseesInput = {
+  where: Prisma.UserWhereUniqueInput
+  create: Prisma.XOR<Prisma.UserCreateWithoutAdviseesInput, Prisma.UserUncheckedCreateWithoutAdviseesInput>
+}
+
+export type UserUpsertWithoutStudentProfileInput = {
+  update: Prisma.XOR<Prisma.UserUpdateWithoutStudentProfileInput, Prisma.UserUncheckedUpdateWithoutStudentProfileInput>
+  create: Prisma.XOR<Prisma.UserCreateWithoutStudentProfileInput, Prisma.UserUncheckedCreateWithoutStudentProfileInput>
+  where?: Prisma.UserWhereInput
+}
+
+export type UserUpdateToOneWithWhereWithoutStudentProfileInput = {
+  where?: Prisma.UserWhereInput
+  data: Prisma.XOR<Prisma.UserUpdateWithoutStudentProfileInput, Prisma.UserUncheckedUpdateWithoutStudentProfileInput>
+}
+
+export type UserUpdateWithoutStudentProfileInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  emailVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  image?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  firstName?: Prisma.StringFieldUpdateOperationsInput | string
+  lastName?: Prisma.StringFieldUpdateOperationsInput | string
+  role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
+  banned?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
+  banReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  banExpires?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  sessions?: Prisma.SessionUpdateManyWithoutUserNestedInput
+  accounts?: Prisma.AccountUpdateManyWithoutUserNestedInput
+  advisees?: Prisma.StudentProfileUpdateManyWithoutAdvisorNestedInput
+  advisingNotes?: Prisma.AdvisingNoteUpdateManyWithoutAdvisorNestedInput
+  appointmentsAsAdvisor?: Prisma.AdvisingAppointmentUpdateManyWithoutAdvisorNestedInput
+}
+
+export type UserUncheckedUpdateWithoutStudentProfileInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  emailVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  image?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  firstName?: Prisma.StringFieldUpdateOperationsInput | string
+  lastName?: Prisma.StringFieldUpdateOperationsInput | string
+  role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
+  banned?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
+  banReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  banExpires?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  sessions?: Prisma.SessionUncheckedUpdateManyWithoutUserNestedInput
+  accounts?: Prisma.AccountUncheckedUpdateManyWithoutUserNestedInput
+  advisees?: Prisma.StudentProfileUncheckedUpdateManyWithoutAdvisorNestedInput
+  advisingNotes?: Prisma.AdvisingNoteUncheckedUpdateManyWithoutAdvisorNestedInput
+  appointmentsAsAdvisor?: Prisma.AdvisingAppointmentUncheckedUpdateManyWithoutAdvisorNestedInput
+}
+
+export type UserUpsertWithoutAdviseesInput = {
+  update: Prisma.XOR<Prisma.UserUpdateWithoutAdviseesInput, Prisma.UserUncheckedUpdateWithoutAdviseesInput>
+  create: Prisma.XOR<Prisma.UserCreateWithoutAdviseesInput, Prisma.UserUncheckedCreateWithoutAdviseesInput>
+  where?: Prisma.UserWhereInput
+}
+
+export type UserUpdateToOneWithWhereWithoutAdviseesInput = {
+  where?: Prisma.UserWhereInput
+  data: Prisma.XOR<Prisma.UserUpdateWithoutAdviseesInput, Prisma.UserUncheckedUpdateWithoutAdviseesInput>
+}
+
+export type UserUpdateWithoutAdviseesInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  emailVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  image?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  firstName?: Prisma.StringFieldUpdateOperationsInput | string
+  lastName?: Prisma.StringFieldUpdateOperationsInput | string
+  role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
+  banned?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
+  banReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  banExpires?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  sessions?: Prisma.SessionUpdateManyWithoutUserNestedInput
+  accounts?: Prisma.AccountUpdateManyWithoutUserNestedInput
+  studentProfile?: Prisma.StudentProfileUpdateOneWithoutUserNestedInput
+  advisingNotes?: Prisma.AdvisingNoteUpdateManyWithoutAdvisorNestedInput
+  appointmentsAsAdvisor?: Prisma.AdvisingAppointmentUpdateManyWithoutAdvisorNestedInput
+}
+
+export type UserUncheckedUpdateWithoutAdviseesInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  emailVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  image?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  firstName?: Prisma.StringFieldUpdateOperationsInput | string
+  lastName?: Prisma.StringFieldUpdateOperationsInput | string
+  role?: Prisma.EnumUserRoleFieldUpdateOperationsInput | $Enums.UserRole
+  banned?: Prisma.NullableBoolFieldUpdateOperationsInput | boolean | null
+  banReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  banExpires?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  sessions?: Prisma.SessionUncheckedUpdateManyWithoutUserNestedInput
+  accounts?: Prisma.AccountUncheckedUpdateManyWithoutUserNestedInput
+  studentProfile?: Prisma.StudentProfileUncheckedUpdateOneWithoutUserNestedInput
+  advisingNotes?: Prisma.AdvisingNoteUncheckedUpdateManyWithoutAdvisorNestedInput
+  appointmentsAsAdvisor?: Prisma.AdvisingAppointmentUncheckedUpdateManyWithoutAdvisorNestedInput
 }
 
 
@@ -540,11 +1239,17 @@ export type UserUncheckedUpdateWithoutAccountsInput = {
 export type UserCountOutputType = {
   sessions: number
   accounts: number
+  advisees: number
+  advisingNotes: number
+  appointmentsAsAdvisor: number
 }
 
 export type UserCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   sessions?: boolean | UserCountOutputTypeCountSessionsArgs
   accounts?: boolean | UserCountOutputTypeCountAccountsArgs
+  advisees?: boolean | UserCountOutputTypeCountAdviseesArgs
+  advisingNotes?: boolean | UserCountOutputTypeCountAdvisingNotesArgs
+  appointmentsAsAdvisor?: boolean | UserCountOutputTypeCountAppointmentsAsAdvisorArgs
 }
 
 /**
@@ -571,6 +1276,27 @@ export type UserCountOutputTypeCountAccountsArgs<ExtArgs extends runtime.Types.E
   where?: Prisma.AccountWhereInput
 }
 
+/**
+ * UserCountOutputType without action
+ */
+export type UserCountOutputTypeCountAdviseesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.StudentProfileWhereInput
+}
+
+/**
+ * UserCountOutputType without action
+ */
+export type UserCountOutputTypeCountAdvisingNotesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.AdvisingNoteWhereInput
+}
+
+/**
+ * UserCountOutputType without action
+ */
+export type UserCountOutputTypeCountAppointmentsAsAdvisorArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.AdvisingAppointmentWhereInput
+}
+
 
 export type UserSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
@@ -578,10 +1304,20 @@ export type UserSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = r
   email?: boolean
   emailVerified?: boolean
   image?: boolean
+  firstName?: boolean
+  lastName?: boolean
+  role?: boolean
+  banned?: boolean
+  banReason?: boolean
+  banExpires?: boolean
   createdAt?: boolean
   updatedAt?: boolean
   sessions?: boolean | Prisma.User$sessionsArgs<ExtArgs>
   accounts?: boolean | Prisma.User$accountsArgs<ExtArgs>
+  studentProfile?: boolean | Prisma.User$studentProfileArgs<ExtArgs>
+  advisees?: boolean | Prisma.User$adviseesArgs<ExtArgs>
+  advisingNotes?: boolean | Prisma.User$advisingNotesArgs<ExtArgs>
+  appointmentsAsAdvisor?: boolean | Prisma.User$appointmentsAsAdvisorArgs<ExtArgs>
   _count?: boolean | Prisma.UserCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["user"]>
 
@@ -591,6 +1327,12 @@ export type UserSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensio
   email?: boolean
   emailVerified?: boolean
   image?: boolean
+  firstName?: boolean
+  lastName?: boolean
+  role?: boolean
+  banned?: boolean
+  banReason?: boolean
+  banExpires?: boolean
   createdAt?: boolean
   updatedAt?: boolean
 }, ExtArgs["result"]["user"]>
@@ -601,6 +1343,12 @@ export type UserSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensio
   email?: boolean
   emailVerified?: boolean
   image?: boolean
+  firstName?: boolean
+  lastName?: boolean
+  role?: boolean
+  banned?: boolean
+  banReason?: boolean
+  banExpires?: boolean
   createdAt?: boolean
   updatedAt?: boolean
 }, ExtArgs["result"]["user"]>
@@ -611,14 +1359,24 @@ export type UserSelectScalar = {
   email?: boolean
   emailVerified?: boolean
   image?: boolean
+  firstName?: boolean
+  lastName?: boolean
+  role?: boolean
+  banned?: boolean
+  banReason?: boolean
+  banExpires?: boolean
   createdAt?: boolean
   updatedAt?: boolean
 }
 
-export type UserOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "name" | "email" | "emailVerified" | "image" | "createdAt" | "updatedAt", ExtArgs["result"]["user"]>
+export type UserOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "name" | "email" | "emailVerified" | "image" | "firstName" | "lastName" | "role" | "banned" | "banReason" | "banExpires" | "createdAt" | "updatedAt", ExtArgs["result"]["user"]>
 export type UserInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   sessions?: boolean | Prisma.User$sessionsArgs<ExtArgs>
   accounts?: boolean | Prisma.User$accountsArgs<ExtArgs>
+  studentProfile?: boolean | Prisma.User$studentProfileArgs<ExtArgs>
+  advisees?: boolean | Prisma.User$adviseesArgs<ExtArgs>
+  advisingNotes?: boolean | Prisma.User$advisingNotesArgs<ExtArgs>
+  appointmentsAsAdvisor?: boolean | Prisma.User$appointmentsAsAdvisorArgs<ExtArgs>
   _count?: boolean | Prisma.UserCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type UserIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {}
@@ -629,6 +1387,10 @@ export type $UserPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs =
   objects: {
     sessions: Prisma.$SessionPayload<ExtArgs>[]
     accounts: Prisma.$AccountPayload<ExtArgs>[]
+    studentProfile: Prisma.$StudentProfilePayload<ExtArgs> | null
+    advisees: Prisma.$StudentProfilePayload<ExtArgs>[]
+    advisingNotes: Prisma.$AdvisingNotePayload<ExtArgs>[]
+    appointmentsAsAdvisor: Prisma.$AdvisingAppointmentPayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
@@ -636,6 +1398,12 @@ export type $UserPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs =
     email: string
     emailVerified: boolean
     image: string | null
+    firstName: string
+    lastName: string
+    role: $Enums.UserRole
+    banned: boolean | null
+    banReason: string | null
+    banExpires: Date | null
     createdAt: Date
     updatedAt: Date
   }, ExtArgs["result"]["user"]>
@@ -1034,6 +1802,10 @@ export interface Prisma__UserClient<T, Null = never, ExtArgs extends runtime.Typ
   readonly [Symbol.toStringTag]: "PrismaPromise"
   sessions<T extends Prisma.User$sessionsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$sessionsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$SessionPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   accounts<T extends Prisma.User$accountsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$accountsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$AccountPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  studentProfile<T extends Prisma.User$studentProfileArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$studentProfileArgs<ExtArgs>>): Prisma.Prisma__StudentProfileClient<runtime.Types.Result.GetResult<Prisma.$StudentProfilePayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+  advisees<T extends Prisma.User$adviseesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$adviseesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$StudentProfilePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  advisingNotes<T extends Prisma.User$advisingNotesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$advisingNotesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$AdvisingNotePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  appointmentsAsAdvisor<T extends Prisma.User$appointmentsAsAdvisorArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$appointmentsAsAdvisorArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$AdvisingAppointmentPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -1068,6 +1840,12 @@ export interface UserFieldRefs {
   readonly email: Prisma.FieldRef<"User", 'String'>
   readonly emailVerified: Prisma.FieldRef<"User", 'Boolean'>
   readonly image: Prisma.FieldRef<"User", 'String'>
+  readonly firstName: Prisma.FieldRef<"User", 'String'>
+  readonly lastName: Prisma.FieldRef<"User", 'String'>
+  readonly role: Prisma.FieldRef<"User", 'UserRole'>
+  readonly banned: Prisma.FieldRef<"User", 'Boolean'>
+  readonly banReason: Prisma.FieldRef<"User", 'String'>
+  readonly banExpires: Prisma.FieldRef<"User", 'DateTime'>
   readonly createdAt: Prisma.FieldRef<"User", 'DateTime'>
   readonly updatedAt: Prisma.FieldRef<"User", 'DateTime'>
 }
@@ -1508,6 +2286,97 @@ export type User$accountsArgs<ExtArgs extends runtime.Types.Extensions.InternalA
   take?: number
   skip?: number
   distinct?: Prisma.AccountScalarFieldEnum | Prisma.AccountScalarFieldEnum[]
+}
+
+/**
+ * User.studentProfile
+ */
+export type User$studentProfileArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the StudentProfile
+   */
+  select?: Prisma.StudentProfileSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the StudentProfile
+   */
+  omit?: Prisma.StudentProfileOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.StudentProfileInclude<ExtArgs> | null
+  where?: Prisma.StudentProfileWhereInput
+}
+
+/**
+ * User.advisees
+ */
+export type User$adviseesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the StudentProfile
+   */
+  select?: Prisma.StudentProfileSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the StudentProfile
+   */
+  omit?: Prisma.StudentProfileOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.StudentProfileInclude<ExtArgs> | null
+  where?: Prisma.StudentProfileWhereInput
+  orderBy?: Prisma.StudentProfileOrderByWithRelationInput | Prisma.StudentProfileOrderByWithRelationInput[]
+  cursor?: Prisma.StudentProfileWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.StudentProfileScalarFieldEnum | Prisma.StudentProfileScalarFieldEnum[]
+}
+
+/**
+ * User.advisingNotes
+ */
+export type User$advisingNotesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the AdvisingNote
+   */
+  select?: Prisma.AdvisingNoteSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the AdvisingNote
+   */
+  omit?: Prisma.AdvisingNoteOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.AdvisingNoteInclude<ExtArgs> | null
+  where?: Prisma.AdvisingNoteWhereInput
+  orderBy?: Prisma.AdvisingNoteOrderByWithRelationInput | Prisma.AdvisingNoteOrderByWithRelationInput[]
+  cursor?: Prisma.AdvisingNoteWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.AdvisingNoteScalarFieldEnum | Prisma.AdvisingNoteScalarFieldEnum[]
+}
+
+/**
+ * User.appointmentsAsAdvisor
+ */
+export type User$appointmentsAsAdvisorArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the AdvisingAppointment
+   */
+  select?: Prisma.AdvisingAppointmentSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the AdvisingAppointment
+   */
+  omit?: Prisma.AdvisingAppointmentOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.AdvisingAppointmentInclude<ExtArgs> | null
+  where?: Prisma.AdvisingAppointmentWhereInput
+  orderBy?: Prisma.AdvisingAppointmentOrderByWithRelationInput | Prisma.AdvisingAppointmentOrderByWithRelationInput[]
+  cursor?: Prisma.AdvisingAppointmentWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.AdvisingAppointmentScalarFieldEnum | Prisma.AdvisingAppointmentScalarFieldEnum[]
 }
 
 /**

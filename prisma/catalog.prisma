@@ -1,0 +1,63 @@
+model AcademicTerm {
+  id       String      @id @default(cuid())
+  season   TermSeason
+  year     Int
+  startsOn DateTime
+  endsOn   DateTime
+
+  transcriptEntries  TranscriptEntry[]
+  plannedCourses     PlannedCourse[]
+  graduatingStudents StudentProfile[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([season, year])
+}
+
+model Course {
+  id          String  @id @default(cuid())
+  subject     String // "CST", "MATH", "MGMT"
+  number      String // "140", "110"
+  title       String
+  credits     Int
+  description String?
+  isLab       Boolean @default(false)
+
+  attributes        CourseAttribute[]
+  requirementItems  RequirementItem[]
+  transcriptEntries TranscriptEntry[]
+  plannedCourses    PlannedCourse[]
+  recommendedIn     RecommendedTermCourse[]
+  prereqFor         CoursePrerequisite[]    @relation("PrereqTarget")
+  prerequisites     CoursePrerequisite[]    @relation("PrereqSource")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([subject, number])
+  @@index([subject])
+}
+
+model CourseAttribute {
+  id            String      @id @default(cuid())
+  courseId      String
+  course        Course      @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  catalogYearId String
+  catalogYear   CatalogYear @relation(fields: [catalogYearId], references: [id], onDelete: Cascade)
+  tag           GenEdTag
+
+  @@unique([courseId, catalogYearId, tag])
+  @@index([catalogYearId, tag])
+}
+
+model CoursePrerequisite {
+  id           String  @id @default(cuid())
+  courseId     String
+  course       Course  @relation("PrereqTarget", fields: [courseId], references: [id], onDelete: Cascade)
+  requiresId   String
+  requires     Course  @relation("PrereqSource", fields: [requiresId], references: [id], onDelete: Cascade)
+  isConcurrent Boolean @default(false) // lecture + lab taken together
+
+  @@unique([courseId, requiresId])
+}

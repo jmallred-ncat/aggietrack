@@ -8,8 +8,23 @@
  *
  * 🟢 You can import this file directly.
  */
+export type * from './models/AdvisingAppointment'
+export type * from './models/AdvisingNote'
 export type * from './models/User'
 export type * from './models/Session'
 export type * from './models/Account'
 export type * from './models/Verification'
+export type * from './models/AcademicTerm'
+export type * from './models/Course'
+export type * from './models/CourseAttribute'
+export type * from './models/CoursePrerequisite'
+export type * from './models/Program'
+export type * from './models/CatalogYear'
+export type * from './models/RequirementGroup'
+export type * from './models/RequirementItem'
+export type * from './models/RecommendedTerm'
+export type * from './models/RecommendedTermCourse'
+export type * from './models/StudentProfile'
+export type * from './models/TranscriptEntry'
+export type * from './models/PlannedCourse'
 export type * from './commonInputTypes'

@@ -18,6 +18,16 @@ export { Prisma }
 export * as $Enums from './enums'
 export * from './enums';
 /**
+ * Model AdvisingAppointment
+ * 
+ */
+export type AdvisingAppointment = Prisma.AdvisingAppointmentModel
+/**
+ * Model AdvisingNote
+ * 
+ */
+export type AdvisingNote = Prisma.AdvisingNoteModel
+/**
  * Model User
  * 
  */
@@ -37,3 +47,68 @@ export type Account = Prisma.AccountModel
  * 
  */
 export type Verification = Prisma.VerificationModel
+/**
+ * Model AcademicTerm
+ * 
+ */
+export type AcademicTerm = Prisma.AcademicTermModel
+/**
+ * Model Course
+ * 
+ */
+export type Course = Prisma.CourseModel
+/**
+ * Model CourseAttribute
+ * 
+ */
+export type CourseAttribute = Prisma.CourseAttributeModel
+/**
+ * Model CoursePrerequisite
+ * 
+ */
+export type CoursePrerequisite = Prisma.CoursePrerequisiteModel
+/**
+ * Model Program
+ * 
+ */
+export type Program = Prisma.ProgramModel
+/**
+ * Model CatalogYear
+ * 
+ */
+export type CatalogYear = Prisma.CatalogYearModel
+/**
+ * Model RequirementGroup
+ * 
+ */
+export type RequirementGroup = Prisma.RequirementGroupModel
+/**
+ * Model RequirementItem
+ * 
+ */
+export type RequirementItem = Prisma.RequirementItemModel
+/**
+ * Model RecommendedTerm
+ * 
+ */
+export type RecommendedTerm = Prisma.RecommendedTermModel
+/**
+ * Model RecommendedTermCourse
+ * 
+ */
+export type RecommendedTermCourse = Prisma.RecommendedTermCourseModel
+/**
+ * Model StudentProfile
+ * 
+ */
+export type StudentProfile = Prisma.StudentProfileModel
+/**
+ * Model TranscriptEntry
+ * 
+ */
+export type TranscriptEntry = Prisma.TranscriptEntryModel
+/**
+ * Model PlannedCourse
+ * 
+ */
+export type PlannedCourse = Prisma.PlannedCourseModel

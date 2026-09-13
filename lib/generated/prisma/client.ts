@@ -31,8 +31,8 @@ export * from "./enums"
  * const prisma = new PrismaClient({
  *   adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL })
  * })
- * // Fetch zero or more Users
- * const users = await prisma.user.findMany()
+ * // Fetch zero or more AdvisingAppointments
+ * const advisingAppointments = await prisma.advisingAppointment.findMany()
  * ```
  * 
  * Read more in our [docs](https://pris.ly/d/client).
@@ -41,6 +41,16 @@ export const PrismaClient = $Class.getPrismaClientClass()
 export type PrismaClient<LogOpts extends Prisma.LogLevel = never, OmitOpts extends Prisma.PrismaClientOptions["omit"] = Prisma.PrismaClientOptions["omit"], ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = $Class.PrismaClient<LogOpts, OmitOpts, ExtArgs>
 export { Prisma }
 
+/**
+ * Model AdvisingAppointment
+ * 
+ */
+export type AdvisingAppointment = Prisma.AdvisingAppointmentModel
+/**
+ * Model AdvisingNote
+ * 
+ */
+export type AdvisingNote = Prisma.AdvisingNoteModel
 /**
  * Model User
  * 
@@ -61,3 +71,68 @@ export type Account = Prisma.AccountModel
  * 
  */
 export type Verification = Prisma.VerificationModel
+/**
+ * Model AcademicTerm
+ * 
+ */
+export type AcademicTerm = Prisma.AcademicTermModel
+/**
+ * Model Course
+ * 
+ */
+export type Course = Prisma.CourseModel
+/**
+ * Model CourseAttribute
+ * 
+ */
+export type CourseAttribute = Prisma.CourseAttributeModel
+/**
+ * Model CoursePrerequisite
+ * 
+ */
+export type CoursePrerequisite = Prisma.CoursePrerequisiteModel
+/**
+ * Model Program
+ * 
+ */
+export type Program = Prisma.ProgramModel
+/**
+ * Model CatalogYear
+ * 
+ */
+export type CatalogYear = Prisma.CatalogYearModel
+/**
+ * Model RequirementGroup
+ * 
+ */
+export type RequirementGroup = Prisma.RequirementGroupModel
+/**
+ * Model RequirementItem
+ * 
+ */
+export type RequirementItem = Prisma.RequirementItemModel
+/**
+ * Model RecommendedTerm
+ * 
+ */
+export type RecommendedTerm = Prisma.RecommendedTermModel
+/**
+ * Model RecommendedTermCourse
+ * 
+ */
+export type RecommendedTermCourse = Prisma.RecommendedTermCourseModel
+/**
+ * Model StudentProfile
+ * 
+ */
+export type StudentProfile = Prisma.StudentProfileModel
+/**
+ * Model TranscriptEntry
+ * 
+ */
+export type TranscriptEntry = Prisma.TranscriptEntryModel
+/**
+ * Model PlannedCourse
+ * 
+ */
+export type PlannedCourse = Prisma.PlannedCourseModel

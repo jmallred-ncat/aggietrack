@@ -51,10 +51,25 @@ export const AnyNull = runtime.AnyNull
 
 
 export const ModelName = {
+  AdvisingAppointment: 'AdvisingAppointment',
+  AdvisingNote: 'AdvisingNote',
   User: 'User',
   Session: 'Session',
   Account: 'Account',
-  Verification: 'Verification'
+  Verification: 'Verification',
+  AcademicTerm: 'AcademicTerm',
+  Course: 'Course',
+  CourseAttribute: 'CourseAttribute',
+  CoursePrerequisite: 'CoursePrerequisite',
+  Program: 'Program',
+  CatalogYear: 'CatalogYear',
+  RequirementGroup: 'RequirementGroup',
+  RequirementItem: 'RequirementItem',
+  RecommendedTerm: 'RecommendedTerm',
+  RecommendedTermCourse: 'RecommendedTermCourse',
+  StudentProfile: 'StudentProfile',
+  TranscriptEntry: 'TranscriptEntry',
+  PlannedCourse: 'PlannedCourse'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -73,12 +88,44 @@ export const TransactionIsolationLevel = runtime.makeStrictEnum({
 export type TransactionIsolationLevel = (typeof TransactionIsolationLevel)[keyof typeof TransactionIsolationLevel]
 
 
+export const AdvisingAppointmentScalarFieldEnum = {
+  id: 'id',
+  studentId: 'studentId',
+  advisorId: 'advisorId',
+  startsAt: 'startsAt',
+  notes: 'notes',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type AdvisingAppointmentScalarFieldEnum = (typeof AdvisingAppointmentScalarFieldEnum)[keyof typeof AdvisingAppointmentScalarFieldEnum]
+
+
+export const AdvisingNoteScalarFieldEnum = {
+  id: 'id',
+  studentId: 'studentId',
+  advisorId: 'advisorId',
+  body: 'body',
+  visibleToStudent: 'visibleToStudent',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type AdvisingNoteScalarFieldEnum = (typeof AdvisingNoteScalarFieldEnum)[keyof typeof AdvisingNoteScalarFieldEnum]
+
+
 export const UserScalarFieldEnum = {
   id: 'id',
   name: 'name',
   email: 'email',
   emailVerified: 'emailVerified',
   image: 'image',
+  firstName: 'firstName',
+  lastName: 'lastName',
+  role: 'role',
+  banned: 'banned',
+  banReason: 'banReason',
+  banExpires: 'banExpires',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 } as const
@@ -94,7 +141,8 @@ export const SessionScalarFieldEnum = {
   updatedAt: 'updatedAt',
   ipAddress: 'ipAddress',
   userAgent: 'userAgent',
-  userId: 'userId'
+  userId: 'userId',
+  impersonatedBy: 'impersonatedBy'
 } as const
 
 export type SessionScalarFieldEnum = (typeof SessionScalarFieldEnum)[keyof typeof SessionScalarFieldEnum]
@@ -129,6 +177,167 @@ export const VerificationScalarFieldEnum = {
 } as const
 
 export type VerificationScalarFieldEnum = (typeof VerificationScalarFieldEnum)[keyof typeof VerificationScalarFieldEnum]
+
+
+export const AcademicTermScalarFieldEnum = {
+  id: 'id',
+  season: 'season',
+  year: 'year',
+  startsOn: 'startsOn',
+  endsOn: 'endsOn',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type AcademicTermScalarFieldEnum = (typeof AcademicTermScalarFieldEnum)[keyof typeof AcademicTermScalarFieldEnum]
+
+
+export const CourseScalarFieldEnum = {
+  id: 'id',
+  subject: 'subject',
+  number: 'number',
+  title: 'title',
+  credits: 'credits',
+  description: 'description',
+  isLab: 'isLab',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type CourseScalarFieldEnum = (typeof CourseScalarFieldEnum)[keyof typeof CourseScalarFieldEnum]
+
+
+export const CourseAttributeScalarFieldEnum = {
+  id: 'id',
+  courseId: 'courseId',
+  catalogYearId: 'catalogYearId',
+  tag: 'tag'
+} as const
+
+export type CourseAttributeScalarFieldEnum = (typeof CourseAttributeScalarFieldEnum)[keyof typeof CourseAttributeScalarFieldEnum]
+
+
+export const CoursePrerequisiteScalarFieldEnum = {
+  id: 'id',
+  courseId: 'courseId',
+  requiresId: 'requiresId',
+  isConcurrent: 'isConcurrent'
+} as const
+
+export type CoursePrerequisiteScalarFieldEnum = (typeof CoursePrerequisiteScalarFieldEnum)[keyof typeof CoursePrerequisiteScalarFieldEnum]
+
+
+export const ProgramScalarFieldEnum = {
+  id: 'id',
+  code: 'code',
+  name: 'name',
+  totalCredits: 'totalCredits',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type ProgramScalarFieldEnum = (typeof ProgramScalarFieldEnum)[keyof typeof ProgramScalarFieldEnum]
+
+
+export const CatalogYearScalarFieldEnum = {
+  id: 'id',
+  programId: 'programId',
+  label: 'label',
+  effectiveFrom: 'effectiveFrom',
+  effectiveTo: 'effectiveTo',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type CatalogYearScalarFieldEnum = (typeof CatalogYearScalarFieldEnum)[keyof typeof CatalogYearScalarFieldEnum]
+
+
+export const RequirementGroupScalarFieldEnum = {
+  id: 'id',
+  catalogYearId: 'catalogYearId',
+  name: 'name',
+  kind: 'kind',
+  minCredits: 'minCredits',
+  minGrade: 'minGrade',
+  sortOrder: 'sortOrder',
+  subject: 'subject',
+  minNumber: 'minNumber',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type RequirementGroupScalarFieldEnum = (typeof RequirementGroupScalarFieldEnum)[keyof typeof RequirementGroupScalarFieldEnum]
+
+
+export const RequirementItemScalarFieldEnum = {
+  id: 'id',
+  groupId: 'groupId',
+  courseId: 'courseId'
+} as const
+
+export type RequirementItemScalarFieldEnum = (typeof RequirementItemScalarFieldEnum)[keyof typeof RequirementItemScalarFieldEnum]
+
+
+export const RecommendedTermScalarFieldEnum = {
+  id: 'id',
+  catalogYearId: 'catalogYearId',
+  sequence: 'sequence',
+  season: 'season'
+} as const
+
+export type RecommendedTermScalarFieldEnum = (typeof RecommendedTermScalarFieldEnum)[keyof typeof RecommendedTermScalarFieldEnum]
+
+
+export const RecommendedTermCourseScalarFieldEnum = {
+  id: 'id',
+  termId: 'termId',
+  courseId: 'courseId'
+} as const
+
+export type RecommendedTermCourseScalarFieldEnum = (typeof RecommendedTermCourseScalarFieldEnum)[keyof typeof RecommendedTermCourseScalarFieldEnum]
+
+
+export const StudentProfileScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  bannerId: 'bannerId',
+  catalogYearId: 'catalogYearId',
+  advisorId: 'advisorId',
+  expectedGradTermId: 'expectedGradTermId',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type StudentProfileScalarFieldEnum = (typeof StudentProfileScalarFieldEnum)[keyof typeof StudentProfileScalarFieldEnum]
+
+
+export const TranscriptEntryScalarFieldEnum = {
+  id: 'id',
+  studentId: 'studentId',
+  courseId: 'courseId',
+  termId: 'termId',
+  grade: 'grade',
+  status: 'status',
+  source: 'source',
+  credits: 'credits',
+  sourceInstitution: 'sourceInstitution',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type TranscriptEntryScalarFieldEnum = (typeof TranscriptEntryScalarFieldEnum)[keyof typeof TranscriptEntryScalarFieldEnum]
+
+
+export const PlannedCourseScalarFieldEnum = {
+  id: 'id',
+  studentId: 'studentId',
+  courseId: 'courseId',
+  termId: 'termId',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type PlannedCourseScalarFieldEnum = (typeof PlannedCourseScalarFieldEnum)[keyof typeof PlannedCourseScalarFieldEnum]
 
 
 export const SortOrder = {

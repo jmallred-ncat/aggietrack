@@ -1,5 +1,5 @@
+import LogOutButton from "@/components/auth/LogOutButton";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
 import {
     Sidebar,
     SidebarContent,
@@ -10,7 +10,8 @@ import {
     SidebarMenuButton,
     SidebarMenuItem
 } from "@/components/ui/sidebar";
-import { BookOpenIcon, CalendarIcon, ChartBarIcon, SignInIcon, UserListIcon } from "@phosphor-icons/react/dist/ssr";
+import type { User } from "@/lib/generated/prisma/client";
+import { BookOpenIcon, CalendarIcon, ChartBarIcon, GearIcon, UserIcon, UserListIcon } from "@phosphor-icons/react/dist/ssr";
 import Link from "next/link";
 
 const navigation = [
@@ -20,15 +21,16 @@ const navigation = [
     { href: "/dashboard/advising", label: "Advising", icon: <UserListIcon weight="duotone" /> },
 ]
 
-export default function DashboardSidebar() {
+export default async function DashboardSidebar({ user }: { user: User }) {
+
     return <Sidebar variant="inset">
         <SidebarHeader>
             <div className="text-sm flex items-center gap-2 not-typeset relative">
                 <Avatar>
-                    <AvatarFallback>SN</AvatarFallback>
+                    <AvatarFallback>{user.firstName.charAt(0)}{user.lastName.charAt(0)}</AvatarFallback>
                 </Avatar>
                 <div className="flex flex-col not-typeset text-xs">
-                    <span className="font-bold">Student Name</span>
+                    <span className="font-bold">{user.name}</span>
                     <span className="text-white/50">Graduating in '{new Date().getFullYear().toString().slice(-2)}</span>
                 </div>
                 <Link href="/dashboard" className="not-typeset absolute inset-0 hover:pointer" />
@@ -36,22 +38,35 @@ export default function DashboardSidebar() {
         </SidebarHeader>
         <SidebarContent>
             {/* STUDENT NAVIGATION */}
-            <SidebarGroup className="not-typeset">
-                <SidebarMenu>
+            <SidebarGroup className="not-typeset flex flex-col h-full">
+                <SidebarMenu className="flex-1">
                     {navigation.map((item) => (
                         <SidebarMenuItem key={item.href}>
                             <SidebarMenuButton render={<Link href={item.href}>{item.icon} {item.label}</Link>
                             } />
                         </SidebarMenuItem>
                     ))}
+
+                    <SidebarMenu className="mt-auto">
+                        <SidebarMenuItem className="mt-auto">
+                            <SidebarMenuButton render={<Link href="/dashboard/profile">
+                                <UserIcon weight="duotone" />
+                                Profile
+                            </Link>} />
+                        </SidebarMenuItem>
+
+                        <SidebarMenuItem className="mt-auto">
+                            <SidebarMenuButton render={<Link href="/dashboard/settings">
+                                <GearIcon weight="duotone" />
+                                Settings
+                            </Link>} />
+                        </SidebarMenuItem>
+                    </SidebarMenu>
                 </SidebarMenu>
             </SidebarGroup>
         </SidebarContent>
         <SidebarFooter>
-            <Button nativeButton={false} variant="destructive" render={<Link href="/login" className="not-typeset bg-red-500 dark:bg-red-700 text-white">
-                <SignInIcon weight="duotone" />
-                Log Out
-            </Link>} />
+            <LogOutButton />
         </SidebarFooter>
     </Sidebar >;
-}
+};

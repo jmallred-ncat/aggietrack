@@ -1,0 +1,60 @@
+enum UserRole {
+  STUDENT
+  ADVISOR
+  ADMIN
+}
+
+enum TermSeason {
+  FALL
+  SPRING
+  SUMMER
+}
+
+enum Grade {
+  A
+  A_MINUS
+  B_PLUS
+  B
+  B_MINUS
+  C_PLUS
+  C
+  C_MINUS
+  D_PLUS
+  D
+  F
+  W
+  I
+  P
+  TR // transfer credit, no GPA
+}
+
+enum TranscriptSource {
+  NCAT
+  TRANSFER
+  AP
+  CLEP
+}
+
+enum TranscriptStatus {
+  IN_PROGRESS
+  COMPLETED
+  WITHDRAWN
+  FAILED
+}
+
+enum RequirementKind {
+  ALL_OF // every listed course (major core)
+  CREDITS_FROM_POOL // N credits from tagged/listed courses (gen-ed, MGMT electives)
+  SUBJECT_ELECTIVE // e.g. any CST course not already used in major core
+  FREE_ELECTIVE // any course at/above a level
+}
+
+enum GenEdTag {
+  WRITTEN_COMMUNICATION
+  HUMANITIES_FINE_ARTS
+  SOCIAL_BEHAVIORAL
+  GLOBAL_AWARENESS
+  AFRICAN_AMERICAN
+  SCIENTIFIC_REASONING
+  SCIENTIFIC_REASONING_LAB
+}

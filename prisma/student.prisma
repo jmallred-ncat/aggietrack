@@ -1,0 +1,67 @@
+model StudentProfile {
+  id     String @id @default(cuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  bannerId String? @unique
+
+  catalogYearId String
+  catalogYear   CatalogYear @relation(fields: [catalogYearId], references: [id])
+
+  advisorId String?
+  advisor   User?   @relation("AdvisorToStudents", fields: [advisorId], references: [id])
+
+  expectedGradTermId String?
+  expectedGradTerm   AcademicTerm? @relation(fields: [expectedGradTermId], references: [id])
+
+  transcript   TranscriptEntry[]
+  plan         PlannedCourse[]
+  appointments AdvisingAppointment[]
+  notes        AdvisingNote[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([advisorId])
+  @@index([catalogYearId])
+}
+
+model TranscriptEntry {
+  id        String         @id @default(cuid())
+  studentId String
+  student   StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  courseId String
+  course   Course @relation(fields: [courseId], references: [id])
+
+  termId String?
+  term   AcademicTerm? @relation(fields: [termId], references: [id])
+
+  grade             Grade?
+  status            TranscriptStatus
+  source            TranscriptSource @default(NCAT)
+  credits           Int
+  sourceInstitution String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([studentId, status])
+  @@index([courseId])
+}
+
+model PlannedCourse {
+  id        String         @id @default(cuid())
+  studentId String
+  student   StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  courseId  String
+  course    Course         @relation(fields: [courseId], references: [id])
+  termId    String
+  term      AcademicTerm   @relation(fields: [termId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([studentId, courseId, termId])
+  @@index([studentId, termId])
+}

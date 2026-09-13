@@ -1,0 +1,82 @@
+model Program {
+  id           String @id @default(cuid())
+  code         String @unique // "0432"
+  name         String // "Information Technology, B.S."
+  totalCredits Int    @default(120)
+
+  catalogYears CatalogYear[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model CatalogYear {
+  id            String    @id @default(cuid())
+  programId     String
+  program       Program   @relation(fields: [programId], references: [id])
+  label         String // "2020-2021"
+  effectiveFrom DateTime
+  effectiveTo   DateTime?
+
+  students    StudentProfile[]
+  groups      RequirementGroup[]
+  attributes  CourseAttribute[]
+  recommended RecommendedTerm[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([programId, label])
+}
+
+model RequirementGroup {
+  id            String      @id @default(cuid())
+  catalogYearId String
+  catalogYear   CatalogYear @relation(fields: [catalogYearId], references: [id], onDelete: Cascade)
+
+  name       String
+  kind       RequirementKind
+  minCredits Int
+  minGrade   Grade?
+  sortOrder  Int
+  subject    String? // "CST" for technical electives, "MGMT" for MGMT electives
+  minNumber  Int? // 100 for free electives
+
+  items RequirementItem[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([catalogYearId])
+}
+
+model RequirementItem {
+  id       String           @id @default(cuid())
+  groupId  String
+  group    RequirementGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  courseId String
+  course   Course           @relation(fields: [courseId], references: [id])
+
+  @@unique([groupId, courseId])
+}
+
+model RecommendedTerm {
+  id            String      @id @default(cuid())
+  catalogYearId String
+  catalogYear   CatalogYear @relation(fields: [catalogYearId], references: [id], onDelete: Cascade)
+  sequence      Int // 1 = freshman fall
+  season        TermSeason
+  courses       RecommendedTermCourse[]
+
+  @@unique([catalogYearId, sequence])
+}
+
+model RecommendedTermCourse {
+  id       String          @id @default(cuid())
+  termId   String
+  term     RecommendedTerm @relation(fields: [termId], references: [id], onDelete: Cascade)
+  courseId String
+  course   Course          @relation(fields: [courseId], references: [id])
+
+  @@unique([termId, courseId])
+}

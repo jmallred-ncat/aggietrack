@@ -1,0 +1,30 @@
+model AdvisingAppointment {
+  id        String         @id @default(cuid())
+  studentId String
+  student   StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  advisorId String
+  advisor   User           @relation("AdvisorAppointments", fields: [advisorId], references: [id])
+  startsAt  DateTime
+  notes     String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([studentId])
+  @@index([advisorId, startsAt])
+}
+
+model AdvisingNote {
+  id               String         @id @default(cuid())
+  studentId        String
+  student          StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  advisorId        String
+  advisor          User           @relation("AdvisorNotes", fields: [advisorId], references: [id])
+  body             String
+  visibleToStudent Boolean        @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([studentId])
+}

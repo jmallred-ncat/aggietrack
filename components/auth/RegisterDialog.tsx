@@ -1,7 +1,9 @@
 "use client";
 
+import { authReactClient } from "@/lib/auth-client";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { EyeIcon, EyeSlashIcon } from "@phosphor-icons/react/dist/ssr";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { z } from "zod";
@@ -23,6 +25,7 @@ const schema = z.object({
 })
 
 export default function RegisterDialog() {
+    const router = useRouter();
     const [passwordType, setPasswordType] = useState<"password" | "text">("password");
     const [verifyPasswordType, setVerifyPasswordType] = useState<"password" | "text">("password");
     const [open, setOpen] = useState(false);
@@ -35,12 +38,26 @@ export default function RegisterDialog() {
             password: "",
             verifyPassword: "",
         },
-        mode: "onBlur",
+        mode: "onSubmit",
         reValidateMode: "onBlur",
     })
 
-    function onSubmit(data: z.infer<typeof schema>) {
-        console.log(data);
+    async function onSubmit(data: z.infer<typeof schema>) {
+        const { error, data: user } = await authReactClient.signUp.email({
+            email: data.email,
+            password: data.password,
+            name: `${data.firstName} ${data.lastName}`,
+            firstName: data.firstName,
+            lastName: data.lastName,
+        }, {
+            onSuccess: () => {
+                setOpen(false);
+                router.push("/dashboard");
+            },
+            onError: (error) => {
+                console.error(error);
+            }
+        });
     }
 
     function onDialogOpenChangeComplete(open: boolean) {
@@ -139,7 +156,4 @@ export default function RegisterDialog() {
             </DialogContent>
         </Dialog >
     )
-
-
-
 }
