@@ -1,6 +1,10 @@
 import LoginDialog from "@/components/auth/LoginDialog";
 import RegisterDialog from "@/components/auth/RegisterDialog";
+import { Button } from "@/components/ui/button";
 import { ButtonGroup } from "@/components/ui/button-group";
+import { auth } from "@/lib/auth";
+import { UserIcon } from "@phosphor-icons/react/dist/ssr";
+import { headers } from "next/headers";
 import Link from "next/link";
 
 const navigation = [
@@ -8,7 +12,12 @@ const navigation = [
     { href: "/features", label: "Features" },
 ]
 
-export default function PublicLayout({ children }: { children: React.ReactNode }) {
+export default async function PublicLayout({ children }: { children: React.ReactNode }) {
+    const session = await auth.api.getSession({
+        headers: await headers(),
+    });
+
+
     return <div className="h-full xl:pt-6 flex flex-col flex-1 w-full">
         <header className="flex items-center justify-between px-4 py-2 max-w-7xl mx-auto w-full not-typeset">
             <Link href="/">
@@ -22,10 +31,18 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
                         </li>
                     ))}
                 </ul>
-                <ButtonGroup>
-                    <LoginDialog />
-                    <RegisterDialog />
-                </ButtonGroup>
+                {session ?
+                    (
+                        <Button nativeButton={false} size="sm" render={<Link href="/dashboard" />}>
+                            <UserIcon weight="fill" />
+                            Dashboard
+                        </Button>
+                    ) : (
+                        <ButtonGroup>
+                            <LoginDialog />
+                            <RegisterDialog />
+                        </ButtonGroup>
+                    )}
             </nav>
         </header>
         <main className="flex flex-1 w-full max-w-7xl mx-auto flex-col px-4 py-2 pb-16">

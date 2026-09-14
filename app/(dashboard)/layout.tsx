@@ -17,7 +17,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
         return redirect("/");
     }
 
-    return <SidebarProvider>
+    return <SidebarProvider defaultOpen={false}>
         <DashboardSidebar user={session.user as User} />
         <SidebarInset>
             <main>

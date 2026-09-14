@@ -1,3 +1,5 @@
 export default function AdvisingPage() {
-    return <div>Advising Page</div>;
+    return <div>
+        <h1>Advising</h1>
+    </div>;
 }

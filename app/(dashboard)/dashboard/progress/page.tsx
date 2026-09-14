@@ -1,3 +1,5 @@
 export default function ProgressPage() {
-    return <div>Progress Page</div>;
+    return <div>
+        <h1>Progress</h1>
+    </div>;
 }

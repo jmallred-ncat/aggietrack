@@ -1,3 +1,5 @@
 export default function PlannerPage() {
-    return <div>Planner Page</div>;
+    return <div>
+        <h1>Planner</h1>
+    </div>;
 }

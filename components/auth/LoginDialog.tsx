@@ -87,7 +87,7 @@ export default function LoginDialog() {
                                 <Field data-invalid={fieldState.invalid}>
                                     <FieldLabel className="flex items-center justify-between">
                                         <span>Password</span>
-                                        <Link href="/reset" className="text-sm text-muted-foreground" onClick={() => setOpen(false)}>Forgot password?</Link>
+                                        <Link href="/reset" className="text-sm text-muted-foreground" onClick={() => setOpen(false)} tabIndex={-1}>Forgot password?</Link>
                                     </FieldLabel>
                                     <InputGroup>
                                         <InputGroupInput {...field} id={field.name} aria-invalid={fieldState.invalid} placeholder="Password" autoComplete="new-password"
