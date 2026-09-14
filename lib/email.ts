@@ -1,8 +1,9 @@
+import { ResetPasswordEmail } from "@/react-email-starter/emails/reset-password";
 import { WelcomeEmail } from "@/react-email-starter/emails/welcome";
 import { render } from "react-email";
 import { Resend } from "resend";
 
-type WelcomeRecipient = {
+type EmailRecipient = {
   email: string;
   firstName?: string | null;
   name?: string | null;
@@ -33,15 +34,15 @@ export function appUrlFromRequest(request?: Request) {
   return (process.env.BETTER_AUTH_URL ?? "http://localhost:3000").replace(/\/$/, "");
 }
 
-function appUrlFromVerificationUrl(verificationUrl: string) {
+function appUrlFromLink(link: string) {
   try {
-    return new URL(verificationUrl).origin;
+    return new URL(link).origin;
   } catch {
     return appUrlFromRequest();
   }
 }
 
-function firstNameFrom(user: WelcomeRecipient) {
+function firstNameFrom(user: EmailRecipient) {
   const fromField = user.firstName?.trim();
   if (fromField) {
     return fromField;
@@ -51,32 +52,64 @@ function firstNameFrom(user: WelcomeRecipient) {
   return fromName || "Aggie";
 }
 
-export async function sendWelcomeEmail(
-  user: WelcomeRecipient,
-  verificationUrl: string,
-  appUrl = appUrlFromVerificationUrl(verificationUrl),
-) {
+async function sendRenderedEmail({
+  to,
+  subject,
+  html,
+}: {
+  to: string;
+  subject: string;
+  html: string;
+}) {
   const resend = getResend();
   if (!resend) {
-    console.warn("RESEND_KEY is not set; skipping welcome email");
+    console.warn("RESEND_KEY is not set; skipping email");
     return;
   }
 
-  const firstName = firstNameFrom(user);
   const from = process.env.EMAIL_FROM ?? "AggieTrack <noreply@aggietrack.space>";
-  const dashboardUrl = `${appUrl}/dashboard`;
-  const html = await render(
-    WelcomeEmail({ firstName, dashboardUrl, verificationUrl }),
-  );
-
   const { error } = await resend.emails.send({
     from,
-    to: user.email,
-    subject: `Confirm your email, ${firstName}. Then three things to do next.`,
+    to,
+    subject,
     html,
   });
 
   if (error) {
     throw new Error(error.message);
   }
+}
+
+export async function sendWelcomeEmail(
+  user: EmailRecipient,
+  verificationUrl: string,
+  appUrl = appUrlFromLink(verificationUrl),
+) {
+  const firstName = firstNameFrom(user);
+  const dashboardUrl = `${appUrl}/dashboard`;
+  const html = await render(
+    WelcomeEmail({ firstName, dashboardUrl, verificationUrl }),
+  );
+
+  await sendRenderedEmail({
+    to: user.email,
+    subject: `Confirm your email, ${firstName}. Then three things to do next.`,
+    html,
+  });
+}
+
+export async function sendPasswordResetEmail(
+  user: EmailRecipient,
+  resetUrl: string,
+) {
+  const firstName = firstNameFrom(user);
+  const html = await render(
+    ResetPasswordEmail({ firstName, resetUrl }),
+  );
+
+  await sendRenderedEmail({
+    to: user.email,
+    subject: `Reset your AggieTrack password, ${firstName}.`,
+    html,
+  });
 }

@@ -12,7 +12,7 @@ import { z } from "zod";
 
 const formSchema = z.object({
     email: z.email(),
-})
+});
 
 type FormSchema = z.infer<typeof formSchema>;
 
@@ -23,49 +23,72 @@ export default function PasswordResetPage() {
         defaultValues: {
             email: "",
         },
-        mode: "onBlur",
+        mode: "onSubmit",
         reValidateMode: "onBlur",
     });
 
     async function onSubmit(values: FormSchema) {
-        await authReactClient.requestPasswordReset({ email: values.email }, {
-            onSuccess: () => {
-                console.log("Email sent");
-                setEmailSent(true);
-            },
-            onError: (error) => {
-                console.error(error);
-            },
-        })
-        console.log(values);
+        await authReactClient.requestPasswordReset({
+            email: values.email,
+            redirectTo: `${window.location.origin}/reset/password`,
+        });
+        setEmailSent(true);
     }
 
-    return <div className="flex justify-center items-center flex-col flex-1">
-        <Card className="w-full max-w-md">
-            <CardHeader>
-                <CardTitle>Password Reset</CardTitle>
-                <CardDescription>Enter your email address to reset your password.</CardDescription>
-            </CardHeader>
-            <CardContent>
-                <form id="reset-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-                    <FieldGroup>
-                        <Controller
-                            name="email"
-                            control={form.control}
-                            render={({ field, fieldState }) => (
-                                <Field data-invalid={fieldState.invalid}>
-                                    <FieldLabel>Email</FieldLabel>
-                                    <Input type="email" {...field} id={field.name} aria-invalid={fieldState.invalid} placeholder="Email" autoComplete="email" />
-                                    {fieldState.invalid && <FieldError errors={fieldState.error ? [{ message: fieldState.error.message }] : []} />}
-                                </Field>
-                            )}
-                        />
-                    </FieldGroup>
-                </form>
-            </CardContent>
-            <CardFooter>
-                <Button type="submit" form="reset-form" className="w-full">Send Reset Email</Button>
-            </CardFooter>
-        </Card>
-    </div>
+    return (
+        <div className="flex flex-1 flex-col items-center justify-center">
+            <Card className="w-full max-w-md">
+                {emailSent ? (
+                    <>
+                        <CardHeader>
+                            <CardTitle>Check your email</CardTitle>
+                            <CardDescription>
+                                If that address has an account, a reset link is on the way. It expires in an hour.
+                            </CardDescription>
+                        </CardHeader>
+                    </>
+                ) : (
+                    <>
+                        <CardHeader>
+                            <CardTitle>Forgot it. Fine.</CardTitle>
+                            <CardDescription>
+                                We&apos;ll send a link if this email has an AggieTrack account.
+                            </CardDescription>
+                        </CardHeader>
+                        <form id="reset-form" onSubmit={form.handleSubmit(onSubmit)}>
+                            <CardContent>
+                                <FieldGroup>
+                                    <Controller
+                                        name="email"
+                                        control={form.control}
+                                        render={({ field, fieldState }) => (
+                                            <Field data-invalid={fieldState.invalid}>
+                                                <FieldLabel>Email</FieldLabel>
+                                                <Input
+                                                    type="email"
+                                                    {...field}
+                                                    id={field.name}
+                                                    aria-invalid={fieldState.invalid}
+                                                    placeholder="Email"
+                                                    autoComplete="email"
+                                                />
+                                                {fieldState.invalid && (
+                                                    <FieldError errors={fieldState.error ? [{ message: fieldState.error.message }] : []} />
+                                                )}
+                                            </Field>
+                                        )}
+                                    />
+                                </FieldGroup>
+                            </CardContent>
+                            <CardFooter>
+                                <Button type="submit" form="reset-form" className="w-full" disabled={form.formState.isSubmitting}>
+                                    Send the link
+                                </Button>
+                            </CardFooter>
+                        </form>
+                    </>
+                )}
+            </Card>
+        </div>
+    );
 }

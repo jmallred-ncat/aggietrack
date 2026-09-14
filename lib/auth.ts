@@ -39,6 +39,20 @@ export const auth = betterAuth({
     emailAndPassword: {
         enabled: true,
         requireEmailVerification: true,
+        sendResetPassword: async ({ user, url }) => {
+            const { sendPasswordResetEmail } = await import("./email");
+            const recipient = user as typeof user & { firstName?: string };
+            await sendPasswordResetEmail(
+                {
+                    email: recipient.email,
+                    firstName: recipient.firstName,
+                    name: recipient.name,
+                },
+                url,
+            ).catch((error) => {
+                console.error("Password reset email failed:", error);
+            });
+        },
     },
     emailVerification: {
         sendOnSignUp: true,
