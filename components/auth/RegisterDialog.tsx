@@ -3,7 +3,6 @@
 import { authReactClient } from "@/lib/auth-client";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { EyeIcon, EyeSlashIcon } from "@phosphor-icons/react/dist/ssr";
-import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { z } from "zod";
@@ -11,12 +10,15 @@ import { Button } from "../ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "../ui/dialog";
 import { Field, FieldError, FieldGroup, FieldLabel } from "../ui/field";
 import { Input } from "../ui/input";
-import { InputGroup, InputGroupButton, InputGroupInput } from "../ui/input-group";
+import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput, InputGroupText } from "../ui/input-group";
 
 const schema = z.object({
     firstName: z.string().min(1, "First names must be at least 1 character long"),
     lastName: z.string().min(1, "Last names must be at least 1 character long"),
-    email: z.email(),
+    email: z.string().min(1, "Email is required").refine((value) => {
+        const email = value.includes("@") ? value : `${value}@aggies.ncat.edu`;
+        return /^[a-zA-Z0-9._%+-]+@aggies\.ncat\.edu$/.test(email);
+    }, "Email must be a valid NCAT email address"),
     password: z.string().min(8, "Passwords must be at least 8 characters long"),
     verifyPassword: z.string().min(8, "Passwords must be at least 8 characters long"),
 }).refine((data) => data.password === data.verifyPassword, {
@@ -25,10 +27,11 @@ const schema = z.object({
 })
 
 export default function RegisterDialog() {
-    const router = useRouter();
     const [passwordType, setPasswordType] = useState<"password" | "text">("password");
     const [verifyPasswordType, setVerifyPasswordType] = useState<"password" | "text">("password");
     const [open, setOpen] = useState(false);
+    const [checkEmail, setCheckEmail] = useState(false);
+    const [submitError, setSubmitError] = useState<string | null>(null);
     const form = useForm<z.infer<typeof schema>>({
         resolver: zodResolver(schema),
         defaultValues: {
@@ -43,31 +46,56 @@ export default function RegisterDialog() {
     })
 
     async function onSubmit(data: z.infer<typeof schema>) {
-        const { error, data: user } = await authReactClient.signUp.email({
-            email: data.email,
+        setSubmitError(null);
+        const email = data.email.includes("@") ? data.email : `${data.email}@aggies.ncat.edu`;
+        const { error } = await authReactClient.signUp.email({
+            email,
             password: data.password,
             name: `${data.firstName} ${data.lastName}`,
             firstName: data.firstName,
             lastName: data.lastName,
+            callbackURL: "/dashboard",
         }, {
             onSuccess: () => {
-                setOpen(false);
-                router.push("/dashboard");
+                setCheckEmail(true);
             },
-            onError: (error) => {
-                console.error(error);
+            onError: (ctx) => {
+                setSubmitError(ctx.error.message ?? "Could not create an account.");
             }
         });
+        if (error) {
+            setSubmitError(error.message ?? "Could not create an account.");
+        }
     }
 
     function onDialogOpenChangeComplete(open: boolean) {
-        if (!open) return form.reset();
+        if (!open) {
+            setCheckEmail(false);
+            setSubmitError(null);
+            form.reset();
+        }
     }
 
     return (
         <Dialog open={open} onOpenChange={setOpen} onOpenChangeComplete={onDialogOpenChangeComplete}>
             <DialogTrigger render={<Button size="sm">Register</Button>} />
             <DialogContent className={"not-typeset w-[700px]"}>
+                {checkEmail ? (
+                    <>
+                        <DialogHeader>
+                            <DialogTitle>Check your Aggie email</DialogTitle>
+                            <DialogDescription>
+                                You&apos;re in — almost. Confirm the email we just sent, then you can start.
+                            </DialogDescription>
+                        </DialogHeader>
+                        <DialogFooter>
+                            <Button type="button" className="w-full" onClick={() => setOpen(false)}>
+                                Got it
+                            </Button>
+                        </DialogFooter>
+                    </>
+                ) : (
+                    <>
                 <DialogHeader>
                     <DialogTitle>Register</DialogTitle>
                     <DialogDescription>Register to create an account</DialogDescription>
@@ -106,7 +134,13 @@ export default function RegisterDialog() {
                             render={({ field, fieldState }) => (
                                 <Field data-invalid={fieldState.invalid}>
                                     <FieldLabel>Email</FieldLabel>
-                                    <Input {...field} id={field.name} aria-invalid={fieldState.invalid} placeholder="Email" autoComplete="email" />
+                                    <InputGroup>
+                                        <InputGroupInput {...field} id={field.name} aria-invalid={fieldState.invalid} placeholder="Email" autoComplete="email" />
+                                        <InputGroupAddon align={"inline-end"} >
+                                            <InputGroupText>@aggies.ncat.edu</InputGroupText>
+                                        </InputGroupAddon>
+                                    </InputGroup>
+
                                     {fieldState.invalid && <FieldError errors={[{ message: fieldState.error?.message }]} />}
                                 </Field>
                             )}
@@ -149,10 +183,16 @@ export default function RegisterDialog() {
                         />
                     </FieldGroup>
 
+                    {submitError && (
+                        <FieldError errors={[{ message: submitError }]} />
+                    )}
+
                     <DialogFooter>
                         <Button type="submit" className="w-full">Create Account</Button>
                     </DialogFooter>
                 </form>
+                    </>
+                )}
             </DialogContent>
         </Dialog >
     )

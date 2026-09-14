@@ -30,7 +30,9 @@ export default async function DashboardLayout({ children }: { children: React.Re
                         </div>
                     </header>
                     <main className="flex flex-col px-4">
-                        {children}
+                        <div className="container mx-auto">
+                            {children}
+                        </div>
                     </main>
                 </TooltipProvider>
             </main>

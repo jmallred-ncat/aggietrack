@@ -22,6 +22,7 @@ export default function LoginDialog() {
     const router = useRouter();
     const [open, setOpen] = useState(false);
     const [passwordType, setPasswordType] = useState<"password" | "text">("password");
+    const [submitError, setSubmitError] = useState<string | null>(null);
     const pathname = usePathname();
     const form = useForm<z.infer<typeof schema>>({
         resolver: zodResolver(schema),
@@ -38,22 +39,36 @@ export default function LoginDialog() {
     }, [pathname]);
 
     async function onSubmit(data: z.infer<typeof schema>) {
-        const { error, data: user } = await authReactClient.signIn.email({
+        setSubmitError(null);
+        const { error } = await authReactClient.signIn.email({
             email: data.email,
             password: data.password,
+            callbackURL: "/dashboard",
         }, {
             onSuccess: () => {
                 setOpen(false);
                 router.push("/dashboard");
             },
-            onError: (error) => {
-                console.error(error);
+            onError: (ctx) => {
+                if (ctx.error.status === 403) {
+                    setSubmitError("Confirm the email we sent you first. We just sent another one.");
+                    return;
+                }
+                setSubmitError(ctx.error.message ?? "Could not sign in.");
             }
         });
+        if (error && error.status === 403) {
+            setSubmitError("Confirm the email we sent you first. We just sent another one.");
+        } else if (error) {
+            setSubmitError(error.message ?? "Could not sign in.");
+        }
     }
 
     function onDialogOpenChangeComplete(open: boolean) {
-        if (!open) return form.reset();
+        if (!open) {
+            setSubmitError(null);
+            form.reset();
+        }
     }
 
     return (
@@ -102,6 +117,10 @@ export default function LoginDialog() {
                             )}
                         />
                     </FieldGroup>
+
+                    {submitError && (
+                        <FieldError errors={[{ message: submitError }]} />
+                    )}
 
                     <DialogFooter>
                         <Button type="submit" className="w-full">Login</Button>

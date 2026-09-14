@@ -19,6 +19,7 @@ export const auth = betterAuth({
             "localhost:*",
             "127.0.0.1:*",
             "*.vercel.app",
+            "https://*.aggietrack.space"
         ],
         fallback: process.env.BETTER_AUTH_URL ?? "http://localhost:3000",
         protocol: "auto",
@@ -26,6 +27,7 @@ export const auth = betterAuth({
     trustedOrigins: [
         "http://localhost:*",
         "https://*.vercel.app",
+        "https://*.aggietrack.space"
     ],
     advanced: {
         trustedProxyHeaders: true,
@@ -36,6 +38,26 @@ export const auth = betterAuth({
     }),
     emailAndPassword: {
         enabled: true,
+        requireEmailVerification: true,
+    },
+    emailVerification: {
+        sendOnSignUp: true,
+        sendOnSignIn: true,
+        autoSignInAfterVerification: true,
+        sendVerificationEmail: async ({ user, url }) => {
+            const { sendWelcomeEmail } = await import("./email");
+            const recipient = user as typeof user & { firstName?: string };
+            await sendWelcomeEmail(
+                {
+                    email: recipient.email,
+                    firstName: recipient.firstName,
+                    name: recipient.name,
+                },
+                url,
+            ).catch((error) => {
+                console.error("Welcome email failed:", error);
+            });
+        },
     },
     user: {
         additionalFields: {

@@ -4,3 +4,4 @@ allowBuilds:
   prisma: true
   sharp: false
   unrs-resolver: false
+  react-email: true
