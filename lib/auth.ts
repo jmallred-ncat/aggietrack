@@ -4,24 +4,33 @@ import { admin } from "better-auth/plugins";
 import { ac, admin as adminRole, advisor, student } from "./permissions";
 import { prisma } from "./prisma";
 
-const getBaseUrl = () => {
-    if (typeof window !== "undefined") {
-        return window.location.origin;
-    }
+const APP_ROLES = ["STUDENT", "ADVISOR", "ADMIN"] as const;
 
-    if (process.env.BETTER_AUTH_URL) return process.env.BETTER_AUTH_URL;
-    if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`;
-    return `http://localhost:${process.env.PORT ?? 3000}`;
+function resolveAppRole(role: unknown) {
+    return APP_ROLES.includes(role as (typeof APP_ROLES)[number])
+        ? role
+        : "STUDENT";
 }
 
 export const auth = betterAuth({
-    baseURL: process.env.BETTER_AUTH_URL
-        ?? (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000"),
+    secret: process.env.BETTER_AUTH_SECRET,
+    baseURL: {
+        allowedHosts: [
+            "localhost:*",
+            "127.0.0.1:*",
+            "*.vercel.app",
+        ],
+        fallback: process.env.BETTER_AUTH_URL ?? "http://localhost:3000",
+        protocol: "auto",
+    },
     trustedOrigins: [
         "http://localhost:*",
         "https://*.vercel.app",
     ],
-    protocol: process.env.NODE_ENV === "production" ? "https" : "http",
+    advanced: {
+        trustedProxyHeaders: true,
+        useSecureCookies: process.env.VERCEL === "1",
+    },
     database: prismaAdapter(prisma, {
         provider: "postgresql",
     }),
@@ -34,6 +43,23 @@ export const auth = betterAuth({
             lastName: { type: "string", required: true },
         }
     },
+    databaseHooks: {
+        user: {
+            create: {
+                async before(user: { role?: unknown }) {
+                    return { data: { ...user, role: resolveAppRole(user.role) } };
+                },
+            },
+            update: {
+                async before(user: { role?: unknown }) {
+                    if (!("role" in user) || user.role === undefined) {
+                        return;
+                    }
+                    return { data: { ...user, role: resolveAppRole(user.role) } };
+                },
+            },
+        },
+    },
     plugins: [admin({
         ac,
         roles: {
@@ -43,6 +69,5 @@ export const auth = betterAuth({
         },
         defaultRole: "STUDENT",
         adminRoles: ["ADMIN"]
-
     })]
 });
