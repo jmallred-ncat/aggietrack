@@ -1,4 +1,4 @@
-import { betterAuth } from "better-auth";
+import { betterAuth, type User } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { admin } from "better-auth/plugins";
 import { ac, admin as adminRole, advisor, student } from "./permissions";
@@ -8,7 +8,7 @@ const APP_ROLES = ["STUDENT", "ADVISOR", "ADMIN"] as const;
 
 function resolveAppRole(role: unknown) {
     return APP_ROLES.includes(role as (typeof APP_ROLES)[number])
-        ? role
+        ? (role as (typeof APP_ROLES)[number])
         : "STUDENT";
 }
 
@@ -46,12 +46,12 @@ export const auth = betterAuth({
     databaseHooks: {
         user: {
             create: {
-                async before(user: { role?: unknown }) {
+                async before(user: User & Record<string, unknown>) {
                     return { data: { ...user, role: resolveAppRole(user.role) } };
                 },
             },
             update: {
-                async before(user: { role?: unknown }) {
+                async before(user: Partial<User> & Record<string, unknown>) {
                     if (!("role" in user) || user.role === undefined) {
                         return;
                     }
