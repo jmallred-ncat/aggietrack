@@ -12,7 +12,9 @@ const labels: Record<string, string> = {
     planner: "Planner",
     advising: "Advising",
     profile: "Profile",
-    settings: "Settings",
+    security: "Security",
+    notifications: "Notifications",
+    account: "Account",
 }
 
 export default function DashboardBreadcrumbs() {
@@ -28,7 +30,7 @@ export default function DashboardBreadcrumbs() {
                 </BreadcrumbItem>
                 {segments.length > 0 && <BreadcrumbSeparator />}
                 {segments.map((segment, i) => {
-                    const href = segments.slice(0, i + 1).join("/");
+                    const href = `/dashboard/${segments.slice(0, i + 1).join("/")}`;
                     const isLast = i === segments.length - 1;
 
                     return (
