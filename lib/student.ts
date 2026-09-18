@@ -1,5 +1,6 @@
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
+import { redirect } from "next/navigation";
 import type { CatalogYear, StudentProfile, User } from "./generated/prisma/client";
 import { prisma } from "./prisma";
 
@@ -8,7 +9,7 @@ export async function getSessionUser() {
         headers: await headers(),
     });
     if (!response?.user) {
-        throw new Error("Unauthorized");
+        return redirect("/");
     }
     return response.user as User;
 }
