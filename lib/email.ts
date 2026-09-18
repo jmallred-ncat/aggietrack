@@ -63,7 +63,9 @@ async function sendRenderedEmail({
 }) {
   const resend = getResend();
   if (!resend) {
-    console.warn("RESEND_KEY is not set; skipping email");
+    console.warn(
+      `RESEND_KEY is not set; skipping email (VERCEL_ENV=${process.env.VERCEL_ENV ?? "unset"})`,
+    );
     return;
   }
 

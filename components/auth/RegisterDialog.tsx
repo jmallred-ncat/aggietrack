@@ -31,6 +31,9 @@ export default function RegisterDialog() {
     const [verifyPasswordType, setVerifyPasswordType] = useState<"password" | "text">("password");
     const [open, setOpen] = useState(false);
     const [checkEmail, setCheckEmail] = useState(false);
+    const [submittedEmail, setSubmittedEmail] = useState("");
+    const [resending, setResending] = useState(false);
+    const [resendNote, setResendNote] = useState<string | null>(null);
     const [submitError, setSubmitError] = useState<string | null>(null);
     const form = useForm<z.infer<typeof schema>>({
         resolver: zodResolver(schema),
@@ -57,6 +60,8 @@ export default function RegisterDialog() {
             callbackURL: "/dashboard",
         }, {
             onSuccess: () => {
+                setSubmittedEmail(email);
+                setResendNote(null);
                 setCheckEmail(true);
             },
             onError: (ctx) => {
@@ -71,9 +76,26 @@ export default function RegisterDialog() {
     function onDialogOpenChangeComplete(open: boolean) {
         if (!open) {
             setCheckEmail(false);
+            setSubmittedEmail("");
+            setResending(false);
+            setResendNote(null);
             setSubmitError(null);
             form.reset();
         }
+    }
+
+    async function resendVerification() {
+        if (!submittedEmail || resending) {
+            return;
+        }
+        setResending(true);
+        setResendNote(null);
+        const { error } = await authReactClient.sendVerificationEmail({
+            email: submittedEmail,
+            callbackURL: "/dashboard",
+        });
+        setResending(false);
+        setResendNote(error ? (error.message ?? "Could not resend.") : "Sent again. Check your Aggie inbox.");
     }
 
     return (
@@ -88,9 +110,21 @@ export default function RegisterDialog() {
                                 You&apos;re in — almost. Confirm the email we just sent, then you can start.
                             </DialogDescription>
                         </DialogHeader>
-                        <DialogFooter>
+                        {resendNote && (
+                            <p className="text-sm text-muted-foreground">{resendNote}</p>
+                        )}
+                        <DialogFooter className="flex flex-col gap-2 sm:flex-col">
                             <Button type="button" className="w-full" onClick={() => setOpen(false)}>
                                 Got it
+                            </Button>
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                className="w-full"
+                                disabled={resending}
+                                onClick={resendVerification}
+                            >
+                                {resending ? "Sending…" : "Didn't get it? Send it again"}
                             </Button>
                         </DialogFooter>
                     </>

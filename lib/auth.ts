@@ -1,4 +1,5 @@
 import { betterAuth, type User } from "better-auth";
+import { createEmailVerificationToken } from "better-auth/api";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { admin } from "better-auth/plugins";
 import { ac, admin as adminRole, advisor, student } from "./permissions";
@@ -12,6 +13,46 @@ function resolveAppRole(role: unknown) {
         : "STUDENT";
 }
 
+type MailUser = User & { firstName?: string };
+
+async function verificationUrlFor(email: string, request?: Request) {
+    const { appUrlFromRequest } = await import("./email");
+    const token = await createEmailVerificationToken(
+        process.env.BETTER_AUTH_SECRET ?? "",
+        email,
+    );
+    const origin = appUrlFromRequest(request);
+    return `${origin}/api/auth/verify-email?token=${token}&callbackURL=${encodeURIComponent("/dashboard")}`;
+}
+
+async function sendWelcomeVerification(user: MailUser, url: string) {
+    const { sendWelcomeEmail } = await import("./email");
+    await sendWelcomeEmail(
+        {
+            email: user.email,
+            firstName: user.firstName,
+            name: user.name,
+        },
+        url,
+    ).catch((error) => {
+        console.error("Welcome email failed:", error);
+    });
+}
+
+async function sendPasswordReset(user: MailUser, url: string) {
+    const { sendPasswordResetEmail } = await import("./email");
+    await sendPasswordResetEmail(
+        {
+            email: user.email,
+            firstName: user.firstName,
+            name: user.name,
+        },
+        url,
+    ).catch((error) => {
+        console.error("Password reset email failed:", error);
+    });
+}
+
 export const auth = betterAuth({
     secret: process.env.BETTER_AUTH_SECRET,
     baseURL: {
@@ -19,7 +60,8 @@ export const auth = betterAuth({
             "localhost:*",
             "127.0.0.1:*",
             "*.vercel.app",
-            "https://*.aggietrack.space"
+            "aggietrack.space",
+            "*.aggietrack.space",
         ],
         fallback: process.env.BETTER_AUTH_URL ?? "http://localhost:3000",
         protocol: "auto",
@@ -40,18 +82,16 @@ export const auth = betterAuth({
         enabled: true,
         requireEmailVerification: true,
         sendResetPassword: async ({ user, url }) => {
-            const { sendPasswordResetEmail } = await import("./email");
-            const recipient = user as typeof user & { firstName?: string };
-            await sendPasswordResetEmail(
-                {
-                    email: recipient.email,
-                    firstName: recipient.firstName,
-                    name: recipient.name,
-                },
-                url,
-            ).catch((error) => {
-                console.error("Password reset email failed:", error);
-            });
+            await sendPasswordReset(user as MailUser, url);
+        },
+        onExistingUserSignUp: async ({ user }, request) => {
+            if (user.emailVerified) {
+                return;
+            }
+            await sendWelcomeVerification(
+                user as MailUser,
+                await verificationUrlFor(user.email, request),
+            );
         },
     },
     emailVerification: {
@@ -59,18 +99,7 @@ export const auth = betterAuth({
         sendOnSignIn: true,
         autoSignInAfterVerification: true,
         sendVerificationEmail: async ({ user, url }) => {
-            const { sendWelcomeEmail } = await import("./email");
-            const recipient = user as typeof user & { firstName?: string };
-            await sendWelcomeEmail(
-                {
-                    email: recipient.email,
-                    firstName: recipient.firstName,
-                    name: recipient.name,
-                },
-                url,
-            ).catch((error) => {
-                console.error("Welcome email failed:", error);
-            });
+            await sendWelcomeVerification(user as MailUser, url);
         },
     },
     user: {
