@@ -7,8 +7,10 @@
     "dev": "concurrently \"next dev\" \"email dev --dir react-email-starter/emails --port 4000\"",
     "generate": "prisma generate",
     "migrate:deploy": "prisma migrate deploy",
+    "seed": "prisma db seed",
+    "seed:preview": "if [ \"$SEED_ON_DEPLOY\" = \"true\" ]; then prisma db seed; else echo \"Skipping seed (SEED_ON_DEPLOY is not true)\"; fi",
     "build": "prisma generate && next build",
-    "vercel-build": "prisma generate && prisma migrate deploy && next build",
+    "vercel-build": "prisma generate && prisma migrate deploy && pnpm run seed:preview && next build",
     "start": "next start",
     "lint": "eslint"
   },
