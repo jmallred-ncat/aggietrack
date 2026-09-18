@@ -48,3 +48,5 @@ dist/
 # local sample data model notes
 SAMPLE_DATA_MODEL.md
 SAMPLE_DATA_MODEL.pdf
+/MODEL_DATA/
+STUDENT_PROFILE_IMPLEMENTATION.md
