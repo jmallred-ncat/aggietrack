@@ -16,7 +16,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
     }
 
     return (
-        <SidebarProvider defaultOpen={false} className="h-full min-h-0 overflow-hidden">
+        <SidebarProvider defaultOpen={false} className="h-svh min-h-0 overflow-hidden">
             <DashboardSidebar user={user} profile={profile} />
             <SidebarInset className="min-h-0 min-w-0 overflow-hidden">
                 <TooltipProvider>

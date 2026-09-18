@@ -28,7 +28,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       suppressHydrationWarning
       className={cn("h-full bg-sidebar", "antialiased", geistSans.variable, geistMono.variable, "font-sans", montserrat.variable)}
     >
-      <body className="min-h-full typeset flex flex-col h-full w-full">
+      <body className="min-h-full typeset flex flex-col w-full">
         <ThemeProvider
           attribute="class"
           defaultTheme="system"

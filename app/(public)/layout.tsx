@@ -18,7 +18,7 @@ export default async function PublicLayout({ children }: { children: React.React
     });
 
 
-    return <div className="h-full xl:pt-6 flex flex-col flex-1 w-full">
+    return <div className="min-h-svh xl:pt-6 flex flex-col flex-1 w-full bg-background">
         <header className="flex items-center justify-between px-4 py-2 max-w-7xl mx-auto w-full not-typeset">
             <Link href="/">
                 <h1 className="text-2xl font-bold">AggieTrack</h1>

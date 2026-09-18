@@ -96,7 +96,7 @@ const advisorFeatures = [
 
 export default async function Home() {
   return (
-    <div className="space-y-32 xl:space-y-64 flex flex-col min-h-screen">
+    <div className="space-y-32 xl:space-y-64 flex flex-col">
       <section className="container mx-auto mt-24 flex xl:flex-row flex-col gap-16 xl:items-center items-start">
         <header className="min-w-0 max-w-prose w-full text-center xl:text-left xl:mx-0 mx-auto">
           <h1 className="text-balance">
