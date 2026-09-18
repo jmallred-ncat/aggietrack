@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { getCatalogYearsForPrograms } from "@/lib/catalog";
-import { getSessionUser } from "@/lib/student";
+import { getSessionUser, getStudentProfile } from "@/lib/student";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { StudentProfileForm } from "./StudentProfileForm";
@@ -13,9 +13,9 @@ export default async function OnboardingPage() {
         return redirect("/dashboard");
     }
 
-    // const profile = await getStudentProfile(user.id);
+    const profile = await getStudentProfile(user.id);
 
-    // if (profile) return redirect("/dashboard");
+    if (profile) return redirect("/dashboard");
 
     const programs = await getCatalogYearsForPrograms();
 

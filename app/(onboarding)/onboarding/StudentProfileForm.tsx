@@ -27,7 +27,7 @@ const profileSchema = z.object({
 });
 
 export function StudentProfileForm({ user, programs }: { user: User, programs: CatalogYearsWithPrograms }) {
-    const [actionError, setActionError] = useState<string | null>("null");
+    const [actionError, setActionError] = useState<string | null>(null);
     const form = useForm<z.infer<typeof profileSchema>>({
         resolver: zodResolver(profileSchema),
         defaultValues: {
