@@ -1,8 +1,9 @@
-"use server";
-
+import RegisterDialog from "@/components/auth/RegisterDialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { auth } from "@/lib/auth";
 import { ArrowsLeftRightIcon, BookOpenIcon, CalendarCheckIcon, CalendarIcon, CalendarPlusIcon, ChartBarIcon, ChecksIcon, LockSimpleIcon, NotePencilIcon, PlayCircleIcon, SealCheckIcon, UserListIcon, UsersThreeIcon, WarningCircleIcon } from "@phosphor-icons/react/dist/ssr";
+import { headers } from "next/headers";
 import Link from "next/link";
 
 const ICON_SIZE = 32;
@@ -95,6 +96,10 @@ const advisorFeatures = [
 
 
 export default async function Home() {
+  const session = await auth.api.getSession({
+    headers: await headers(),
+  });
+
   return (
     <div className="space-y-32 xl:space-y-64 flex flex-col">
       <section className="container mx-auto mt-24 flex xl:flex-row flex-col gap-16 xl:items-center items-start">
@@ -103,7 +108,11 @@ export default async function Home() {
             Know exactly where you stand.
           </h1>
           <p>AggieTrack maps the B.S. in Information Technology at North Carolina A&T — your catalog year, what’s left, and the terms that finish it.</p>
-          <Button className={"mt-4 not-typeset"} nativeButton={false} render={<Link href="/login">Get started</Link>} />
+          {session ? (
+            <Button className="mt-4 not-typeset" nativeButton={false} render={<Link href="/dashboard">Dashboard</Link>} />
+          ) : (
+            <RegisterDialog trigger={<Button className="mt-4 not-typeset">Get started</Button>} />
+          )}
         </header>
 
 
