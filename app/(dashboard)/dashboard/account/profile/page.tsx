@@ -1,6 +1,5 @@
 import { getSessionUser, requireStudentProfile } from "@/lib/student";
-import { ArrowRightIcon } from "@phosphor-icons/react/dist/ssr";
-import { format } from "date-fns";
+import BannerIdForm from "./BannerIdForm";
 
 export default async function ProfileSettingsPage() {
     const user = await getSessionUser();
@@ -21,11 +20,11 @@ export default async function ProfileSettingsPage() {
                 {profile.bannerId && (
                     <>
                         <div>
-                            <h3>Banner ID</h3>
+                            <h3 className="mt-0">Banner ID</h3>
                         </div>
 
                         <div className="md:col-span-2">
-                            <p>{profile.bannerId}</p>
+                            <BannerIdForm user={user} bannerId={profile.bannerId} />
                         </div>
                     </>
                 )}
@@ -42,7 +41,7 @@ export default async function ProfileSettingsPage() {
                 </div>
 
                 <div className="md:col-span-2">
-                    <p className="flex items-center gap-x-2">{format(profile.catalogYear.effectiveFrom, "MMM. yyyy")} <ArrowRightIcon /> {profile.catalogYear.effectiveTo ? format(profile.catalogYear.effectiveTo, "MMM. yyyy") : "Present"}</p>
+                    <p className="flex items-center gap-x-2">{profile.catalogYear.label}</p>
                 </div>
 
             </section>
