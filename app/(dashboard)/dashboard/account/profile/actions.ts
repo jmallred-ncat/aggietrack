@@ -1,37 +1,37 @@
 "use server";
 
+import { Prisma } from "@/lib/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
+import { getSessionUser } from "@/lib/student";
+import { revalidatePath } from "next/cache";
 
-export async function updateBannerId(userId: string, bannerId: string) {
-    const user = await prisma.user.findUnique({
-        where: {
-            id: userId,
-        },
-        include: {
-            studentProfile: true,
+export async function updateBannerId(bannerId: string) {
+    const user = await getSessionUser();
+    const trimmed = bannerId.trim();
+
+    if (!trimmed) {
+        return { success: false as const, error: "Banner ID is required." };
+    }
+
+    try {
+        await prisma.studentProfile.update({
+            where: {
+                userId: user.id,
+            },
+            data: {
+                bannerId: trimmed,
+            },
+        });
+    } catch (error) {
+        if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+            const target = error.meta?.target;
+            if (Array.isArray(target) && target.includes("bannerId")) {
+                return { success: false as const, error: "That banner ID is already in use." };
+            }
         }
-    });
-
-    if (!user) {
-        return { success: false, error: "User not found" };
+        return { success: false as const, error: "Failed to update student profile." };
     }
 
-    if (!user.studentProfile) {
-        return { success: false, error: "Student profile not found" };
-    }
-
-    const studentProfile = await prisma.studentProfile.update({
-        where: {
-            id: user.studentProfile.id,
-        },
-        data: {
-            bannerId: bannerId,
-        },
-    });
-
-    if (!studentProfile) {
-        return { success: false, error: "Failed to update student profile" };
-    }
-
-    return { success: true, data: studentProfile };
+    revalidatePath("/dashboard/account/profile");
+    return { success: true as const };
 }

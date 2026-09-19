@@ -17,17 +17,13 @@ export default async function ProfileSettingsPage() {
             </section>
 
             <section className="grid grid-cols-1 md:grid-cols-3 gap-x-8">
-                {profile.bannerId && (
-                    <>
-                        <div>
-                            <h3 className="mt-0">Banner ID</h3>
-                        </div>
+                <div>
+                    <h3 className="mt-0">Banner ID</h3>
+                </div>
 
-                        <div className="md:col-span-2">
-                            <BannerIdForm user={user} bannerId={profile.bannerId} />
-                        </div>
-                    </>
-                )}
+                <div className="md:col-span-2">
+                    <BannerIdForm bannerId={profile.bannerId ?? ""} />
+                </div>
                 <div>
                     <h3>Program</h3>
                 </div>
@@ -42,6 +38,7 @@ export default async function ProfileSettingsPage() {
 
                 <div className="md:col-span-2">
                     <p className="flex items-center gap-x-2">{profile.catalogYear.label}</p>
+                    <span>Progress is calculated against this catalog year and cannot be changed on this page.</span>
                 </div>
 
             </section>
