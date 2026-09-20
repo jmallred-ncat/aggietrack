@@ -32,12 +32,23 @@ function createAdapter() {
     return new PrismaPg({ connectionString });
 }
 
+function createPrismaClient() {
+    return new PrismaClient({
+        adapter: createAdapter(),
+    });
+}
+
 const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient };
 
-export const prisma = globalForPrisma.prisma ?? new PrismaClient({
-    adapter: createAdapter(),
-});
+function getPrismaClient() {
+    if (process.env.NODE_ENV === "production") {
+        globalForPrisma.prisma ??= createPrismaClient();
+        return globalForPrisma.prisma;
+    }
 
-if (process.env.NODE_ENV !== "production") {
-    globalForPrisma.prisma = prisma;
+    globalForPrisma.prisma = createPrismaClient();
+    return globalForPrisma.prisma;
 }
+
+export const prisma = getPrismaClient();
+

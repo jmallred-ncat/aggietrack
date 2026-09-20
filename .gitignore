@@ -44,7 +44,8 @@ node_modules/
 dist/
 .env
 
-/prisma/lib/prisma
+# prisma
+/lib/generated/prisma
 
 # local sample data model notes
 SAMPLE_DATA_MODEL.md
