@@ -1,22 +1,61 @@
-model Program {
-  id           String @id @default(cuid())
-  code         String @unique // "0432"
-  name         String // "Information Technology, B.S."
-  totalCredits Int    @default(120)
+model Degree {
+  id           String      @id @default(cuid())
+  name         String      @unique // "Bachelor of Science"
+  abbreviation String      @unique // "B.S."
+  level        DegreeLevel
+  isActive     Boolean     @default(true)
+  sortOrder    Int         @default(0)
 
-  catalogYears CatalogYear[]
+  programs Program[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([level, isActive])
+}
+
+model Department {
+  id           String  @id @default(cuid())
+  name         String  @unique // "Computer Systems Technology"
+  abbreviation String  @unique // "CST"
+  isActive     Boolean @default(true)
+  sortOrder    Int     @default(0)
+
+  programs Program[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
 
+model Program {
+  id           String  @id @default(cuid())
+  code         String  @unique // "0432"
+  shortName    String? // "INFO", "ELET"
+  name         String // "Information Technology"
+  totalCredits Int     @default(120)
+
+  degreeId String
+  degree   Degree @relation(fields: [degreeId], references: [id])
+
+  departmentId String
+  department   Department @relation(fields: [departmentId], references: [id])
+
+  catalogYears CatalogYear[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([name, degreeId])
+  @@index([degreeId])
+  @@index([departmentId])
+  @@index([shortName])
+}
+
 model CatalogYear {
-  id            String    @id @default(cuid())
-  programId     String
-  program       Program   @relation(fields: [programId], references: [id])
-  label         String // "2020-2021"
-  effectiveFrom DateTime
-  effectiveTo   DateTime?
+  id        String  @id @default(cuid())
+  programId String
+  program   Program @relation(fields: [programId], references: [id])
+  year      Int // 2020; unique start year for this program's catalog
 
   students    StudentProfile[]
   groups      RequirementGroup[]
@@ -26,7 +65,7 @@ model CatalogYear {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@unique([programId, label])
+  @@unique([programId, year])
 }
 
 model RequirementGroup {

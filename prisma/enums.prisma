@@ -4,10 +4,19 @@ enum UserRole {
   ADMIN
 }
 
+enum DegreeLevel {
+  BACCALAUREATE
+  MASTERS
+  DOCTORAL
+  CERTIFICATE
+}
+
 enum TermSeason {
   FALL
   SPRING
   SUMMER
+  SUMMER_I
+  SUMMER_II
 }
 
 enum Grade {
