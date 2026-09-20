@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { getCatalogYearsForPrograms } from "@/lib/catalog";
+import { prisma } from "@/lib/prisma";
 import { getSessionUser, getStudentProfile } from "@/lib/student";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -17,9 +17,9 @@ export default async function OnboardingPage() {
 
     if (profile) return redirect("/dashboard");
 
-    const programs = await getCatalogYearsForPrograms();
+    const hasPrograms = await prisma.program.count() > 0;
 
-    if (programs.length === 0) return (
+    if (!hasPrograms) return (
         <div className="flex flex-col flex-1 items-center justify-center px-4 md:px-6 lg:px-8">
             <h2>Nothing to see here...</h2>
             <p className="max-w-prose text-balance text-center leading-tight text-muted-foreground">Programs have not been added to the system yet. We are actively working on it and will be ready soon.</p>
@@ -37,7 +37,7 @@ export default async function OnboardingPage() {
                 </p>
             </header>
             <section className="flex-1 flex flex-col">
-                <StudentProfileForm user={user} programs={programs} />
+                <StudentProfileForm user={user} />
             </section>
         </div>
     );

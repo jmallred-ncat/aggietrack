@@ -4,6 +4,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { CircularProgress } from "@/components/ui/circular-progress";
+import { formatProgramName } from "@/lib/program";
 import { getSessionUser, getStudentProfile } from "@/lib/student";
 import { GraduationCapIcon, MedalIcon, NoteIcon } from "@phosphor-icons/react/dist/ssr";
 import { redirect } from "next/navigation";
@@ -40,7 +41,7 @@ export default async function Dashboard() {
             <header className="not-typeset">
                 <Badge>Overview</Badge>
                 <h1 className="text-5xl font-bold">Student Overview</h1>
-                <p className="text-lg text-muted-foreground max-w-prose w-full text-balance leading-tight mt-3">Welcome back, {user.firstName}. You are currently pursuing your {profile.catalogYear.program.name} degree at North Carolina Agricultural and Technical State University.</p>
+                <p className="text-lg text-muted-foreground max-w-prose w-full text-balance leading-tight mt-3">Welcome back, {user.firstName}. You are currently pursuing your {formatProgramName(profile.catalogYear.program)} degree at North Carolina Agricultural and Technical State University.</p>
             </header>
 
         </section>

@@ -24,7 +24,12 @@ export async function getStudentProfile(userId: User["id"]) {
         include: {
             catalogYear: {
                 include: {
-                    program: true,
+                    program: {
+                        include: {
+                            degree: true,
+                            department: true,
+                        },
+                    },
                 }
             }
         }

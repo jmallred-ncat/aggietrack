@@ -1,5 +1,6 @@
 "use server";
 
+import { getCatalogYearsForPrograms } from "@/lib/catalog";
 import { Prisma } from "@/lib/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
 import { getSessionUser, getStudentProfile } from "@/lib/student";
@@ -60,4 +61,8 @@ export async function createStudentProfileAction(input: unknown) {
     }
 
     redirect("/dashboard/account/profile");
+}
+
+export async function searchProgramsAction(query: string) {
+    return await getCatalogYearsForPrograms(query);
 }

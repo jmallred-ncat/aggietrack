@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "concurrently \"next dev\" \"email dev --dir react-email-starter/emails --port 4000\"",
     "generate": "prisma generate",
+    "postinstall": "prisma generate",
     "migrate:deploy": "prisma migrate deploy",
     "seed": "prisma db seed",
     "seed:preview": "if [ \"$SEED_ON_DEPLOY\" = \"true\" ]; then prisma db seed; else echo \"Skipping seed (SEED_ON_DEPLOY is not true)\"; fi",
@@ -22,6 +23,7 @@
     "@prisma/adapter-neon": "7.10.0",
     "@prisma/adapter-pg": "^7.10.0",
     "@prisma/client": "7.10.0",
+    "@uidotdev/usehooks": "^2.4.1",
     "better-auth": "^1.7.3",
     "class-variance-authority": "^0.7.1",
     "cn": "^0.2.5",
@@ -56,5 +58,5 @@
     "tsx": "^4.23.13",
     "typescript": "^6.0.3"
   },
-  "packageManager": "pnpm@12.4.1"
+  "packageManager": "pnpm@12.5.1"
 }

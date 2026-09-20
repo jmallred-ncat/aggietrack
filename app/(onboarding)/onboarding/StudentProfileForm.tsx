@@ -2,41 +2,36 @@
 
 import { Alert, AlertAction, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/components/ui/empty";
+import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty";
 import { Field, FieldContent, FieldDescription, FieldGroup, FieldLabel, FieldLegend, FieldSet, FieldTitle } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import type { CatalogYearsWithPrograms } from "@/lib/catalog";
+import { type CatalogYearsWithPrograms } from "@/lib/catalog";
+import { formatProgramName } from "@/lib/program";
 import type { User } from "@/lib/generated/prisma/client";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ArrowCounterClockwiseIcon, MagnifyingGlassIcon } from "@phosphor-icons/react";
-import { format } from "date-fns";
-import { useState } from "react";
+import { ArrowCounterClockwiseIcon, MagnifyingGlassIcon, SpinnerIcon } from "@phosphor-icons/react";
+import { useDebounce } from "@uidotdev/usehooks";
+import { useEffect, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { z } from "zod";
-import { createStudentProfileAction } from "./actions";
+import { createStudentProfileAction, searchProgramsAction } from "./actions";
 
 const profileSchema = z.object({
     programId: z.string().min(1, { message: "Program is required" }),
     catalogYearId: z.string().min(1, { message: "Catalog year is required" }),
-    userId: z.string(),
     bannerId: z.string().optional(),
-    advisorId: z.string().optional(),
-    expectedGradTermId: z.string().nullable(),
 });
 
-export function StudentProfileForm({ user, programs }: { user: User, programs: CatalogYearsWithPrograms }) {
+export function StudentProfileForm({ user }: { user: User }) {
     const [actionError, setActionError] = useState<string | null>(null);
     const form = useForm<z.infer<typeof profileSchema>>({
         resolver: zodResolver(profileSchema),
         defaultValues: {
             programId: "",
             catalogYearId: "",
-            userId: user.id,
             bannerId: "",
-            advisorId: "",
-            expectedGradTermId: null,
         },
         mode: "onChange",
         reValidateMode: "onChange",
@@ -44,17 +39,37 @@ export function StudentProfileForm({ user, programs }: { user: User, programs: C
 
     const programId = form.watch("programId");
 
+    const [searchQuery, setSearchQuery] = useState<string>("");
+    const [programs, setPrograms] = useState<CatalogYearsWithPrograms>([]);
+    const [isSearching, setIsSearching] = useState<boolean>(false);
+    const debouncedSearchQuery = useDebounce(searchQuery, 500);
+
     const catalogYears = programs.find((program) => program.id === programId)?.catalogYears ?? [];
 
-    const { isValid, isSubmitting, isValidating } = form.formState;
+    useEffect(() => {
+        let cancelled = false;
+        (async () => {
+            setIsSearching(true);
+            const hits = await searchProgramsAction(debouncedSearchQuery);
+            if (!cancelled) {
+                setPrograms(hits);
+            }
+            setIsSearching(false);
+        })();
+        return () => { cancelled = true; };
+    }, [debouncedSearchQuery]);
+
+    const showSearching =
+        Boolean(searchQuery.trim()) &&
+        (searchQuery !== debouncedSearchQuery || isSearching);
+
+    const { isSubmitting } = form.formState;
+    const catalogYearId = form.watch("catalogYearId");
     const canSubmit =
-        isValid &&
         !isSubmitting &&
-        !isValidating &&
         Boolean(programId) &&
-        Boolean(form.watch("catalogYearId")) &&
-        catalogYears.length > 0 &&
-        programs.length > 0;
+        Boolean(catalogYearId) &&
+        catalogYears.length > 0;
 
     const onSubmit = async (data: z.infer<typeof profileSchema>) => {
         const { error } = await createStudentProfileAction({
@@ -90,22 +105,11 @@ export function StudentProfileForm({ user, programs }: { user: User, programs: C
                             <FieldLabel htmlFor={field.name}>
                                 Banner ID
                             </FieldLabel>
-                            <Input type="text" {...field} placeholder="Optional" />
                             <FieldDescription>
                                 This can be found on Aggie Access Online.
                             </FieldDescription>
-                        </Field>
-                    )} />
+                            <Input type="text" {...field} placeholder="Optional" />
 
-                    <Controller control={form.control} name="advisorId" render={({ field }) => (
-                        <Field orientation={"vertical"}>
-                            <FieldLabel htmlFor={field.name}>
-                                Advisor
-                            </FieldLabel>
-                            <Input type="text" {...field} placeholder="John Doe... This will be a combobox with search" />
-                            <FieldDescription>
-                                Your advisor is assigned by your department. It can be found on Aggie Access Online.
-                            </FieldDescription>
                         </Field>
                     )} />
                 </FieldGroup>
@@ -129,27 +133,48 @@ export function StudentProfileForm({ user, programs }: { user: User, programs: C
                             <InputGroupAddon>
                                 <MagnifyingGlassIcon size={16} />
                             </InputGroupAddon>
-                            <InputGroupInput type="text" placeholder="Search available programs.... this doesn't work yet" />
+                            <InputGroupInput type="text" placeholder="Search available programs..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
                         </InputGroup>
                     </div>
-                    <Controller control={form.control} name="programId" render={({ field }) => (
-                        <RadioGroup {...field} className={"grid gap-2 sm:grid-cols-2 mt-2"}>
-                            {programs.map((program) => (
-                                <FieldLabel htmlFor={program.id} key={program.id}>
-                                    <Field orientation="horizontal">
-                                        <FieldContent>
-                                            <FieldTitle>{program.name}</FieldTitle>
-                                            <FieldDescription>
-                                                Sample Description
-                                            </FieldDescription>
-                                        </FieldContent>
-                                        <RadioGroupItem value={program.id} id={program.id} />
-                                    </Field>
-                                </FieldLabel>
-                            ))}
 
-                        </RadioGroup>
-                    )} />
+                    {programs.length > 0 ? (
+                        <Controller control={form.control} name="programId" render={({ field }) => (
+                            <RadioGroup {...field} className={"grid gap-2 sm:grid-cols-2 mt-2"}>
+                                {programs.map((program) => (
+                                    <FieldLabel htmlFor={program.id} key={program.id}>
+                                        <Field orientation="horizontal">
+                                            <FieldContent>
+                                                <FieldTitle>{formatProgramName(program)}</FieldTitle>
+                                                <FieldDescription>
+                                                    {program.department.abbreviation} · {program.totalCredits} Credits
+                                                </FieldDescription>
+                                            </FieldContent>
+                                            <RadioGroupItem value={program.id} id={program.id} />
+                                        </Field>
+                                    </FieldLabel>
+                                ))}
+
+                            </RadioGroup>
+                        )} />
+                    ) : (
+                        <Empty className="col-span-full border border-dashed">
+                            <EmptyHeader>
+                                {showSearching && (
+                                    <EmptyMedia variant="icon">
+                                        <SpinnerIcon className="animate-spin" aria-hidden="true" />
+                                    </EmptyMedia>
+                                )}
+                                <EmptyTitle>{isSearching ? "Searching" : "No Programs"}</EmptyTitle>
+                                <EmptyDescription>
+                                    {!searchQuery.trim()
+                                        ? "Try searching for a program."
+                                        : isSearching
+                                            ? `Searching for “${searchQuery.trim()}”...`
+                                            : `No programs found for “${searchQuery.trim()}”.`}
+                                </EmptyDescription>
+                            </EmptyHeader>
+                        </Empty>
+                    )}
 
 
                 </FieldSet>
@@ -158,16 +183,16 @@ export function StudentProfileForm({ user, programs }: { user: User, programs: C
                     <FieldLegend variant="label">
                         Catalog Year
                     </FieldLegend>
+                    <FieldDescription>
+                        The catalog year will be used to calculate your progress towards your degree.
+                    </FieldDescription>
                     <Controller control={form.control} name="catalogYearId" render={({ field }) => (
                         <RadioGroup {...field} id={field.name} className={"grid gap-2 sm:grid-cols-2 md:grid-cols-3 mt-1"}>
                             {catalogYears.length > 0 ? catalogYears.map((catalogYear) => (
                                 <FieldLabel htmlFor={catalogYear.id} key={catalogYear.id}>
                                     <Field orientation="horizontal">
                                         <FieldContent>
-                                            <FieldTitle>{new Date(catalogYear.effectiveFrom).getFullYear()}</FieldTitle>
-                                            <FieldDescription>
-                                                Effective through {catalogYear.effectiveTo ? format(catalogYear.effectiveTo, "MMMM yyyy") : "TBD"}
-                                            </FieldDescription>
+                                            <FieldTitle>{catalogYear.year}</FieldTitle>
                                         </FieldContent>
                                         <RadioGroupItem value={catalogYear.id} id={catalogYear.id} />
                                     </Field>

@@ -1,3 +1,4 @@
+import { formatProgramName } from "@/lib/program";
 import { getSessionUser, requireStudentProfile } from "@/lib/student";
 import BannerIdForm from "./BannerIdForm";
 
@@ -29,7 +30,7 @@ export default async function ProfileSettingsPage() {
                 </div>
 
                 <div className="md:col-span-2">
-                    <p>{profile.catalogYear.program.name}</p>
+                    <p>{formatProgramName(profile.catalogYear.program)}</p>
                 </div>
 
                 <div>
@@ -37,8 +38,8 @@ export default async function ProfileSettingsPage() {
                 </div>
 
                 <div className="md:col-span-2">
-                    <p className="flex items-center gap-x-2">{profile.catalogYear.label}</p>
-                    <span>Progress is calculated against this catalog year and cannot be changed on this page.</span>
+                    <p className="flex items-center gap-x-2">{profile.catalogYear.year}</p>
+                    <span className="text-xs text-muted-foreground max-w-md text-balance leading-tight inline-block w-full">Progress is calculated against this catalog year and cannot be changed on this page.</span>
                 </div>
 
             </section>
