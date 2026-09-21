@@ -1,11 +1,9 @@
 import { formatProgramName } from "@/lib/program";
-import { getSessionUser, requireStudentProfile } from "@/lib/student";
+import { requireStudentProfile } from "@/lib/student";
 import BannerIdForm from "./BannerIdForm";
 
 export default async function ProfileSettingsPage() {
-    const user = await getSessionUser();
-    const profile = await
-        requireStudentProfile(user.id);
+    const profile = await requireStudentProfile();
     return (
         <div className="space-y-16">
             <section>

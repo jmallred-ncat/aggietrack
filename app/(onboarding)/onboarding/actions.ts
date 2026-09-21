@@ -19,7 +19,7 @@ export async function createStudentProfileAction(input: unknown) {
         return { error: "Only students can create a profile here." }
     }
 
-    const existing = await getStudentProfile(user.id);
+    const existing = await getStudentProfile();
 
     if (existing) {
         redirect("/dashboard");

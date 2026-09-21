@@ -1,8 +1,7 @@
-import { getSessionUser, getStudentProfile } from "@/lib/student";
+import { getStudentProfile } from "@/lib/student";
 
 export default async function ProfilePage() {
-    const user = await getSessionUser();
-    const profile = await getStudentProfile(user.id);
+    const profile = await getStudentProfile();
     return (
         <div>
             <section>

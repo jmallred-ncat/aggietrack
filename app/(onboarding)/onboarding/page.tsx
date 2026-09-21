@@ -13,7 +13,7 @@ export default async function OnboardingPage() {
         return redirect("/dashboard");
     }
 
-    const profile = await getStudentProfile(user.id);
+    const profile = await getStudentProfile();
 
     if (profile) return redirect("/dashboard");
 

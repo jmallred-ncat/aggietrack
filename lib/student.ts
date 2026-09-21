@@ -16,10 +16,11 @@ export async function getSessionUser() {
 
 export type StudentProfileWithCatalog = NonNullable<Awaited<ReturnType<typeof getStudentProfile>>>;
 
-export async function getStudentProfile(userId: User["id"]) {
+export async function getStudentProfile() {
+    const user = await getSessionUser();
     const profile = await prisma.studentProfile.findUnique({
         where: {
-            userId,
+            userId: user.id,
         },
         include: {
             catalogYear: {
@@ -42,10 +43,10 @@ export async function getStudentProfile(userId: User["id"]) {
     return profile;
 }
 
-export async function requireStudentProfile(userId: User["id"]) {
-    const profile = await getStudentProfile(userId);
+export async function requireStudentProfile() {
+    const profile = await getStudentProfile();
     if (!profile) {
-        throw new Error("Student profile not found");
+        throw new Error("User is not a student");
     }
     return profile;
 }

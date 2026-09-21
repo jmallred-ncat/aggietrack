@@ -9,7 +9,7 @@ import DashboardSidebar from "./dashboard-sidebar";
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
     const user = await getSessionUser();
 
-    const profile = await getStudentProfile(user.id);
+    const profile = await getStudentProfile();
 
     if (user.role === "STUDENT" && !profile) {
         return redirect("/onboarding");

@@ -12,7 +12,7 @@ import { redirect } from "next/navigation";
 export default async function Dashboard() {
     const user = await getSessionUser();
 
-    const profile = await getStudentProfile(user.id);
+    const profile = await getStudentProfile();
 
     if (!profile) {
         if (user.role === "STUDENT") {
