@@ -26,13 +26,13 @@ model Course {
   /// Catalog typically-offered seasons (F/S/SS → FALL/SPRING/SUMMER)
   offeredIn   TermSeason[] @default([])
 
-  attributes        CourseAttribute[]
-  requirementItems  RequirementItem[]
-  transcriptEntries TranscriptEntry[]
-  plannedCourses    PlannedCourse[]
-  recommendedIn     RecommendedTermCourse[]
-  prereqFor         CoursePrerequisite[]    @relation("PrereqTarget")
-  prerequisites     CoursePrerequisite[]    @relation("PrereqSource")
+  attributes          CourseAttribute[]
+  requirementItems    RequirementItem[]
+  transcriptEntries   TranscriptEntry[]
+  plannedCourses      PlannedCourse[]
+  recommendedIn       RecommendedTermCourse[]
+  prerequisiteGroups  PrerequisiteGroup[]
+  requiredBy          CoursePrerequisite[] @relation("PrerequisiteOption")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -53,13 +53,34 @@ model CourseAttribute {
   @@index([catalogYearId, tag])
 }
 
-model CoursePrerequisite {
-  id           String  @id @default(cuid())
+/// One AND-clause of a course's prerequisites or corequisites.
+/// Options inside the group are alternatives: any one of them satisfies the group.
+model PrerequisiteGroup {
+  id           String               @id @default(cuid())
   courseId     String
-  course       Course  @relation("PrereqTarget", fields: [courseId], references: [id], onDelete: Cascade)
-  requiresId   String
-  requires     Course  @relation("PrereqSource", fields: [requiresId], references: [id], onDelete: Cascade)
-  isConcurrent Boolean @default(false) // lecture + lab taken together
+  course       Course               @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  isConcurrent Boolean              @default(false)
+  sortOrder    Int                  @default(0)
+  /// Catalog text that completed courses cannot prove: scores, standing, consent, or "or higher".
+  note         String?
+  options      CoursePrerequisite[]
 
-  @@unique([courseId, requiresId])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([courseId])
+}
+
+model CoursePrerequisite {
+  id         String            @id @default(cuid())
+  groupId    String
+  group      PrerequisiteGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  requiresId String
+  requires   Course            @relation("PrerequisiteOption", fields: [requiresId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([groupId, requiresId])
+  @@index([requiresId])
 }

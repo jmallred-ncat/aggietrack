@@ -60,11 +60,16 @@ export function CourseBrowser({
     const isSearchPending = query.trim() !== debouncedQuery.trim();
 
     return <div>
-        <header>
-            <h1 className="text-2xl font-bold">{program.degree.abbreviation} in {program.name} Courses</h1>
+        <header className="not-typeset py-6">
+            <Badge>{program.department.name}</Badge>
+            <h1 className="text-4xl font-bold not-typeset text-balance max-w-prose w-full">{program.degree.abbreviation} in {program.name} Courses</h1>
+            <p className="text-sm text-muted-foreground mt-2 max-w-prose w-full text-balance">
+                Quickly search, filter, and browse courses in your degree program. Enter a course code, title, or requirement name to find relevant courses, see which requirements they satisfy, and discover course details instantly.
+            </p>
+
         </header>
 
-        <div className="sticky top-0 z-20 -mx-4 mt-4 border-y bg-background/95 px-4 py-3 backdrop-blur supports-[backdrop-filter]:bg-background/80">
+        <div className="sticky top-0 z-20 -mx-4 mt-4 bg-background/95 px-4 py-3 backdrop-blur supports-[backdrop-filter]:bg-background/80">
             <div className="relative">
                 <MagnifyingGlassIcon
                     aria-hidden="true"
@@ -146,14 +151,42 @@ const RequirementCourseSection = memo(function RequirementCourseSection({
     </section>;
 });
 
-const CourseCard = memo(function CourseCard({ course }: { course: Course }) {
+type CurriculumCourse = CurriculumCourseSection["courses"][number];
+type PrerequisiteGroup = CurriculumCourse["prerequisiteGroups"][number];
+
+function requirementGroups(course: CurriculumCourse, concurrent: boolean) {
+    return course.prerequisiteGroups
+        .filter((group) => group.isConcurrent === concurrent)
+        .map((group) => ({
+            ...group,
+            options: [...group.options].sort((a, b) =>
+                a.requires.subject.localeCompare(b.requires.subject)
+                || a.requires.number.localeCompare(b.requires.number, undefined, { numeric: true }),
+            ),
+        }));
+}
+
+const CourseCard = memo(function CourseCard({ course }: { course: CurriculumCourse }) {
+    const prerequisites = requirementGroups(course, false);
+    const corequisites = requirementGroups(course, true);
+    const hasRequirements = prerequisites.length > 0 || corequisites.length > 0;
+
     return <Card className="not-typeset">
         <CardHeader>
             <div className="flex w-full items-center justify-between gap-2">
                 <Badge className="font-mono">{course.subject} {course.number}</Badge>
-                {course.isLab
-                    ? <FlaskIcon size={16} weight="bold" />
-                    : <LecternIcon size={16} weight="bold" />}
+                <span className="flex items-center gap-2">
+                    {hasRequirements && (
+                        <span
+                            className="size-2 shrink-0 rounded-full bg-destructive"
+                            role="img"
+                            aria-label="Has a prerequisite or corequisite"
+                        />
+                    )}
+                    {course.isLab
+                        ? <FlaskIcon size={16} weight="bold" />
+                        : <LecternIcon size={16} weight="bold" />}
+                </span>
             </div>
             <CardTitle className="line-clamp-2">{course.title}</CardTitle>
             <CardDescription>
@@ -163,9 +196,9 @@ const CourseCard = memo(function CourseCard({ course }: { course: Course }) {
         <CardContent className="flex-1">
             <p className="line-clamp-2 text-sm text-muted-foreground">{course.description}</p>
         </CardContent>
-        <CardFooter>
+        <CardFooter className="flex items-center justify-between gap-2">
             <Dialog>
-                <DialogTrigger render={<Button variant="ghost" className="w-full" size="sm">View Details</Button>} />
+                <DialogTrigger render={<Button variant="ghost" className="w-full flex-1" size="sm">View Details</Button>} />
                 <DialogContent className="not-typeset w-full">
                     <DialogHeader>
                         <DialogTitle>
@@ -189,13 +222,60 @@ const CourseCard = memo(function CourseCard({ course }: { course: Course }) {
                             </li>
                             <li>{convertCourseOfferedIn(course.offeredIn)}</li>
                         </ul>
+                        <RequirementGroups title="Prerequisites" groups={prerequisites} />
+                        <RequirementGroups title="Corequisites" groups={corequisites} />
                         <p className="mt-3">{course.description}</p>
                     </div>
                 </DialogContent>
             </Dialog>
+
+            <Button variant="secondary" className="w-full flex-1" size="sm">Add to Planner</Button>
         </CardFooter>
     </Card>;
 });
+
+function RequirementGroups({
+    title,
+    groups,
+}: {
+    title: string;
+    groups: PrerequisiteGroup[];
+}) {
+    if (groups.length === 0) {
+        return null;
+    }
+
+    return (
+        <div className="mt-4">
+            <h3 className="text-sm font-semibold">{title}</h3>
+            {groups.length > 1 && (
+                <p className="mt-1 text-sm text-muted-foreground">All of the following</p>
+            )}
+            <ul className="mt-1 space-y-2 text-sm">
+                {groups.map((group) => (
+                    <li key={group.id}>
+                        {group.options.length > 1 && (
+                            <p className="text-muted-foreground">One of</p>
+                        )}
+                        {group.options.length > 0 && (
+                            <ul className="space-y-1">
+                                {group.options.map((option) => (
+                                    <li key={option.requires.id}>
+                                        <span className="font-mono text-sm tracking-tighter">{option.requires.subject} {option.requires.number}</span>
+                                        <span className="font-medium"> {option.requires.title}</span>
+                                    </li>
+                                ))}
+                            </ul>
+                        )}
+                        {group.note && (
+                            <p className="text-muted-foreground">{group.note}</p>
+                        )}
+                    </li>
+                ))}
+            </ul>
+        </div>
+    );
+}
 
 function convertCourseOfferedIn(offeredIn: string[], condensed = false) {
     const sessions = offeredIn.map(

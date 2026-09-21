@@ -13,18 +13,19 @@ import { elet2025 } from "./seed/elet-2025";
 import {
   gecAttributes,
   gecCourses,
-  gecCatalogRelations,
+  gecCatalogGroups,
   mergeGecConcurrentPairs,
   mergeGecCourses,
 } from "./seed/gec";
 import { info2025 } from "./seed/info-2025";
-import { mergeCstCatalogCourses, mergeCstCatalogConcurrentPairs, cstTechnicalElectiveCandidates, cstCatalogRelations } from "./seed/cst-catalog";
+import { mergeCstCatalogCourses, mergeCstCatalogConcurrentPairs, cstTechnicalElectiveCandidates, cstCatalogGroups } from "./seed/cst-catalog";
 import {
   mergeMgmtConcurrentPairs,
   mergeMgmtCourses,
-  mgmtCatalogRelations,
+  mgmtCatalogGroups,
   mgmtElectives,
 } from "./seed/mgmt";
+import type { PrerequisiteGroupSeed } from "./seed/prerequisite-text";
 
 const INFO_YEARS = [2020, 2021, 2022, 2023, 2024, 2025, 2026] as const;
 const HANDBOOK_YEAR = 2025;
@@ -37,10 +38,10 @@ const concurrentPairs = mergeMgmtConcurrentPairs(
     mergeGecConcurrentPairs(handbookConcurrentPairs),
   ),
 );
-const catalogPrerequisiteRelations = [
-  ...cstCatalogRelations,
-  ...gecCatalogRelations,
-  ...mgmtCatalogRelations,
+const catalogPrerequisiteGroups = [
+  ...cstCatalogGroups,
+  ...gecCatalogGroups,
+  ...mgmtCatalogGroups,
 ];
 
 async function seedDegrees() {
@@ -104,72 +105,80 @@ async function seedCourses() {
     courseIds.set(courseKey(course), row.id);
   }
 
-  for (const [lecture, lab] of concurrentPairs) {
+  await replacePrerequisiteGroups(courseIds, concurrentPairs, catalogPrerequisiteGroups);
+
+  return courseIds;
+}
+
+async function replacePrerequisiteGroups(
+  courseIds: Map<string, string>,
+  pairs: [{ subject: string; number: string }, { subject: string; number: string }][],
+  groups: PrerequisiteGroupSeed[],
+) {
+  await prisma.prerequisiteGroup.deleteMany();
+
+  const sortByCourse = new Map<string, number>();
+  const seen = new Set<string>();
+
+  async function createGroup(
+    courseId: string,
+    isConcurrent: boolean,
+    optionIds: string[],
+    note: string | null,
+  ) {
+    const key = `${courseId}|${isConcurrent}|${[...optionIds].sort().join(",")}|${note ?? ""}`;
+    if (seen.has(key) || (optionIds.length === 0 && !note)) {
+      return;
+    }
+    seen.add(key);
+
+    const sortOrder = sortByCourse.get(courseId) ?? 0;
+    sortByCourse.set(courseId, sortOrder + 1);
+
+    await prisma.prerequisiteGroup.create({
+      data: {
+        courseId,
+        isConcurrent,
+        sortOrder,
+        note,
+        options: {
+          create: optionIds.map((requiresId) => ({ requiresId })),
+        },
+      },
+    });
+  }
+
+  for (const [lecture, lab] of pairs) {
     const lectureId = courseIds.get(courseKey(lecture));
     const labId = courseIds.get(courseKey(lab));
     if (!lectureId || !labId) {
       throw new Error(`Missing concurrent pair ${courseKey(lecture)} / ${courseKey(lab)}`);
     }
 
-    await prisma.coursePrerequisite.upsert({
-      where: {
-        courseId_requiresId: {
-          courseId: lectureId,
-          requiresId: labId,
-        },
-      },
-      update: { isConcurrent: true },
-      create: {
-        courseId: lectureId,
-        requiresId: labId,
-        isConcurrent: true,
-      },
-    });
-
-    await prisma.coursePrerequisite.upsert({
-      where: {
-        courseId_requiresId: {
-          courseId: labId,
-          requiresId: lectureId,
-        },
-      },
-      update: { isConcurrent: true },
-      create: {
-        courseId: labId,
-        requiresId: lectureId,
-        isConcurrent: true,
-      },
-    });
+    await createGroup(lectureId, true, [labId], null);
+    await createGroup(labId, true, [lectureId], null);
   }
 
-  for (const relation of catalogPrerequisiteRelations) {
-    if (relation.isConcurrent) {
-      continue; // already handled via concurrentPairs
+  for (const group of groups) {
+    if (group.isConcurrent && group.options.length === 1) {
+      continue;
     }
 
-    const courseId = courseIds.get(courseKey(relation.course));
-    const requiresId = courseIds.get(courseKey(relation.requires));
-    if (!courseId || !requiresId) {
-      continue; // missing targets stay description-only
+    const courseId = courseIds.get(courseKey(group.course));
+    if (!courseId) {
+      continue;
     }
 
-    await prisma.coursePrerequisite.upsert({
-      where: {
-        courseId_requiresId: {
-          courseId,
-          requiresId,
-        },
-      },
-      update: { isConcurrent: false },
-      create: {
-        courseId,
-        requiresId,
-        isConcurrent: false,
-      },
+    const optionIds = group.options.flatMap((option) => {
+      const requiresId = courseIds.get(courseKey(option));
+      return requiresId ? [requiresId] : [];
     });
-  }
+    if (optionIds.length === 0 && !group.note) {
+      continue;
+    }
 
-  return courseIds;
+    await createGroup(courseId, group.isConcurrent, optionIds, group.note);
+  }
 }
 
 async function seedDepartments() {

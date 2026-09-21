@@ -1,6 +1,7 @@
 import { TermSeason } from "../../lib/generated/prisma/client";
 import { type CourseRef, type CourseSeed, courseKey } from "./courses";
 import ncatMgmtCourses from "./ncat_mgmt_courses_detailed.json";
+import { type PrerequisiteGroupSeed, prerequisiteGroupsFor } from "./prerequisite-text";
 
 /**
  * NCAT catalog search export for MGMT.
@@ -21,14 +22,7 @@ type NcatMgmtCourse = {
   catalog_note?: string;
 };
 
-export type MgmtCourseRelationSeed = {
-  course: CourseRef;
-  requires: CourseRef;
-  isConcurrent: boolean;
-};
-
 const COURSE_CODE = /^([A-Z]{2,8})\s+(\d{3}[A-Z]?)$/;
-const COURSE_TOKEN = /\b([A-Z]{2,8})\s+(\d{3}[A-Z]?)\b/g;
 
 const OFFERED_CODE_TO_SEASON: Record<string, TermSeason> = {
   F: TermSeason.FALL,
@@ -60,24 +54,6 @@ function parseOfferedIn(codes: string[]): TermSeason[] {
   }
 
   return [...seasons];
-}
-
-function extractCourseRefs(text: string): CourseRef[] {
-  return [...text.matchAll(COURSE_TOKEN)].map((match) => ({
-    subject: match[1],
-    number: match[2],
-  }));
-}
-
-/** Only persist unambiguous single-course and AND prerequisite lists. */
-function parseAndCourseRefs(text: string): CourseRef[] | null {
-  const cleaned = text.trim().replace(/\.$/, "");
-  if (!cleaned || /\bor\b/i.test(cleaned)) {
-    return null;
-  }
-
-  const refs = extractCourseRefs(cleaned);
-  return refs.length > 0 ? refs : null;
 }
 
 const catalogRows = (ncatMgmtCourses as NcatMgmtCourse[]).map((row) => {
@@ -117,25 +93,12 @@ export const mgmtElectives: CourseRef[] = mgmtCourses
   .filter((course) => course.number !== "110")
   .map(({ subject, number }) => ({ subject, number }));
 
-export const mgmtCatalogRelations: MgmtCourseRelationSeed[] =
-  catalogRows.flatMap(({ row, course }) => {
-    const relations: MgmtCourseRelationSeed[] = [];
-
-    if (row.corequisites) {
-      for (const requires of parseAndCourseRefs(row.corequisites) ?? []) {
-        relations.push({ course, requires, isConcurrent: true });
-        relations.push({ course: requires, requires: course, isConcurrent: true });
-      }
-    }
-
-    if (row.prerequisites) {
-      for (const requires of parseAndCourseRefs(row.prerequisites) ?? []) {
-        relations.push({ course, requires, isConcurrent: false });
-      }
-    }
-
-    return relations;
-  });
+export const mgmtCatalogGroups: PrerequisiteGroupSeed[] = catalogRows.flatMap(
+  ({ row, course }) => [
+    ...prerequisiteGroupsFor(course, row.corequisites, true),
+    ...prerequisiteGroupsFor(course, row.prerequisites, false),
+  ],
+);
 
 export function mergeMgmtCourses(existing: CourseSeed[]): CourseSeed[] {
   const byKey = new Map(existing.map((course) => [courseKey(course), course]));
@@ -157,16 +120,16 @@ export function mergeMgmtConcurrentPairs(
     pairs.map(([a, b]) => [courseKey(a), courseKey(b)].sort().join("|")),
   );
 
-  for (const relation of mgmtCatalogRelations) {
-    if (!relation.isConcurrent) {
+  for (const group of mgmtCatalogGroups) {
+    if (!group.isConcurrent || group.options.length !== 1) {
       continue;
     }
-    const key = [courseKey(relation.course), courseKey(relation.requires)]
+    const key = [courseKey(group.course), courseKey(group.options[0])]
       .sort()
       .join("|");
     if (!seen.has(key)) {
       seen.add(key);
-      pairs.push([relation.course, relation.requires]);
+      pairs.push([group.course, group.options[0]]);
     }
   }
 

@@ -2,6 +2,7 @@ import { GenEdTag, TermSeason } from "../../lib/generated/prisma/client";
 import { type CourseRef, type CourseSeed, courseKey } from "./courses";
 import { type AttributeSeed } from "./curriculum";
 import ncatGenEdCourses from "./ncat_gen_ed_courses_detailed.json";
+import { type PrerequisiteGroupSeed, prerequisiteGroupsFor } from "./prerequisite-text";
 
 /**
  * NCAT General Education list + catalog details.
@@ -49,14 +50,7 @@ type NcatGenEdCourse = {
   catalog_note?: string;
 };
 
-export type CourseRelationSeed = {
-  course: CourseRef;
-  requires: CourseRef;
-  isConcurrent: boolean;
-};
-
 const COURSE_CODE = /^([A-Z]{2,8})\s+(\d{3}[A-Z]?)$/;
-const COURSE_TOKEN = /\b([A-Z]{2,8})\s+(\d{3}[A-Z]?)\b/g;
 
 const OFFERED_CODE_TO_SEASON: Record<string, TermSeason> = {
   F: TermSeason.FALL,
@@ -135,41 +129,6 @@ function tagsForRow(categories: string[], isLab: boolean): GenEdTag[] {
   return [...tags];
 }
 
-function extractCourseRefs(text: string): CourseRef[] {
-  const refs: CourseRef[] = [];
-  for (const match of text.matchAll(COURSE_TOKEN)) {
-    refs.push({ subject: match[1], number: match[2] });
-  }
-  return refs;
-}
-
-function parseAndPrerequisiteRefs(text: string): CourseRef[] | null {
-  const cleaned = text.trim().replace(/\.$/, "");
-  if (!cleaned || /\bor\b/i.test(cleaned)) {
-    return null;
-  }
-
-  const withoutConsent = cleaned.replace(
-    /\s*(?:,?\s*)?(?:or\s+)?consent(?:\s+of|\s+from)?\s+instructor\.?/gi,
-    "",
-  );
-  if (/\bor\b/i.test(withoutConsent)) {
-    return null;
-  }
-
-  const refs = extractCourseRefs(withoutConsent);
-  return refs.length > 0 ? refs : null;
-}
-
-function parseCorequisiteRefs(text: string): CourseRef[] | null {
-  const cleaned = text.trim().replace(/\.$/, "");
-  if (!cleaned || /\bor\b/i.test(cleaned)) {
-    return null;
-  }
-  const refs = extractCourseRefs(cleaned);
-  return refs.length > 0 ? refs : null;
-}
-
 function isSeedableRow(row: NcatGenEdCourse): boolean {
   return (
     row.catalog_match_status === "matched" &&
@@ -219,35 +178,29 @@ export const gecAttributes: AttributeSeed[] = parsedRows.flatMap(
 const gecCourseKeys = new Set(gecCourses.map(courseKey));
 
 /** Same-subject coreqs (lecture/lab). Cross-subject coreqs stay description-only. */
-export const gecCatalogRelations: CourseRelationSeed[] = parsedRows.flatMap(
+export const gecCatalogGroups: PrerequisiteGroupSeed[] = parsedRows.flatMap(
   ({ course, row }) => {
     const courseRef = { subject: course.subject, number: course.number };
-    const relations: CourseRelationSeed[] = [];
+    const groups = [
+      ...prerequisiteGroupsFor(courseRef, row.corequisites, true),
+      ...prerequisiteGroupsFor(courseRef, row.prerequisites, false),
+    ];
 
-    if (row.corequisites) {
-      for (const requires of parseCorequisiteRefs(row.corequisites) ?? []) {
-        if (requires.subject !== course.subject) {
-          continue;
-        }
-        if (!gecCourseKeys.has(courseKey(requires))) {
-          continue;
-        }
-        relations.push({ course: courseRef, requires, isConcurrent: true });
-        relations.push({
-          course: requires,
-          requires: courseRef,
-          isConcurrent: true,
-        });
+    return groups.flatMap((group) => {
+      if (!group.isConcurrent) {
+        return [group];
       }
-    }
 
-    if (row.prerequisites) {
-      for (const requires of parseAndPrerequisiteRefs(row.prerequisites) ?? []) {
-        relations.push({ course: courseRef, requires, isConcurrent: false });
+      const options = group.options.filter(
+        (option) =>
+          option.subject === course.subject
+          && gecCourseKeys.has(courseKey(option)),
+      );
+      if (options.length === 0 && !group.note) {
+        return [];
       }
-    }
-
-    return relations;
+      return [{ ...group, options }];
+    });
   },
 );
 
@@ -286,18 +239,18 @@ export function mergeGecConcurrentPairs(
   );
   const pairs = [...existing];
 
-  for (const relation of gecCatalogRelations) {
-    if (!relation.isConcurrent) {
+  for (const group of gecCatalogGroups) {
+    if (!group.isConcurrent || group.options.length !== 1) {
       continue;
     }
-    const key = [courseKey(relation.course), courseKey(relation.requires)]
+    const key = [courseKey(group.course), courseKey(group.options[0])]
       .sort()
       .join("|");
     if (seen.has(key)) {
       continue;
     }
     seen.add(key);
-    pairs.push([relation.course, relation.requires]);
+    pairs.push([group.course, group.options[0]]);
   }
 
   return pairs;

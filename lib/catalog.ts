@@ -1,9 +1,37 @@
 import {
+    Prisma,
     RequirementKind,
     type Course,
 } from "./generated/prisma/client";
 import { prisma } from "./prisma";
 import { requireStudentProfile } from "./student";
+
+const courseWithRequirements = {
+    include: {
+        prerequisiteGroups: {
+            orderBy: { sortOrder: "asc" as const },
+            select: {
+                id: true,
+                isConcurrent: true,
+                note: true,
+                options: {
+                    select: {
+                        requires: {
+                            select: {
+                                id: true,
+                                subject: true,
+                                number: true,
+                                title: true,
+                            },
+                        },
+                    },
+                },
+            },
+        },
+    },
+} as const;
+
+type CourseWithRequirements = Prisma.CourseGetPayload<typeof courseWithRequirements>;
 
 const programWithDegree = {
     include: {
@@ -101,7 +129,7 @@ function compareCourses(a: Course, b: Course) {
         || a.number.localeCompare(b.number, undefined, { numeric: true });
 }
 
-function applyMinimumNumber(courses: Course[], minNumber: number | null) {
+function applyMinimumNumber<T extends Pick<Course, "number">>(courses: T[], minNumber: number | null) {
     if (minNumber == null) {
         return courses;
     }
@@ -130,7 +158,9 @@ export async function getCurriculumCourseSections() {
             requiredGenEdTag: true,
             items: {
                 select: {
-                    course: true,
+                    course: {
+                        include: courseWithRequirements.include,
+                    },
                 },
             },
         },
@@ -169,12 +199,17 @@ export async function getCurriculumCourseSections() {
                     catalogYearId,
                     tag: { in: genEdTags },
                 },
-                include: { course: true },
+                include: {
+                    course: {
+                        include: courseWithRequirements.include,
+                    },
+                },
             })
             : [],
         dynamicSubjects.length > 0
             ? prisma.course.findMany({
                 where: { subject: { in: dynamicSubjects } },
+                include: courseWithRequirements.include,
             })
             : [],
     ]);
@@ -188,7 +223,7 @@ export async function getCurriculumCourseSections() {
     );
 
     return groupsWithItems.map(({ items, ...group }) => {
-        let courses: Course[];
+        let courses: CourseWithRequirements[];
 
         switch (group.kind) {
             case RequirementKind.ALL_OF:

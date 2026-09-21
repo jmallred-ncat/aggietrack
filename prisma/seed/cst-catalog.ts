@@ -1,6 +1,7 @@
 import { TermSeason } from "../../lib/generated/prisma/client";
 import { type CourseRef, type CourseSeed, courseKey } from "./courses";
 import ncatCstSearchCourses from "./ncat_cst_search_courses_detailed.json";
+import { type PrerequisiteGroupSeed, prerequisiteGroupsFor } from "./prerequisite-text";
 
 /**
  * NCAT catalog search export for CST.
@@ -14,10 +15,10 @@ import ncatCstSearchCourses from "./ncat_cst_search_courses_detailed.json";
  *   offered_in_codes  → offeredIn (F→FALL, S→SPRING, SS→SUMMER)
  *   isLab             ← inferred from title
  *
- * Maps onto CoursePrerequisite (when both courses exist in the seed):
- *   corequisites      → isConcurrent: true (both directions)
- *   prerequisites     → isConcurrent: false for simple / AND lists only
- *                       (OR groups and class-standing text are left in description)
+ * Maps onto PrerequisiteGroup (when option courses exist in the seed):
+ *   corequisites      → one concurrent group; a single option is also a concurrent pair
+ *   prerequisites     → AND across groups, OR inside a group
+ *                       (scores, standing, consent, and "or higher" stay on the group note)
  *
  * Not stored (no schema field):
  *   source_url
@@ -34,14 +35,7 @@ type NcatSearchCourse = {
   offered_in_codes: string[];
 };
 
-export type CourseRelationSeed = {
-  course: CourseRef;
-  requires: CourseRef;
-  isConcurrent: boolean;
-};
-
 const COURSE_CODE = /^([A-Z]{2,8})\s+(\d{3}[A-Z]?)$/;
-const COURSE_TOKEN = /\b([A-Z]{2,8})\s+(\d{3}[A-Z]?)\b/g;
 
 const OFFERED_CODE_TO_SEASON: Record<string, TermSeason> = {
   F: TermSeason.FALL,
@@ -95,45 +89,6 @@ function parseNcatSearchCourse(row: NcatSearchCourse): CourseSeed {
   };
 }
 
-function extractCourseRefs(text: string): CourseRef[] {
-  const refs: CourseRef[] = [];
-  for (const match of text.matchAll(COURSE_TOKEN)) {
-    refs.push({ subject: match[1], number: match[2] });
-  }
-  return refs;
-}
-
-/** Only seed AND / single-course lists. Skip OR alternatives and standing requirements. */
-function parseAndPrerequisiteRefs(text: string): CourseRef[] | null {
-  const cleaned = text.trim().replace(/\.$/, "");
-  if (!cleaned) {
-    return null;
-  }
-  if (/\bor\b/i.test(cleaned)) {
-    return null;
-  }
-
-  const withoutConsent = cleaned.replace(
-    /\s*(?:,?\s*)?(?:or\s+)?consent(?:\s+of|\s+from)?\s+instructor\.?/gi,
-    "",
-  );
-  if (/\bor\b/i.test(withoutConsent)) {
-    return null;
-  }
-
-  const refs = extractCourseRefs(withoutConsent);
-  return refs.length > 0 ? refs : null;
-}
-
-function parseCorequisiteRefs(text: string): CourseRef[] | null {
-  const cleaned = text.trim().replace(/\.$/, "");
-  if (!cleaned || /\bor\b/i.test(cleaned)) {
-    return null;
-  }
-  const refs = extractCourseRefs(cleaned);
-  return refs.length > 0 ? refs : null;
-}
-
 const catalogRows = (ncatCstSearchCourses as NcatSearchCourse[]).filter(
   (row) => row.course_code.trim().startsWith("CST "),
 );
@@ -145,25 +100,13 @@ export const cstTechnicalElectiveCandidates = cstCatalogCourses.filter(
   (course) => Number.parseInt(course.number, 10) >= 200,
 );
 
-export const cstCatalogRelations: CourseRelationSeed[] = catalogRows.flatMap(
+export const cstCatalogGroups: PrerequisiteGroupSeed[] = catalogRows.flatMap(
   (row) => {
     const course = parseCourseCode(row.course_code);
-    const relations: CourseRelationSeed[] = [];
-
-    if (row.corequisites) {
-      for (const requires of parseCorequisiteRefs(row.corequisites) ?? []) {
-        relations.push({ course, requires, isConcurrent: true });
-        relations.push({ course: requires, requires: course, isConcurrent: true });
-      }
-    }
-
-    if (row.prerequisites) {
-      for (const requires of parseAndPrerequisiteRefs(row.prerequisites) ?? []) {
-        relations.push({ course, requires, isConcurrent: false });
-      }
-    }
-
-    return relations;
+    return [
+      ...prerequisiteGroupsFor(course, row.corequisites, true),
+      ...prerequisiteGroupsFor(course, row.prerequisites, false),
+    ];
   },
 );
 
@@ -199,18 +142,18 @@ export function mergeCstCatalogConcurrentPairs(
   );
   const pairs = [...existing];
 
-  for (const relation of cstCatalogRelations) {
-    if (!relation.isConcurrent) {
+  for (const group of cstCatalogGroups) {
+    if (!group.isConcurrent || group.options.length !== 1) {
       continue;
     }
-    const key = [courseKey(relation.course), courseKey(relation.requires)]
+    const key = [courseKey(group.course), courseKey(group.options[0])]
       .sort()
       .join("|");
     if (seen.has(key)) {
       continue;
     }
     seen.add(key);
-    pairs.push([relation.course, relation.requires]);
+    pairs.push([group.course, group.options[0]]);
   }
 
   return pairs;
