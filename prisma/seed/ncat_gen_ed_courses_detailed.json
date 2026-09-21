@@ -1,0 +1,2156 @@
+[
+  {
+    "course_code": "ACCT 201",
+    "gen_ed_listed_titles": [
+      "Accounting Seminar (formerly ACCT 301)"
+    ],
+    "gen_ed_categories": [
+      "SS"
+    ],
+    "course_name": "Accounting Colloquium I",
+    "total_credits": 1,
+    "description": "This course introduces accounting majors to the accounting profession and to the resources needed to prepare for an accounting career. Topics covered include exposure to varied career opportunities in the accounting profession; preparation for the professional examinations; development of presentation and analytical skills; and identification/discussion of current and emerging issues in the profession. Additionally, learning assurance assessment activities will be conducted as needed.",
+    "prerequisites": "Sophomore standing and Accounting major.",
+    "corequisites": null,
+    "offered_in_codes": [
+      "F",
+      "S"
+    ],
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=47978",
+    "catalog_match_status": "matched"
+  },
+  {
+    "course_code": "ASME 234",
+    "gen_ed_listed_titles": [
+      "Weather and Climate Studies (formerly EES 234)"
+    ],
+    "gen_ed_categories": [
+      "SR"
+    ],
+    "course_name": "Weather and Climate Studies",
+    "total_credits": 3,
+    "description": "This course provides an opportunity for students to develop skills in the principles and processes of scientific inquiry through application of the scientific method to analyze phenomena, issues, and problems related to meteorology and climatology along with their societal impact.",
+    "prerequisites": null,
+    "corequisites": null,
+    "offered_in_codes": [
+      "F",
+      "S",
+      "SS"
+    ],
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=48194",
+    "catalog_match_status": "matched"
+  },
+  {
+    "course_code": "BIOL 100",
+    "gen_ed_listed_titles": [
+      "Biological Science"
+    ],
+    "gen_ed_categories": [
+      "SR"
+    ],
+    "course_name": "Biological Science",
+    "total_credits": 4,
+    "description": "This is a general education course that stresses the objectives presented under the general education program of the University. This course stresses central concepts in biology including; basic chemical and physical phenomena, biochemistry, cell form and function, genetics, evolution, and multicellular organization. The laboratory will examine major biological concepts. Biological Science is not open to Biology majors.",
+    "prerequisites": null,
+    "corequisites": null,
+    "offered_in_codes": [
+      "F",
+      "S",
+      "SS"
+    ],
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=48237",
+    "catalog_match_status": "matched"
+  },
+  {
+    "course_code": "BIOL 101",
+    "gen_ed_listed_titles": [
+      "Concepts of Biology I"
+    ],
+    "gen_ed_categories": [
+      "SR"
+    ],
+    "course_name": "Concepts of Biology I",
+    "total_credits": 4,
+    "description": "This course is an introduction to science and the scientific method, basic biochemistry, cell structure and function, energy and metabolism, reproduction and genetics for those students planning to enroll in additional major courses in the biological sciences. The laboratory will emphasize central biological concepts.",
+    "prerequisites": "CHEM 103 or CHEM 106.",
+    "corequisites": null,
+    "offered_in_codes": [
+      "F",
+      "S",
+      "SS"
+    ],
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=48238",
+    "catalog_match_status": "matched"
+  },
+  {
+    "course_code": "BIOL 102",
+    "gen_ed_listed_titles": [
+      "Concepts of Biology II"
+    ],
+    "gen_ed_categories": [
+      "SR"
+    ],
+    "course_name": "Concepts of Biology II",
+    "total_credits": 4,
+    "description": "This course is a continuation of BIOL 101. It will include an introduction to evolution, basic ecological principles, and a survey of the diversity of life. The laboratory will survey life’s diversity.",
+    "prerequisites": "BIOL 101.",
+    "corequisites": null,
+    "offered_in_codes": [
+      "F",
+      "S",
+      "SS"
+    ],
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=48239",
+    "catalog_match_status": "matched"
+  },
+  {
+    "course_code": "BIOL 105",
+    "gen_ed_listed_titles": [
+      "Biology Orientation I"
+    ],
+    "gen_ed_categories": [
+      "SS"
+    ],
+    "course_name": "Biology Orientation",
+    "total_credits": 1,
+    "description": "This course will introduce students to the university and the Department of Biology. Special emphasis will be placed on succeeding as a biology major, the challenges and expectations, effective study skills, university support services, and university policies and procedures. Students are expected to leave the course with an awareness of how to cope with and overcome the demands of college life and to take advantage of opportunities at the university. Restricted to biology majors.",
+    "prerequisites": null,
+    "corequisites": null,
+    "offered_in_codes": [
+      "F",
+      "S"
+    ],
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=48240",
+    "catalog_match_status": "matched"
+  },
+  {
+    "course_code": "BIOL 205",
+    "gen_ed_listed_titles": [
+      "Biology Orientation II"
+    ],
+    "gen_ed_categories": [
+      "SS"
+    ],
+    "course_name": "Biology Orientation II",
+    "total_credits": 1,
+    "description": "This course is a continuation of BIOL 105. Emphasis will be placed on effective study skills, career planning, professional development, university support services, and university policies and procedures. Students are expected to leave the course with an awareness of career options in the biological sciences, requirements for pursuing advanced studies, and job-seeking skills. The course is restricted to biology majors.",
+    "prerequisites": "BIOL 105 or FRST 100, Biology major.",
+    "corequisites": null,
+    "offered_in_codes": [
+      "F",
+      "S"
+    ],
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=48242",
+    "catalog_match_status": "matched"
+  },
+  {
+    "course_code": "CAEE 121",
+    "gen_ed_listed_titles": [
+      "Civil: Architectural: and Environmental Engineering Colloquium II"
+    ],
+    "gen_ed_categories": [
+      "SS"
+    ],
+    "course_name": "CAEE Colloquium",
+    "total_credits": 1,
+    "description": "This course includes lectures, seminars and activities important to the retention and matriculation of civil and architectural engineering students. Topics covered include learning styles, group dynamics, and career development. Students are also provided with group advisement regarding department, college, and university-level policies and procedures.",
+    "prerequisites": null,
+    "corequisites": null,
+    "offered_in_codes": [
+      "F",
+      "S",
+      "SS"
+    ],
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=48323",
+    "catalog_match_status": "matched"
+  },
+  {
+    "course_code": "CHEM 100",
+    "gen_ed_listed_titles": [
+      "Physical Science"
+    ],
+    "gen_ed_categories": [
+      "SR"
+    ],
+    "course_name": "Physical Science",
+    "total_credits": 3,
+    "description": "This is a one semester introductory course designed to make clear the nature of science as an enterprise and illustrate by numerous examples how science really proceeds. Learning experiences are constructed so that they closely approximate real life situations where one has to search for clues and insights from a variety of sources. This course is not open to students who have received credit for CHEM 103, CHEM 104, CHEM 105, CHEM 106, or CHEM 107.",
+    "prerequisites": null,
+    "corequisites": null,
+    "offered_in_codes": [
+      "F",
+      "S",
+      "SS"
+    ],
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=48378",
+    "catalog_match_status": "matched"
+  },
+  {
+    "course_code": "CHEM 104",
+    "gen_ed_listed_titles": [
+      "General Chemistry IV"
+    ],
+    "gen_ed_categories": [
+      "SR"
+    ],
+    "course_name": "Basic General, Organic and Biochemistry I",
+    "total_credits": 3,
+    "description": "This course is an introduction to fundamental techniques and concepts in chemistry, including writing and interpretation of symbols, formulas, equations, atomic structure, composition and reactions of inorganic compounds. This course is not open to majors in chemistry, physics, biology, mathematics and engineering.",
+    "prerequisites": "SAT MATH score of 490 or SAT Subject MATH Level II score of 470 or ACT MATH score of 19 or CHEM 103 with a grade of C or better.",
+    "corequisites": "CHEM 114.",
+    "offered_in_codes": [
+      "F",
+      "S",
+      "SS"
+    ],
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=48380",
+    "catalog_match_status": "matched"
+  },
+  {
+    "course_code": "CHEM 106",
+    "gen_ed_listed_titles": [
+      "General Chemistry VI"
+    ],
+    "gen_ed_categories": [
+      "SR"
+    ],
+    "course_name": "General Chemistry VI",
+    "total_credits": 3,
+    "description": "This is a course which emphasizes basic principles and important theoretical concepts of chemistry. Topics will include atomic structure, electronic configuration, the wave mechanical model of the atom, chemical bonding, states of matter, chemical equilibria, systems of acids and bases, and electrochemistry.",
+    "prerequisites": "2 units of high school algebra or equivalent, and 1 unit of high school chemistry or CHEM 103.",
+    "corequisites": "CHEM 116.",
+    "offered_in_codes": [
+      "F",
+      "S",
+      "SS"
+    ],
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=48382",
+    "catalog_match_status": "matched"
+  },
+  {
+    "course_code": "CHEM 107",
+    "gen_ed_listed_titles": [
+      "General Chemistry VII"
+    ],
+    "gen_ed_categories": [
+      "SR"
+    ],
+    "course_name": "General Chemistry VII",
+    "total_credits": 3,
+    "description": "This course is a continuation of CHEM 106. It includes chemistry of important metals and nonmetals and a rigorous treatment of qualitative inorganic analysis.",
+    "prerequisites": "CHEM 106 or equivalent.",
+    "corequisites": "CHEM 117.",
+    "offered_in_codes": [
+      "F",
+      "S",
+      "SS"
+    ],
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=48383",
+    "catalog_match_status": "matched"
+  },
+  {
+    "course_code": "CHEM 108",
+    "gen_ed_listed_titles": [
+      "Chemistry Orientation"
+    ],
+    "gen_ed_categories": [
+      "SS"
+    ],
+    "course_name": "Chemistry Orientation",
+    "total_credits": 1,
+    "description": "This course is a series of lectures and discussions on the nature and requirements of the chemical profession the application of chemistry to modern living, and other selected topics.",
+    "prerequisites": null,
+    "corequisites": null,
+    "offered_in_codes": [
+      "F"
+    ],
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=48384",
+    "catalog_match_status": "matched"
+  },
+  {
+    "course_code": "CHEM 110",
+    "gen_ed_listed_titles": [
+      "Physical Science Lab"
+    ],
+    "gen_ed_categories": [
+      "SR"
+    ],
+    "course_name": "Physical Science Laboratory",
+    "total_credits": 1,
+    "description": "This is a laboratory course designed to bring students into working contact with the essential aspects of scientific experiences. In this course the student develops concrete ideas about the operational meaning of the scientific method and problem solving.",
+    "prerequisites": null,
+    "corequisites": "CHEM 100. This course is not open to students who have received",
+    "offered_in_codes": [
+      "F",
+      "S",
+      "SS"
+    ],
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=48385",
+    "catalog_match_status": "matched",
+    "catalog_note": "The catalog corequisite field includes an unfinished enrollment restriction; the source text is preserved."
+  },
+  {
+    "course_code": "CHEM 114",
+    "gen_ed_listed_titles": [
+      "General Chemistry IV Lab"
+    ],
+    "gen_ed_categories": [
+      "SR"
+    ],
+    "course_name": "General Chemistry IV Laboratory",
+    "total_credits": 1,
+    "description": "This course is a study of inorganic reaction and substances and their relation to the processes.",
+    "prerequisites": null,
+    "corequisites": "CHEM 104.",
+    "offered_in_codes": [
+      "F",
+      "S",
+      "SS"
+    ],
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=48386",
+    "catalog_match_status": "matched"
+  },
+  {
+    "course_code": "CHEM 116",
+    "gen_ed_listed_titles": [
+      "General Chemistry VI Lab"
+    ],
+    "gen_ed_categories": [
+      "SR"
+    ],
+    "course_name": "General Chemistry VI Laboratory",
+    "total_credits": 1,
+    "description": "This is a course which emphasizes quantitative studies of chemical reactions such as acid-base studies, redox reactions, and equilibrium reactions. Emphasis is also placed on the development of manipulative skills in the laboratory.",
+    "prerequisites": null,
+    "corequisites": "CHEM 106.",
+    "offered_in_codes": [
+      "F",
+      "S",
+      "SS"
+    ],
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=48388",
+    "catalog_match_status": "matched"
+  },
+  {
+    "course_code": "CHEM 117",
+    "gen_ed_listed_titles": [
+      "General Chemistry VII Lab"
+    ],
+    "gen_ed_categories": [
+      "SR"
+    ],
+    "course_name": "General Chemistry VII Laboratory",
+    "total_credits": 1,
+    "description": "This is a continuation of CHEM 116 with an introduction to qualitative analysis.",
+    "prerequisites": "CHEM 116.",
+    "corequisites": "CHEM 107.",
+    "offered_in_codes": [
+      "F",
+      "S",
+      "SS"
+    ],
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=48389",
+    "catalog_match_status": "matched"
+  },
+  {
+    "course_code": "COMP 121",
+    "gen_ed_listed_titles": [
+      "Computer Science Freshman Colloquium"
+    ],
+    "gen_ed_categories": [
+      "SS"
+    ],
+    "course_name": "Computer Science Freshmen Colloquium",
+    "total_credits": 1,
+    "description": "This course includes lectures, seminars and activities important to the retention and matriculation of computer science students. Topics covered include learning styles, group dynamics, computer science history, and career development. Students are also provided with group advisement regarding department, college, and university-level policies and procedures.",
+    "prerequisites": null,
+    "corequisites": null,
+    "offered_in_codes": [
+      "F",
+      "S",
+      "SS"
+    ],
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=48518",
+    "catalog_match_status": "matched"
+  },
+  {
+    "course_code": "ECEN 121",
+    "gen_ed_listed_titles": [
+      "Electrical and Computer Engineering Freshman Colloquium"
+    ],
+    "gen_ed_categories": [
+      "SS"
+    ],
+    "course_name": "Electrical and Computer Engineering Freshman Colloquium",
+    "total_credits": null,
+    "description": null,
+    "prerequisites": null,
+    "corequisites": null,
+    "offered_in_codes": [],
+    "source_url": null,
+    "catalog_match_status": "not_found",
+    "catalog_note": "Listed on the general education page, but this course code was not found in the course index or department filter for catalog 19. Catalog fields are unknown."
+  },
+  {
+    "course_code": "ECON 200",
+    "gen_ed_listed_titles": [
+      "Introductory Microeconomics"
+    ],
+    "gen_ed_categories": [
+      "SBS"
+    ],
+    "course_name": "Principles of Economics (Micro)",
+    "total_credits": 3,
+    "description": "This course introduces principles of economics related to individual segments of the society. Emphasis will be placed upon scarcity, supply and demand, consumer behavior, business firms and market structures. Approved for General Education Social and Behavioral Sciences category.",
+    "prerequisites": null,
+    "corequisites": null,
+    "offered_in_codes": [
+      "F",
+      "S",
+      "SS"
+    ],
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=48748",
+    "catalog_match_status": "matched"
+  },
+  {
+    "course_code": "ECON 201",
+    "gen_ed_listed_titles": [
+      "Introductory Macroeconomics"
+    ],
+    "gen_ed_categories": [
+      "SBS"
+    ],
+    "course_name": "Principles of Economics (Macro)",
+    "total_credits": 3,
+    "description": "This course introduces principles of economics related to the economy. National income determination, inflation, unemployment, monetary and fiscal policies, and the basics of international economic relations are examined. Approved for General Education Social and Behavioral Sciences category.",
+    "prerequisites": null,
+    "corequisites": null,
+    "offered_in_codes": [
+      "F",
+      "S",
+      "SS"
+    ],
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=48749",
+    "catalog_match_status": "matched"
+  },
+  {
+    "course_code": "EDPR 102",
+    "gen_ed_listed_titles": [
+      "Introduction to Teacher Education I (formerly CUIN 102)"
+    ],
+    "gen_ed_categories": [
+      "SS"
+    ],
+    "course_name": "Introduction to Teacher Education I",
+    "total_credits": 2,
+    "description": "This course is designed to provide prospective (new and freshman) teacher education students with an orientation to the Educator Preparation Program requirements and to assist them in preparation for the Praxis I (mathematics, reading and writing) examinations. This course is required of all undergraduate prospective teacher education majors. Students are required to have 6 hours of computer practice time per week. Grade: Pass/Fail.",
+    "prerequisites": null,
+    "corequisites": null,
+    "offered_in_codes": [
+      "F",
+      "S",
+      "SS"
+    ],
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=48777",
+    "catalog_match_status": "matched"
+  },
+  {
+    "course_code": "ENGL 100",
+    "gen_ed_listed_titles": [
+      "Ideas and their Expressions I"
+    ],
+    "gen_ed_categories": [
+      "WC"
+    ],
+    "course_name": "Ideas and Their Expression I",
+    "total_credits": 3,
+    "description": "This course helps prepare students for academic work by:",
+    "prerequisites": null,
+    "corequisites": null,
+    "offered_in_codes": [
+      "F",
+      "S"
+    ],
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=47921",
+    "catalog_match_status": "matched"
+  },
+  {
+    "course_code": "ENGL 101",
+    "gen_ed_listed_titles": [
+      "Ideas and their Expressions II"
+    ],
+    "gen_ed_categories": [
+      "WC"
+    ],
+    "course_name": "Ideas and Their Expression II",
+    "total_credits": 3,
+    "description": "This course continues the student’s growth as a writer through:",
+    "prerequisites": "ENGL 100.",
+    "corequisites": null,
+    "offered_in_codes": [],
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=48831",
+    "catalog_match_status": "matched",
+    "catalog_note": "The catalog description ends with an unfinished phrase (through:); the source text is preserved."
+  },
+  {
+    "course_code": "ENGL 200",
+    "gen_ed_listed_titles": [
+      "Survey of Humanities I"
+    ],
+    "gen_ed_categories": [
+      "HFA"
+    ],
+    "course_name": "Survey of Humanities I",
+    "total_credits": 3,
+    "description": "This course is a study of interrelationships of literature, music, and the fine arts; it is a study of master works, philosophical ideas, and artistic movements of Western Civilization, with attention given also to non-Western culture. It will survey cultures from ancient times to the end of the Renaissance.",
+    "prerequisites": "ENGL 101.",
+    "corequisites": null,
+    "offered_in_codes": [
+      "F",
+      "S",
+      "SS"
+    ],
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=48835",
+    "catalog_match_status": "matched"
+  },
+  {
+    "course_code": "ENGL 201",
+    "gen_ed_listed_titles": [
+      "Survey of Humanities II"
+    ],
+    "gen_ed_categories": [
+      "HFA"
+    ],
+    "course_name": "Survey of Humanities II",
+    "total_credits": 3,
+    "description": "This course is a continuation of ENGL 200. It will begin with the Baroque period and will include Neo-Classicism. Romanticism, and modern modes of artistic expression.",
+    "prerequisites": "ENGL 101.",
+    "corequisites": null,
+    "offered_in_codes": [
+      "F",
+      "S",
+      "SS"
+    ],
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=48836",
+    "catalog_match_status": "matched"
+  },
+  {
+    "course_code": "ENGL 211",
+    "gen_ed_listed_titles": [
+      "Survey of African American Literature I (formerly ENGL 333)"
+    ],
+    "gen_ed_categories": [
+      "HFA",
+      "AA"
+    ],
+    "course_name": "Survey of African-American Literature I",
+    "total_credits": 3,
+    "description": "This course is the study of prose, poetry, and drama by American authors of African ancestry from the 18th century to the turn of the 20th century. Students will explore African-American literature, tracing its origins through the Diaspora and the period of slavery in America to the beginning of the 20th century. Important movements, authors, and works will be examined in both a literary and historical sense so that an understanding and knowledge of the Black experience through its literature may be acquired.",
+    "prerequisites": "ENGL 101.",
+    "corequisites": null,
+    "offered_in_codes": [
+      "F",
+      "S"
+    ],
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=48854",
+    "catalog_match_status": "matched"
+  },
+  {
+    "course_code": "ENGL 212",
+    "gen_ed_listed_titles": [
+      "Survey of African American Literature II (formerly ENGL 334)"
+    ],
+    "gen_ed_categories": [
+      "HFA",
+      "AA"
+    ],
+    "course_name": "Survey of African-American Literature II",
+    "total_credits": 3,
+    "description": "This is a survey course focusing on literature written by African-Americans from the beginning of the 20th century to the present. Students will study exciting literary periods, such as the Harlem Renaissance and the Black Arts Movement, as well as modern and contemporary Black writers. Important movements, authors, and works will be examined in both a literary and historical sense.",
+    "prerequisites": "ENGL 101.",
+    "corequisites": null,
+    "offered_in_codes": [
+      "F",
+      "S"
+    ],
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=48855",
+    "catalog_match_status": "matched"
+  },
+  {
+    "course_code": "ENGL 230",
+    "gen_ed_listed_titles": [
+      "World Literature I"
+    ],
+    "gen_ed_categories": [
+      "HFA"
+    ],
+    "course_name": "World Literature I",
+    "total_credits": 3,
+    "description": "This course is a survey of selected major world writers from ancient times to about 1600.",
+    "prerequisites": "ENGL 101.",
+    "corequisites": null,
+    "offered_in_codes": [
+      "F"
+    ],
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=48888",
+    "catalog_match_status": "matched"
+  },
+  {
+    "course_code": "ENGL 231",
+    "gen_ed_listed_titles": [
+      "World Literature II"
+    ],
+    "gen_ed_categories": [
+      "HFA"
+    ],
+    "course_name": "World Literature II",
+    "total_credits": 3,
+    "description": "This course surveys selected major world writers from about 1600 to the present, excluding English and American.",
+    "prerequisites": "ENGL 101.",
+    "corequisites": null,
+    "offered_in_codes": [
+      "S"
+    ],
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=48889",
+    "catalog_match_status": "matched"
+  },
+  {
+    "course_code": "ENVS 201",
+    "gen_ed_listed_titles": [
+      "The Earth's Environment (formerly EASC 201)"
+    ],
+    "gen_ed_categories": [
+      "SR"
+    ],
+    "course_name": "The Earth’s Environment",
+    "total_credits": 3,
+    "description": "This course is a study of the earth’s system as related to atmosphere, biosphere, hydrosphere and lithosphere. The interrelationship of humans with the earth’s environment as revealed in the modification of natural processes will also be examined.",
+    "prerequisites": "Consent of the instructor.",
+    "corequisites": null,
+    "offered_in_codes": [
+      "F",
+      "S",
+      "SS"
+    ],
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=48922",
+    "catalog_match_status": "matched"
+  },
+  {
+    "course_code": "FCS 135",
+    "gen_ed_listed_titles": [
+      "Food and Man's Survival"
+    ],
+    "gen_ed_categories": [
+      "SBS"
+    ],
+    "course_name": "Food and Man’s Survival",
+    "total_credits": 3,
+    "description": "This course acquaints students with the most common information regarding foods, nutrition and health, with attempts to dispel misconceptions about food properties and factors affecting the quality of foods. Areas of discussion include mankind’s struggle for foods; chemical additives and food safety; modern food preservation; organic and health foods; and nutrition and the consumer.",
+    "prerequisites": null,
+    "corequisites": null,
+    "offered_in_codes": [
+      "F",
+      "S",
+      "SS"
+    ],
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=48938",
+    "catalog_match_status": "matched"
+  },
+  {
+    "course_code": "FCS 160",
+    "gen_ed_listed_titles": [
+      "Introduction to Family and Consumer Sciences"
+    ],
+    "gen_ed_categories": [
+      "SS"
+    ],
+    "course_name": "Introduction to Family and Consumer Sciences",
+    "total_credits": 2,
+    "description": "This course is designed to assist students in making personal adjustments to college living; it provides an introduction to the broad areas of family and consumer sciences and a study of the curricula and professional opportunities in the field.",
+    "prerequisites": null,
+    "corequisites": null,
+    "offered_in_codes": [
+      "F",
+      "S"
+    ],
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=48943",
+    "catalog_match_status": "matched"
+  },
+  {
+    "course_code": "FCS 181",
+    "gen_ed_listed_titles": [
+      "Social-Psychological Aspects of Dress"
+    ],
+    "gen_ed_categories": [
+      "SBS"
+    ],
+    "course_name": "Social-Psychological Aspects of Dress",
+    "total_credits": 3,
+    "description": "This course is a basic study of the social, psychological, cultural and economic influences on contemporary fashions.",
+    "prerequisites": null,
+    "corequisites": null,
+    "offered_in_codes": [
+      "S"
+    ],
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=48945",
+    "catalog_match_status": "matched"
+  },
+  {
+    "course_code": "FCS 260",
+    "gen_ed_listed_titles": [
+      "Introduction to Human Development"
+    ],
+    "gen_ed_categories": [
+      "SBS"
+    ],
+    "course_name": "Introduction to Human Development",
+    "total_credits": 3,
+    "description": "This course is an introduction to the human development process covering the life span from prenatal, childhood, adolescence, adulthood, and aging through death. The social, psychological, cognitive, physical and moral characteristics of each stage are studied.",
+    "prerequisites": null,
+    "corequisites": null,
+    "offered_in_codes": [
+      "F",
+      "S",
+      "SS"
+    ],
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=48951",
+    "catalog_match_status": "matched"
+  },
+  {
+    "course_code": "FIN 279",
+    "gen_ed_listed_titles": [
+      "Personal Finance (formerly BUED 279 & BUED 379)"
+    ],
+    "gen_ed_categories": [
+      "SBS"
+    ],
+    "course_name": "Personal Finance",
+    "total_credits": 3,
+    "description": "This course examines the challenges faced by individuals in managing personal incomes and expenditures. Emphasis is placed upon credit, budgeting, borrowing, saving, and insurance.",
+    "prerequisites": "Sophomore standing.",
+    "corequisites": null,
+    "offered_in_codes": [
+      "S"
+    ],
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=49045",
+    "catalog_match_status": "matched"
+  },
+  {
+    "course_code": "FRST 101",
+    "gen_ed_listed_titles": [
+      "College Success"
+    ],
+    "gen_ed_categories": [
+      "SS"
+    ],
+    "course_name": "College Success",
+    "total_credits": 1,
+    "description": "This course is a one credit-hour course that empowers students to effectively transition to meeting the demands of higher education, to acquire technical skills and study skills for maximum academic achievement, and to develop an efficient pathway for reaching professional and personal goals. Through in-class discussions, activities, and assignments students will be oriented to campus resources, learn academic policies and procedures and create a clear educational pathway.",
+    "prerequisites": null,
+    "corequisites": null,
+    "offered_in_codes": [],
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=47927",
+    "catalog_match_status": "matched"
+  },
+  {
+    "course_code": "GEEN 111",
+    "gen_ed_listed_titles": [
+      "College of Engineering Colloquium I"
+    ],
+    "gen_ed_categories": [
+      "SS"
+    ],
+    "course_name": "College of Engineering Colloquium I",
+    "total_credits": 1,
+    "description": "This course includes lectures, seminars, and activities important to the retention and matriculation of students in the college of engineering. Students are introduced to various engineering and computer science degree programs and their respective professions, and are also provided with group advisement regarding department, college, and university-level policies and procedures.",
+    "prerequisites": null,
+    "corequisites": null,
+    "offered_in_codes": [],
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=49146",
+    "catalog_match_status": "matched"
+  },
+  {
+    "course_code": "GEEN 121",
+    "gen_ed_listed_titles": [
+      "College of Engineering Colloquium II"
+    ],
+    "gen_ed_categories": [
+      "SS"
+    ],
+    "course_name": "College of Engineering Colloquium II",
+    "total_credits": 1,
+    "description": "This course includes lectures, seminars and activities important to the retention and matriculation of engineering students. Topics covered include learning styles, group dynamics, and career development. Students are also provided with group advisement regarding department, colllege, and university-level policies and procedures.",
+    "prerequisites": null,
+    "corequisites": null,
+    "offered_in_codes": [],
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=49147",
+    "catalog_match_status": "matched"
+  },
+  {
+    "course_code": "HIST 103",
+    "gen_ed_listed_titles": [
+      "NC A&T State University History: A Legacy of Social Activism and Aggie Pride (formerly HIST 203)"
+    ],
+    "gen_ed_categories": [
+      "AA",
+      "SBS"
+    ],
+    "course_name": "North Carolina A&T State University: A Legacy of Social Activism and Aggie Pride (formerly HIST 203)",
+    "total_credits": 3,
+    "description": "This course examines establishment and evolution of North Carolina A&T State University within the context of the development of American higher education. With the use of various primary and secondary sources, students will gain a greater knowledge of the development and growth of the institution during major historical periods by examining past and present leaders, facilities, programs, and accomplished alumni. Attention will be given to the impact of the University and its alumni on political, social, economic, and intellectual development at the local, national, and international levels. Emphasis is placed on the institution’s and activists’ impact on the Civil Rights movement and the pivotal role that each played. The course will also explore relevant contemporary issues and the institution’s global perspective in the new millennium.",
+    "prerequisites": null,
+    "corequisites": null,
+    "offered_in_codes": [
+      "F",
+      "S",
+      "SS"
+    ],
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=49183",
+    "catalog_match_status": "matched"
+  },
+  {
+    "course_code": "HIST 104",
+    "gen_ed_listed_titles": [
+      "U.S. History from 1492-1877 (formerly HIST 204)"
+    ],
+    "gen_ed_categories": [
+      "SBS"
+    ],
+    "course_name": "U.S. History From 1492-1877 (formerly HIST 204)",
+    "total_credits": 3,
+    "description": "This course examines the basic diplomatic, political, economic and sociocultural forces in the formation and development of the United States to 1877. Emphasis is placed upon political developments within a broad economic, social and cultural context.",
+    "prerequisites": null,
+    "corequisites": null,
+    "offered_in_codes": [
+      "F",
+      "S",
+      "SS"
+    ],
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=49184",
+    "catalog_match_status": "matched"
+  },
+  {
+    "course_code": "HIST 105",
+    "gen_ed_listed_titles": [
+      "U.S. History from 1877-Present (formerly HIST 205)"
+    ],
+    "gen_ed_categories": [
+      "SBS"
+    ],
+    "course_name": "U.S. History Since 1877 (formerly HIST 205)",
+    "total_credits": 3,
+    "description": "This course continues the examination of basic diplomatic, political, economic and sociocultural forces in the development of the United States since 1877. Study of these major historical elements is pursued in an effort to help students to better understand the problems and challenges of contemporary American life, both domestic and foreign.",
+    "prerequisites": null,
+    "corequisites": null,
+    "offered_in_codes": [
+      "F",
+      "S",
+      "SS"
+    ],
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=49185",
+    "catalog_match_status": "matched"
+  },
+  {
+    "course_code": "HIST 106",
+    "gen_ed_listed_titles": [
+      "African American History to 1877 (formerly HIST 201)"
+    ],
+    "gen_ed_categories": [
+      "AA",
+      "SBS"
+    ],
+    "course_name": "African-American History to 1877 (formerly HIST 201)",
+    "total_credits": 3,
+    "description": "This is a survey of the history of African-Americans in the United States from the African background through the Civil War. The emphasis is on American slavery, the abolition movement, the free African-American community, Civil War, Emancipation, and Reconstruction.",
+    "prerequisites": null,
+    "corequisites": null,
+    "offered_in_codes": [
+      "F",
+      "S",
+      "SS"
+    ],
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=49186",
+    "catalog_match_status": "matched"
+  },
+  {
+    "course_code": "HIST 107",
+    "gen_ed_listed_titles": [
+      "African American History 1877 to the Present (formerly HIST 202)"
+    ],
+    "gen_ed_categories": [
+      "AA",
+      "SBS"
+    ],
+    "course_name": "African-American History Since 1877 (formerly HIST 202)",
+    "total_credits": 3,
+    "description": "This course emphasizes African-American leadership organizations, achievement, and the struggle of African-Americans for equality in the United States since 1877.",
+    "prerequisites": null,
+    "corequisites": null,
+    "offered_in_codes": [
+      "F",
+      "S",
+      "SS"
+    ],
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=49187",
+    "catalog_match_status": "matched"
+  },
+  {
+    "course_code": "HIST 130",
+    "gen_ed_listed_titles": [
+      "The Contemporary Global Experience (formerly The World Since 1945)"
+    ],
+    "gen_ed_categories": [
+      "GL"
+    ],
+    "course_name": "The Contemporary Global Experience",
+    "total_credits": 3,
+    "description": "This course examines the social, economic, political, and cultural and environmental forces that shape our individual and collective experiences in these times and in different parts of the world. Students will learn how current conditions across the globe have been shaped by recent historical developments and will be introduced to concepts enabling them to grasp the contemporary global experience.",
+    "prerequisites": null,
+    "corequisites": null,
+    "offered_in_codes": [
+      "F",
+      "S",
+      "SS"
+    ],
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=49188",
+    "catalog_match_status": "matched"
+  },
+  {
+    "course_code": "HIST 206",
+    "gen_ed_listed_titles": [
+      "Pre-Modern World History (formerly HIST 100)",
+      "Pre-Modern World History"
+    ],
+    "gen_ed_categories": [
+      "GL",
+      "SBS"
+    ],
+    "course_name": "The World to 1400 (formerly HIST 100)",
+    "total_credits": 3,
+    "description": "This course examines the social, political, economic, religious, and cultural developments of the pre-modern world, from prehistory to 1400 C.E. and the beginning of the period of transition to modern.",
+    "prerequisites": null,
+    "corequisites": null,
+    "offered_in_codes": [],
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=49189",
+    "catalog_match_status": "matched"
+  },
+  {
+    "course_code": "HIST 207",
+    "gen_ed_listed_titles": [
+      "Modern World History (formerly HIST 101)",
+      "Modern World History"
+    ],
+    "gen_ed_categories": [
+      "GL",
+      "SBS"
+    ],
+    "course_name": "The World Since 1400 (formerly HIST 101)",
+    "total_credits": 3,
+    "description": "This course begins in 1400 C.E. and examines the social, political, economic, religious, and cultural developments that contributed to the making of the modern world.",
+    "prerequisites": null,
+    "corequisites": null,
+    "offered_in_codes": [],
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=49190",
+    "catalog_match_status": "matched"
+  },
+  {
+    "course_code": "HIST 216",
+    "gen_ed_listed_titles": [
+      "African History Since 1800"
+    ],
+    "gen_ed_categories": [
+      "GL",
+      "SBS"
+    ],
+    "course_name": "History of Africa Since 1800",
+    "total_credits": 3,
+    "description": "This course is a general survey of the history of Africa since 1800. Major areas of study include the slave trade, the underdevelopment of Africa, Western imperialism and the African partition, and the growth of nationalism.",
+    "prerequisites": null,
+    "corequisites": null,
+    "offered_in_codes": [
+      "S"
+    ],
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=49196",
+    "catalog_match_status": "matched"
+  },
+  {
+    "course_code": "HIST 231",
+    "gen_ed_listed_titles": [
+      "Genocide"
+    ],
+    "gen_ed_categories": [
+      "GL",
+      "SBS"
+    ],
+    "course_name": "Genocide",
+    "total_credits": 3,
+    "description": "This course examines the concept of genocide, the deliberate murder of a specific group of people. After studying various theoretical approaches students will apply these concepts to specific case studies in order to understand, and hopefully prevent, such incidents of atrocious political violence.",
+    "prerequisites": null,
+    "corequisites": null,
+    "offered_in_codes": [
+      "F",
+      "S",
+      "SS"
+    ],
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=49200",
+    "catalog_match_status": "matched"
+  },
+  {
+    "course_code": "HIST 277",
+    "gen_ed_listed_titles": [
+      "Quantitative History"
+    ],
+    "gen_ed_categories": [
+      "MLAR"
+    ],
+    "course_name": "Quantitative History",
+    "total_credits": 3,
+    "description": "This course introduces quantitative history and makes use of statistical data in historical research. Students will examine and evaluate works that have utilized quantitative methods; will learn how to access, create, and manage historical databases; and, will utilize statistical data in their own research.",
+    "prerequisites": null,
+    "corequisites": null,
+    "offered_in_codes": [
+      "F",
+      "S",
+      "SS"
+    ],
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=49208",
+    "catalog_match_status": "matched"
+  },
+  {
+    "course_code": "ISEN 121",
+    "gen_ed_listed_titles": [
+      "Industrial and Systems Engineering Colloquium"
+    ],
+    "gen_ed_categories": [
+      "SS"
+    ],
+    "course_name": "Industrial and Systems Engineering Colloquium",
+    "total_credits": 1,
+    "description": "This course includes lectures, seminars and activities important to the engagement and leadership development of industrial and systems engineering students. Topics covered include learning styles, group dynamics, industrial and systems engineering history, and whole person development. Students are also provided with group advisement regarding department, college, and university-level policies and procedures.",
+    "prerequisites": null,
+    "corequisites": null,
+    "offered_in_codes": [],
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=49330",
+    "catalog_match_status": "matched"
+  },
+  {
+    "course_code": "JOMC 240",
+    "gen_ed_listed_titles": [
+      "Media History"
+    ],
+    "gen_ed_categories": [
+      "SBS"
+    ],
+    "course_name": "Media History",
+    "total_credits": 3,
+    "description": "This course examines the relationship between the media and United States history. It recognizes the significance of alternative media such as minority and non-traditional media, and analyses the relationships between media and government to explore and understand the roles they play in history.",
+    "prerequisites": null,
+    "corequisites": null,
+    "offered_in_codes": [
+      "F",
+      "S",
+      "SS"
+    ],
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=49375",
+    "catalog_match_status": "matched"
+  },
+  {
+    "course_code": "LIBS 202",
+    "gen_ed_listed_titles": [
+      "Introduction to African American Studies"
+    ],
+    "gen_ed_categories": [
+      "HFA",
+      "AA"
+    ],
+    "course_name": "Introduction to African American Studies",
+    "total_credits": 3,
+    "description": "This course is designed to provide freshmen and sophomores with a critical understanding of the field of African-American studies. The course will be taught from an interdisciplinary perspective, emphasizing critical thinking and communication skills.",
+    "prerequisites": null,
+    "corequisites": null,
+    "offered_in_codes": [],
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=49519",
+    "catalog_match_status": "matched"
+  },
+  {
+    "course_code": "MATH 101",
+    "gen_ed_listed_titles": [
+      "Fundamentals of Algebra and Trigonometry I"
+    ],
+    "gen_ed_categories": [
+      "MLAR"
+    ],
+    "course_name": "Fundamentals of Algebra and Trigonometry I",
+    "total_credits": 3,
+    "description": "Numbers and their properties polynomials, rational expressions, rational exponents, radicals, equations and inequalities in one variable, relations and functions are studied.",
+    "prerequisites": "An SAT Math score 480-510 or SAT Math II level score 430-460 or ACT Math score 18-20 or Math Department Algebra Test score between 15 and 19.",
+    "corequisites": null,
+    "offered_in_codes": [
+      "F",
+      "S",
+      "SS"
+    ],
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=47920",
+    "catalog_match_status": "matched"
+  },
+  {
+    "course_code": "MATH 102",
+    "gen_ed_listed_titles": [
+      "Fundamentals of Algebra and Trigonometry II"
+    ],
+    "gen_ed_categories": [
+      "MLAR"
+    ],
+    "course_name": "Fundamentals of Algebra and Trigonometry II",
+    "total_credits": 3,
+    "description": "This course is a continuation of MATH 101. Quadratic functions, systems of linear equations, exponential and logarithmic functions, circular functions, trigonometric functions, analytical trigonometry and the binomial theorem will be studied.",
+    "prerequisites": "“C” or better grade in MATH 101 or MATH 101E.",
+    "corequisites": null,
+    "offered_in_codes": [
+      "F",
+      "S",
+      "SS"
+    ],
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=49582",
+    "catalog_match_status": "matched"
+  },
+  {
+    "course_code": "MATH 103",
+    "gen_ed_listed_titles": [
+      "College Algebra and Trigonometry for Engineers and Scientists I"
+    ],
+    "gen_ed_categories": [
+      "MLAR"
+    ],
+    "course_name": "College Algebra and Trigonometry for Engineers and Scientists I",
+    "total_credits": 3,
+    "description": "This course covers number systems, exponents, radicals, functions, linear and quadratic equations, complex numbers, inequalities, and graphs of polynomial and rational functions.",
+    "prerequisites": "An SAT Math score between 480 and 510; or ACT Math score between 18-20; or SAT Subject Math Level II Test score between 430 and 460; or N.C. A&T; Math Department-developed Algebra placement test score between 15 and 19, or at least a “C” in MATH 101E.",
+    "corequisites": null,
+    "offered_in_codes": [
+      "F",
+      "S",
+      "SS"
+    ],
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=49583",
+    "catalog_match_status": "matched"
+  },
+  {
+    "course_code": "MATH 104",
+    "gen_ed_listed_titles": [
+      "College Algebra and Trigonometry for Engineers and Scientists II"
+    ],
+    "gen_ed_categories": [
+      "MLAR"
+    ],
+    "course_name": "College Algebra and Trigonometry for Engineers and Scientists II",
+    "total_credits": 3,
+    "description": "A continuation of MATH 103. The course covers exponential, logarithmic and trigonometric functions and their graphs, also the geometry of triangles with applications. Trigonometric identities are covered, and the binomial theorem.",
+    "prerequisites": "“C” or better grade in MATH 103.",
+    "corequisites": null,
+    "offered_in_codes": [
+      "F",
+      "S",
+      "SS"
+    ],
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=49584",
+    "catalog_match_status": "matched"
+  },
+  {
+    "course_code": "MATH 107",
+    "gen_ed_listed_titles": [
+      "Math Literacy and Explorations"
+    ],
+    "gen_ed_categories": [
+      "MLAR"
+    ],
+    "course_name": "Mathematical Literacy and Exploration",
+    "total_credits": 3,
+    "description": "This course presents a survey of topics that apply to mathematics in personal life in order to provide general mathematical literacy and skepticism. Topics include personal mathematics, growth rates, statistical literacy, basic probability, as well as understanding and describing data numerically and visually. The course is intended for non-STEM (science, technology, engineering and mathematics) majors. The course may be taken before, after, or concurrently with MATH 108.",
+    "prerequisites": null,
+    "corequisites": null,
+    "offered_in_codes": [
+      "F",
+      "S",
+      "SS"
+    ],
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=49587",
+    "catalog_match_status": "matched"
+  },
+  {
+    "course_code": "MATH 108",
+    "gen_ed_listed_titles": [
+      "Mathematics in Society"
+    ],
+    "gen_ed_categories": [
+      "MLAR"
+    ],
+    "course_name": "Mathematics in Society",
+    "total_credits": 3,
+    "description": "This course focuses on applications of mathematics relevant to groups of people in society. Mathematical topics are covered from an application driven perspective. Concepts include voting theory, finance, apportionment, task scheduling, and cryptography. The course is intended for non-STEM (science, technology, engineering and mathematics) majors and may be taken before, after, or concurrently with MATH 107.",
+    "prerequisites": null,
+    "corequisites": null,
+    "offered_in_codes": [
+      "F",
+      "S",
+      "SS"
+    ],
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=49588",
+    "catalog_match_status": "matched"
+  },
+  {
+    "course_code": "MATH 110",
+    "gen_ed_listed_titles": [
+      "Pre-Calculus for Engineers and Scientists"
+    ],
+    "gen_ed_categories": [
+      "MLAR"
+    ],
+    "course_name": "Pre-Calculus for Engineers and Scientists",
+    "total_credits": 4,
+    "description": "Algebraic properties of the number system, fundamental operations, exponents and radicals, functions and graphs, solutions of equations and systems of equations, trigonometric functions and identities, inequalities, logarithms, progressions, mathematical induction, binomial theorem, permutations and combinations will be studied.",
+    "prerequisites": "An SAT Math score 520-570 or an ACT Math score 21-23 or a Math Department Algebra Test score at least 20 or a Math Department Pre-calculus Test score 13-16, or at least a “C” in MATH 102.",
+    "corequisites": null,
+    "offered_in_codes": [
+      "F",
+      "S",
+      "SS"
+    ],
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=49589",
+    "catalog_match_status": "matched"
+  },
+  {
+    "course_code": "MATH 111",
+    "gen_ed_listed_titles": [
+      "College Algebra and Trigonometry"
+    ],
+    "gen_ed_categories": [
+      "MLAR"
+    ],
+    "course_name": "College Algebra and Trigonometry",
+    "total_credits": 4,
+    "description": "This course is a review of basic algebra; first and second degree equations; polynomial and rational functions-systems of equations-inequalities, right triangle trigonometry; and trigonometric identities and equations.",
+    "prerequisites": "An SAT Math score 520-570 or an ACT Math score 21-23 or a Math Department Algebra Test score at least 20, or MATH 102.",
+    "corequisites": null,
+    "offered_in_codes": [
+      "F",
+      "S",
+      "SS"
+    ],
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=47925",
+    "catalog_match_status": "matched"
+  },
+  {
+    "course_code": "MATH 112",
+    "gen_ed_listed_titles": [
+      "Calculus for Non Math Majors"
+    ],
+    "gen_ed_categories": [
+      "MLAR"
+    ],
+    "course_name": "Calculus for Business and Technology",
+    "total_credits": 4,
+    "description": "This course includes a brief treatment of basic concepts of differential and integral calculus with applications to business, economics, social and behavioral sciences; polynomial, rational, exponential and logarithmic functions.",
+    "prerequisites": "MATH 104, MATH 110, or MATH 111.",
+    "corequisites": null,
+    "offered_in_codes": [
+      "F",
+      "S",
+      "SS"
+    ],
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=49590",
+    "catalog_match_status": "matched"
+  },
+  {
+    "course_code": "MATH 115",
+    "gen_ed_listed_titles": [
+      "Mathematics for Decision Making"
+    ],
+    "gen_ed_categories": [
+      "MLAR"
+    ],
+    "course_name": "Mathematics for Decision Making",
+    "total_credits": 3,
+    "description": "This course covers mathematical concepts for the effective formulation and solution of application problems in business, finance, management, and the social and life sciences. Topics include descriptive data analysis, inferential statistics, bivariate regression and correlation, linear equations and matrix operations, and differentiation and its application to max-min problems..",
+    "prerequisites": "MATH 104, MATH 110, or MATH 111.",
+    "corequisites": null,
+    "offered_in_codes": [
+      "F",
+      "S",
+      "SS"
+    ],
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=49591",
+    "catalog_match_status": "matched"
+  },
+  {
+    "course_code": "MATH 123",
+    "gen_ed_listed_titles": [
+      "Discrete Mathematics I"
+    ],
+    "gen_ed_categories": [
+      "MLAR"
+    ],
+    "course_name": "Discrete Mathematics I",
+    "total_credits": 3,
+    "description": "This course is an introduction to applied discrete mathematics. Topics include set theory, introduction to logic, functions, recursion, relations, properties of integers, and elementary matrix algebra.",
+    "prerequisites": "MATH 104 or MATH 110 or MATH 111 or MATH 131.",
+    "corequisites": null,
+    "offered_in_codes": [
+      "F",
+      "S"
+    ],
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=49592",
+    "catalog_match_status": "matched"
+  },
+  {
+    "course_code": "MATH 131",
+    "gen_ed_listed_titles": [
+      "Calculus I"
+    ],
+    "gen_ed_categories": [
+      "MLAR"
+    ],
+    "course_name": "Calculus I",
+    "total_credits": 4,
+    "description": "Limits and continuity of functions, the derivative, applications of the derivative, the definite integral and applications of the definite integral will be studied.",
+    "prerequisites": "At least “C-” in one of the following courses: MATH 104, MATH 110 and MATH 111, or an ACT Math score at least 24 or a Math Department Pre-calculus Test score at least 17.",
+    "corequisites": null,
+    "offered_in_codes": [
+      "F",
+      "S",
+      "SS"
+    ],
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=49593",
+    "catalog_match_status": "matched"
+  },
+  {
+    "course_code": "MATH 132",
+    "gen_ed_listed_titles": [
+      "Calculus II"
+    ],
+    "gen_ed_categories": [
+      "MLAR"
+    ],
+    "course_name": "Calculus II",
+    "total_credits": 4,
+    "description": "Topics in analytic geometry, differentiation and integration of exponential, logarithmic, trigonometric, inverse trigonometric and hyperbolic functions, additional techniques and applications of integration, indeterminate forms, improper integrals, Taylor’s Formula and infinite series will be studied.",
+    "prerequisites": "MATH 131.",
+    "corequisites": null,
+    "offered_in_codes": [
+      "F",
+      "S",
+      "SS"
+    ],
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=49594",
+    "catalog_match_status": "matched"
+  },
+  {
+    "course_code": "MATH 224",
+    "gen_ed_listed_titles": [
+      "Introduction to Probability and Statistics"
+    ],
+    "gen_ed_categories": [
+      "MLAR"
+    ],
+    "course_name": "Introduction to Probability and Statistics",
+    "total_credits": 3,
+    "description": "This is a general course covering graphical and numerical summaries of data, basic rules of probability, introduction of discrete and continuous random variables, sampling variability, and the fundamentals of estimation and hypothesis testing by means and proportions.",
+    "prerequisites": "MATH 104 or MATH 110 or MATH 111 or MATH 131.",
+    "corequisites": null,
+    "offered_in_codes": [
+      "F",
+      "S",
+      "SS"
+    ],
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=49601",
+    "catalog_match_status": "matched"
+  },
+  {
+    "course_code": "MATH 231",
+    "gen_ed_listed_titles": [
+      "Calculus III"
+    ],
+    "gen_ed_categories": [
+      "MLAR"
+    ],
+    "course_name": "Calculus III",
+    "total_credits": 4,
+    "description": "This course will cover plane curves and polar coordinates, vector and solid geometry, vector valued functions, partial differentiation, multiple integrals, applications of multiple integrals and vector analysis.",
+    "prerequisites": "MATH 132.",
+    "corequisites": null,
+    "offered_in_codes": [
+      "F",
+      "S",
+      "SS"
+    ],
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=49602",
+    "catalog_match_status": "matched"
+  },
+  {
+    "course_code": "MEEN 121",
+    "gen_ed_listed_titles": [
+      "Mechanical Engineering Colloquium"
+    ],
+    "gen_ed_categories": [
+      "SS"
+    ],
+    "course_name": "Mechanical Engineering Colloquium",
+    "total_credits": null,
+    "description": null,
+    "prerequisites": null,
+    "corequisites": null,
+    "offered_in_codes": [],
+    "source_url": null,
+    "catalog_match_status": "not_found",
+    "catalog_note": "Listed on the general education page, but this course code was not found in the course index or department filter for catalog 19. Catalog fields are unknown."
+  },
+  {
+    "course_code": "MGMT 221",
+    "gen_ed_listed_titles": [
+      "Global Business Environment"
+    ],
+    "gen_ed_categories": [
+      "GL"
+    ],
+    "course_name": "Global Business Environment",
+    "total_credits": 3,
+    "description": "Global Business Environment provides students with both an understanding of the fast changing global society and an awareness of the challenges and opportunities in the global economy. It provides approaches to understanding international relationships among nations (the political, socio-cultural, legal, economic, and technological factors influencing international operations). Emphasis is placed on the cultural challenges of global business as well as maintenance of a global perspective in all business decision making.",
+    "prerequisites": null,
+    "corequisites": null,
+    "offered_in_codes": [],
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=49629",
+    "catalog_match_status": "matched"
+  },
+  {
+    "course_code": "MUSI 216",
+    "gen_ed_listed_titles": [
+      "Music Appreciation"
+    ],
+    "gen_ed_categories": [
+      "HFA"
+    ],
+    "course_name": "Music Appreciation",
+    "total_credits": 3,
+    "description": "This course is a study of melody, harmony, rhythm, simple forms, vocal music, texture and the orchestra. It is designed for the general student to provide an introductory survey to the art of music.",
+    "prerequisites": null,
+    "corequisites": null,
+    "offered_in_codes": [
+      "F",
+      "S",
+      "SS"
+    ],
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=49712",
+    "catalog_match_status": "matched"
+  },
+  {
+    "course_code": "MUSI 220",
+    "gen_ed_listed_titles": [
+      "History of Black Music in America"
+    ],
+    "gen_ed_categories": [
+      "HFA",
+      "AA"
+    ],
+    "course_name": "History of Black Music in America",
+    "total_credits": 3,
+    "description": "This course is a study of black American music from the 17th century to the present. Emphasis is placed on musical forms and styles within the social, economic, and political areas. Formal musical training desirable but not required. Humanities credit given.",
+    "prerequisites": null,
+    "corequisites": null,
+    "offered_in_codes": [
+      "F",
+      "SS"
+    ],
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=49715",
+    "catalog_match_status": "matched"
+  },
+  {
+    "course_code": "NURS 100",
+    "gen_ed_listed_titles": [
+      "Student Success I"
+    ],
+    "gen_ed_categories": [
+      "SS"
+    ],
+    "course_name": "Student Success I",
+    "total_credits": 1,
+    "description": "This course is designed to facilitate transition to higher education early in an academic program of study. Students will explore a range of personal and professional strategies to achieve academic success and to cope effectively with the requirements of higher education.",
+    "prerequisites": "Pre-Nursing majors only.",
+    "corequisites": null,
+    "offered_in_codes": [],
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=49802",
+    "catalog_match_status": "matched"
+  },
+  {
+    "course_code": "NURS 204",
+    "gen_ed_listed_titles": [
+      "Biostatistics"
+    ],
+    "gen_ed_categories": [
+      "MLAR"
+    ],
+    "course_name": "Biostatistics",
+    "total_credits": 3,
+    "description": "This course introduces basic statistical principles and includes the following statistical concepts: descriptive statistics, probability, inferential statistics, correlation and linear regression. Emphasis is placed on the use and relevance of statistics to health sciences and a substantial number of human health examples are included to demonstrate the application of statistics to health and disease. Students also will be introduced and expected to use a statistical software program, i.e. SPSS.",
+    "prerequisites": "MATH 101 or higher.",
+    "corequisites": null,
+    "offered_in_codes": [],
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=49803",
+    "catalog_match_status": "matched"
+  },
+  {
+    "course_code": "PHIL 101",
+    "gen_ed_listed_titles": [
+      "Introduction to Philosophy (formerly PHIL 260)"
+    ],
+    "gen_ed_categories": [
+      "HFA"
+    ],
+    "course_name": "Introduction to Philosophy (formerly PHIL 260)",
+    "total_credits": 3,
+    "description": "This is an introductory course covering such topics as theories of reality, the nature of mind and knowledge, and the higher values of life.",
+    "prerequisites": null,
+    "corequisites": null,
+    "offered_in_codes": [
+      "S"
+    ],
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=49847",
+    "catalog_match_status": "matched"
+  },
+  {
+    "course_code": "PHIL 102",
+    "gen_ed_listed_titles": [
+      "Logic (formerly PHIL 262)"
+    ],
+    "gen_ed_categories": [
+      "MLAR"
+    ],
+    "course_name": "Logic (formerly PHIL 262)",
+    "total_credits": 3,
+    "description": "This is an introductory course designed to give a critical analysis of the principles, problems and fallacies in reasoning.",
+    "prerequisites": null,
+    "corequisites": null,
+    "offered_in_codes": [
+      "F",
+      "S",
+      "SS"
+    ],
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=49848",
+    "catalog_match_status": "matched"
+  },
+  {
+    "course_code": "PHIL 103",
+    "gen_ed_listed_titles": [
+      "World Religions (formerly PHIL 265)"
+    ],
+    "gen_ed_categories": [
+      "GL",
+      "HFA"
+    ],
+    "course_name": "World Religions (formerly PHIL 265)",
+    "total_credits": 3,
+    "description": "This course examines the teachings and practices of the world’s major religions. This exploration is conducted as a factual approach in which the history, beliefs, philosophy, practices and important figures of each religion are presented. Religions covered include African and Native American oral traditions, Hinduism, Jainism, Sikhism, Buddhism, Taoism, Confucianism, Shinto, Judaism, Christianity, Islam, and new religious movements.",
+    "prerequisites": null,
+    "corequisites": null,
+    "offered_in_codes": [
+      "F",
+      "S",
+      "SS"
+    ],
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=49849",
+    "catalog_match_status": "matched"
+  },
+  {
+    "course_code": "PHIL 104",
+    "gen_ed_listed_titles": [
+      "Introduction to Ethics (formerly PHIL 268)"
+    ],
+    "gen_ed_categories": [
+      "HFA"
+    ],
+    "course_name": "Introduction to Ethics (formerly PHIL 268)",
+    "total_credits": 3,
+    "description": "This introductory course covers basic ethical theory, its history, and major authors. This course is designed to give students a vocabulary for discussing ethics as well as the skills necessary to articulate and apply normative positions.",
+    "prerequisites": null,
+    "corequisites": null,
+    "offered_in_codes": [
+      "F",
+      "S",
+      "SS"
+    ],
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=49850",
+    "catalog_match_status": "matched"
+  },
+  {
+    "course_code": "PHIL 201",
+    "gen_ed_listed_titles": [
+      "Business Ethics (formerly PHIL 315)"
+    ],
+    "gen_ed_categories": [
+      "GL",
+      "HFA"
+    ],
+    "course_name": "Business Ethics (formerly PHIL 315)",
+    "total_credits": 3,
+    "description": "This course will introduce students to ethical challenges faced in an international business world. Using a case studies approach, students will survey major theories of ethics, examine current ethical practices in business, and learn to formulate, articulate, and defend their own answers to business ethics’ questions.",
+    "prerequisites": null,
+    "corequisites": null,
+    "offered_in_codes": [
+      "F",
+      "S",
+      "SS"
+    ],
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=49851",
+    "catalog_match_status": "matched"
+  },
+  {
+    "course_code": "PHIL 266",
+    "gen_ed_listed_titles": [
+      "Contemporary Moral Problems"
+    ],
+    "gen_ed_categories": [
+      "HFA"
+    ],
+    "course_name": "Contemporary Moral Problems",
+    "total_credits": 3,
+    "description": "This course begins with an examination of various ethical theories and then applies these theories to address moral challenges faced by today’s society. Topics include the environment, abortion, treatment of animals, drug use, pornography, hate speech, euthanasia, famine relief, affirmative action and the death penalty.",
+    "prerequisites": null,
+    "corequisites": null,
+    "offered_in_codes": [
+      "F",
+      "S",
+      "SS"
+    ],
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=49855",
+    "catalog_match_status": "matched"
+  },
+  {
+    "course_code": "PHIL 267",
+    "gen_ed_listed_titles": [
+      "Philosophy of Love and Friendship"
+    ],
+    "gen_ed_categories": [
+      "HFA"
+    ],
+    "course_name": "Philosophy of Love and Friendship",
+    "total_credits": 3,
+    "description": "In this course students will undertake a conceptual analysis of the terms “love” and “friendship”. Questions addressed include: What are the various types of love? Does a person need friends in order to achieve happiness? And what are the minimal requirements of friendship? Students will survey a variety of philosophical and contemporary literature along with examples from film and popular culture to investigate the nature of love and friendship.",
+    "prerequisites": null,
+    "corequisites": null,
+    "offered_in_codes": [
+      "F",
+      "S",
+      "SS"
+    ],
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=49856",
+    "catalog_match_status": "matched"
+  },
+  {
+    "course_code": "PHYS 101",
+    "gen_ed_listed_titles": [
+      "Introduction to Astronomy"
+    ],
+    "gen_ed_categories": [
+      "SR"
+    ],
+    "course_name": "Introduction to Astronomy",
+    "total_credits": 3,
+    "description": "This course is a broad survey of astronomy that examines the night sky, the seasons, the phases of the moon, eclipses, gravity, light, telescopes, the solar system, stars and galaxies.",
+    "prerequisites": null,
+    "corequisites": null,
+    "offered_in_codes": [
+      "F",
+      "S"
+    ],
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=49882",
+    "catalog_match_status": "matched"
+  },
+  {
+    "course_code": "PHYS 104",
+    "gen_ed_listed_titles": [
+      "Introduction to Cosmology"
+    ],
+    "gen_ed_categories": [
+      "SR"
+    ],
+    "course_name": "Introduction to Cosmology",
+    "total_credits": 3,
+    "description": "This course will examine the universe: its size, shape and expansion; its origin, age and future; black holes and the mysterious dark matter and dark energy.",
+    "prerequisites": null,
+    "corequisites": null,
+    "offered_in_codes": [
+      "F",
+      "S"
+    ],
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=49883",
+    "catalog_match_status": "matched"
+  },
+  {
+    "course_code": "PHYS 105",
+    "gen_ed_listed_titles": [
+      "Physics for Non-Scientists"
+    ],
+    "gen_ed_categories": [
+      "SR"
+    ],
+    "course_name": "Physics for Nonscientists",
+    "total_credits": 3,
+    "description": "This course is intended for non-science students. It is a qualitative introduction to topics at the forefront of modern physics, with an emphasis on conceptual understanding. Mathematics use is reduced to a minimum. The course stresses the major role physics plays in our everyday life and aims at helping students evaluate the importance of the new scientific developments and their technological and socio-economical implications. It covers a wide variety of topics such as the building blocks of matter, the evolution of our universe, superconductivity and superfluidity, MRI and medical imaging techniques, the physics of lasers, the physics of semiconductors and transistors, nanoscience and nanotechnology, modern and future energy sources and their effects on the environment.",
+    "prerequisites": null,
+    "corequisites": null,
+    "offered_in_codes": [
+      "F",
+      "S"
+    ],
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=49884",
+    "catalog_match_status": "matched"
+  },
+  {
+    "course_code": "PHYS 110",
+    "gen_ed_listed_titles": [
+      "Survey of Physics"
+    ],
+    "gen_ed_categories": [
+      "SR"
+    ],
+    "course_name": "Survey of Physics",
+    "total_credits": 2,
+    "description": "This is a one-semester study of selected topics in physics from each of the following: Newtonian mechanics, heat, sound, electricity and magnetism, light, atomic, and nuclear physics, and relativity.",
+    "prerequisites": "MATH 102, MATH 110 or MATH 111.",
+    "corequisites": "PHYS 111.",
+    "offered_in_codes": [
+      "F",
+      "S",
+      "SS"
+    ],
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=49885",
+    "catalog_match_status": "matched"
+  },
+  {
+    "course_code": "PHYS 111",
+    "gen_ed_listed_titles": [
+      "Survey of Physics Lab"
+    ],
+    "gen_ed_categories": [
+      "SR"
+    ],
+    "course_name": "Survey of Physics Lab",
+    "total_credits": 1,
+    "description": "This is a laboratory course to be taken concurrently with PHYS 110, Survey of Physics. Students will perform experiments designed to verify and/or clarify physics concepts.",
+    "prerequisites": null,
+    "corequisites": "PHYS 110.",
+    "offered_in_codes": [
+      "F",
+      "S",
+      "SS"
+    ],
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=49886",
+    "catalog_match_status": "matched"
+  },
+  {
+    "course_code": "PHYS 214",
+    "gen_ed_listed_titles": [
+      "Astronomy I"
+    ],
+    "gen_ed_categories": [
+      "SR"
+    ],
+    "course_name": "Astronomy I",
+    "total_credits": 3,
+    "description": "This course studies the Solar System. The following topics will be explored: the motions of the Earth, the sun, the moon, and the planets; the nature of light; ground and space-based telescopes; comparative planetology; the Earth-moon system; terrestrial and gas planets and their moons; dwarf planets, asteroids, and comets; planetary system formation.",
+    "prerequisites": null,
+    "corequisites": "PHYS 224.",
+    "offered_in_codes": [
+      "F",
+      "S",
+      "SS"
+    ],
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=49890",
+    "catalog_match_status": "matched"
+  },
+  {
+    "course_code": "PHYS 215",
+    "gen_ed_listed_titles": [
+      "Astronomy II"
+    ],
+    "gen_ed_categories": [
+      "SR"
+    ],
+    "course_name": "Astronomy II",
+    "total_credits": 3,
+    "description": "This course studies Stars, Galaxies, and Cosmology. The following topics will be explored: stellar observables; star birth, evolution, and death; novae and supernovae; white dwarfs, neutron stars, and black holes; normal galaxies, active galaxies, and quasars; dark matter and dark energy; cosmology; and the early universe",
+    "prerequisites": "PHYS 214 and PHYS 224.",
+    "corequisites": null,
+    "offered_in_codes": [
+      "F",
+      "S"
+    ],
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=49891",
+    "catalog_match_status": "matched"
+  },
+  {
+    "course_code": "PHYS 224",
+    "gen_ed_listed_titles": [
+      "Astronomy I Lab"
+    ],
+    "gen_ed_categories": [
+      "SR"
+    ],
+    "course_name": "Astronomy I Laboratory",
+    "total_credits": 1,
+    "description": "In this laboratory, students will learn how to use robotic telescopes. Students will learn how to analyze data from their observations of planets, moons, asteroids, binary and variable stars, supernovae, star-forming regions, star clusters, and galaxies.",
+    "prerequisites": null,
+    "corequisites": "PHYS 214.",
+    "offered_in_codes": [
+      "F",
+      "S"
+    ],
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=49894",
+    "catalog_match_status": "matched"
+  },
+  {
+    "course_code": "PHYS 225",
+    "gen_ed_listed_titles": [
+      "College Physics I"
+    ],
+    "gen_ed_categories": [
+      "SR"
+    ],
+    "course_name": "College Physics I",
+    "total_credits": 3,
+    "description": "This is an algebra-based course. No calculus is used. The course is a study of fundamental principles of mechanics and thermodynamics. The topics covered include units, physical quantities, and vectors; kinematics and dynamics of translational motion; applications of Newton’s laws; work and energy; momentum, impulse, and collisions; kinematics and dynamics of rotational motion; equilibrium and elasticity; gravitation; periodic motion; fluid mechanics; temperature and heat; kinetic theory and thermal properties of matter, and thermodynamic systems & processes.",
+    "prerequisites": "MATH 110 or MATH 111.",
+    "corequisites": "PHYS 235.",
+    "offered_in_codes": [
+      "F",
+      "S",
+      "SS"
+    ],
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=49895",
+    "catalog_match_status": "matched"
+  },
+  {
+    "course_code": "PHYS 226",
+    "gen_ed_listed_titles": [
+      "College Physics II"
+    ],
+    "gen_ed_categories": [
+      "SR"
+    ],
+    "course_name": "College Physics II",
+    "total_credits": 3,
+    "description": "This is an algebra-based continuation of PHYS 225. No calculus is used. The course covers the fundamental principles of electricity, magnetism, wave motion, and optics.",
+    "prerequisites": "PHYS 225.",
+    "corequisites": "PHYS 236.",
+    "offered_in_codes": [
+      "F",
+      "S",
+      "SS"
+    ],
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=49896",
+    "catalog_match_status": "matched"
+  },
+  {
+    "course_code": "PHYS 235",
+    "gen_ed_listed_titles": [
+      "College Physics I Lab"
+    ],
+    "gen_ed_categories": [
+      "SR"
+    ],
+    "course_name": "College Physics I Laboratory",
+    "total_credits": 1,
+    "description": "This is a course that will emphasize the importance of experimentation and observations in the development of a physical science. A selected group of experiments will be undertaken.",
+    "prerequisites": null,
+    "corequisites": "PHYS 225.",
+    "offered_in_codes": [
+      "F",
+      "S",
+      "SS"
+    ],
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=49897",
+    "catalog_match_status": "matched"
+  },
+  {
+    "course_code": "PHYS 236",
+    "gen_ed_listed_titles": [
+      "College Physics II Lab"
+    ],
+    "gen_ed_categories": [
+      "SR"
+    ],
+    "course_name": "College Physics II Laboratory",
+    "total_credits": 1,
+    "description": "This is a continuation of PHYS 235.",
+    "prerequisites": null,
+    "corequisites": "PHYS 226.",
+    "offered_in_codes": [
+      "F",
+      "S",
+      "SS"
+    ],
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=49898",
+    "catalog_match_status": "matched"
+  },
+  {
+    "course_code": "PHYS 241",
+    "gen_ed_listed_titles": [
+      "General Physics I"
+    ],
+    "gen_ed_categories": [
+      "SR"
+    ],
+    "course_name": "General Physics I",
+    "total_credits": 3,
+    "description": "This is a calculus-based physics course that covers the fundamental principles of Newtonian mechanics, heat, and thermodynamics.",
+    "prerequisites": null,
+    "corequisites": "MATH 132, PHYS 251.",
+    "offered_in_codes": [
+      "F",
+      "S",
+      "SS"
+    ],
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=49899",
+    "catalog_match_status": "matched"
+  },
+  {
+    "course_code": "PHYS 242",
+    "gen_ed_listed_titles": [
+      "General Physics II"
+    ],
+    "gen_ed_categories": [
+      "SR"
+    ],
+    "course_name": "General Physics II",
+    "total_credits": 3,
+    "description": "This is a continuation of PHYS 241. It is a calculus-based study of physics, which covers the fundamental principles of electricity, magnetism, wave motion, and optics.",
+    "prerequisites": "PHYS 241, MATH 132.",
+    "corequisites": "PHYS 252.",
+    "offered_in_codes": [
+      "F",
+      "S",
+      "SS"
+    ],
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=49900",
+    "catalog_match_status": "matched"
+  },
+  {
+    "course_code": "PHYS 251",
+    "gen_ed_listed_titles": [
+      "General Physics I Lab"
+    ],
+    "gen_ed_categories": [
+      "SR"
+    ],
+    "course_name": "General Physics I Lab",
+    "total_credits": 1,
+    "description": "This is a laboratory course where a selected group of physics experiments will be performed. Emphasis is placed on the development of experimental technique, analysis of data, and physical interpretation of experimental results.",
+    "prerequisites": null,
+    "corequisites": "PHYS 241.",
+    "offered_in_codes": [
+      "F",
+      "S",
+      "SS"
+    ],
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=49901",
+    "catalog_match_status": "matched"
+  },
+  {
+    "course_code": "PHYS 252",
+    "gen_ed_listed_titles": [
+      "General Physics II Lab"
+    ],
+    "gen_ed_categories": [
+      "SR"
+    ],
+    "course_name": "General Physics II Lab",
+    "total_credits": 1,
+    "description": "This course is a continuation of PHYS 251.",
+    "prerequisites": null,
+    "corequisites": "PHYS 242.",
+    "offered_in_codes": [
+      "F",
+      "S",
+      "SS"
+    ],
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=49902",
+    "catalog_match_status": "matched"
+  },
+  {
+    "course_code": "POLI 110",
+    "gen_ed_listed_titles": [
+      "American Government and Politics (formerly POLI 200)"
+    ],
+    "gen_ed_categories": [
+      "SBS"
+    ],
+    "course_name": "American Government and Politics (formerly POLI 200)",
+    "total_credits": 3,
+    "description": "This course introduces the student to the study of politics through an analysis of major features of the American polity. Topics to be treated include the political self-understanding of Americans, the founding of the political system, the operation of our political institutions, and the forms of political participation.",
+    "prerequisites": null,
+    "corequisites": null,
+    "offered_in_codes": [
+      "F",
+      "S",
+      "SS"
+    ],
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=49940",
+    "catalog_match_status": "matched"
+  },
+  {
+    "course_code": "PSYC 101",
+    "gen_ed_listed_titles": [
+      "General Psychology for Non-Majors (formerly PSYC 320)"
+    ],
+    "gen_ed_categories": [
+      "SBS"
+    ],
+    "course_name": "General Psychology (formerly PSYC 320)",
+    "total_credits": 3,
+    "description": "This course provides an introduction to psychology for non-psychology majors. Topics given major consideration include maturation and development, motivation, emotion, and personality; mental health, intelligence, and aptitude; perception and attention; learning, forgetting, language, and thinking; social influence, attitudes, beliefs, and vocational adjustments.",
+    "prerequisites": "Non Psychology majors.",
+    "corequisites": null,
+    "offered_in_codes": [
+      "F",
+      "S",
+      "SS"
+    ],
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=49978",
+    "catalog_match_status": "matched"
+  },
+  {
+    "course_code": "PSYC 120",
+    "gen_ed_listed_titles": [
+      "Freshman Seminar (formerly PSYC 240)"
+    ],
+    "gen_ed_categories": [
+      "SS"
+    ],
+    "course_name": "Freshman Seminar (formerly PSYC 240)",
+    "total_credits": 3,
+    "description": "This course is designed to give students an overview of the various fields of psychology, possible career opportunities for psychology graduates, and skills that are essential to the success of students majoring in psychology. Topics will include how to read, critique and summarize research papers, an introduction to APA style, basic career skills such as creating a resume, writing a personal statement, how to prepare for an interview, presentation skills and academic etiquette. This course will also provide students with an overview of the graduate school application process and will emphasize the importance of gaining research experience through independent study.",
+    "prerequisites": "Psychology majors only.",
+    "corequisites": null,
+    "offered_in_codes": [
+      "F",
+      "S",
+      "SS"
+    ],
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=49980",
+    "catalog_match_status": "matched"
+  },
+  {
+    "course_code": "SOCI 100",
+    "gen_ed_listed_titles": [
+      "Principles of Sociology"
+    ],
+    "gen_ed_categories": [
+      "SBS"
+    ],
+    "course_name": "Principles of Sociology",
+    "total_credits": 3,
+    "description": "Basic concepts and principles in sociology as they are used to examine patterned and recurrent forms of social behavior will be studied.",
+    "prerequisites": null,
+    "corequisites": null,
+    "offered_in_codes": [],
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=50049",
+    "catalog_match_status": "matched"
+  },
+  {
+    "course_code": "SOCI 200",
+    "gen_ed_listed_titles": [
+      "Introduction to Anthropology"
+    ],
+    "gen_ed_categories": [
+      "SBS"
+    ],
+    "course_name": "Introduction to Anthropology",
+    "total_credits": 3,
+    "description": "This course includes an analysis and comparison of primitive cultures and further comparisons with modern cultures.",
+    "prerequisites": null,
+    "corequisites": null,
+    "offered_in_codes": [],
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=50069",
+    "catalog_match_status": "matched"
+  },
+  {
+    "course_code": "SPCH 250",
+    "gen_ed_listed_titles": [
+      "Fundamentals of Speech Communication"
+    ],
+    "gen_ed_categories": [
+      "HFA"
+    ],
+    "course_name": "Speech Fundamentals",
+    "total_credits": 3,
+    "description": "This course is an introduction to the theoretical bases of human communication including verbal and nonverbal communication, preparation and practice in intrapersonal, interpersonal, group and public communication, critical listening and critical thinking.",
+    "prerequisites": null,
+    "corequisites": null,
+    "offered_in_codes": [
+      "F",
+      "S",
+      "SS"
+    ],
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=50141",
+    "catalog_match_status": "matched"
+  },
+  {
+    "course_code": "SPCH 251",
+    "gen_ed_listed_titles": [
+      "Public Speaking"
+    ],
+    "gen_ed_categories": [
+      "HFA"
+    ],
+    "course_name": "Public Speaking",
+    "total_credits": 3,
+    "description": "This course examines methods of developing, organizing, and effectively delivering public speeches. Emphasis is placed on informative, persuasive, and ceremonial addresses.",
+    "prerequisites": "SPCH 250.",
+    "corequisites": null,
+    "offered_in_codes": [
+      "F",
+      "S",
+      "SS"
+    ],
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=50142",
+    "catalog_match_status": "matched"
+  },
+  {
+    "course_code": "SSFM 226",
+    "gen_ed_listed_titles": [
+      "A Personal Approach to Health"
+    ],
+    "gen_ed_categories": [
+      "SBS"
+    ],
+    "course_name": "A Personal Approach to Health",
+    "total_credits": null,
+    "description": null,
+    "prerequisites": null,
+    "corequisites": null,
+    "offered_in_codes": [],
+    "source_url": null,
+    "catalog_match_status": "not_found",
+    "catalog_note": "Listed on the general education page, but this course code was not found in the course index or department filter for catalog 19. Catalog fields are unknown."
+  },
+  {
+    "course_code": "STAT 214",
+    "gen_ed_listed_titles": [
+      "Statistics for Social Sciences (added Fall 2017)"
+    ],
+    "gen_ed_categories": [
+      "MLAR"
+    ],
+    "course_name": "Introduction to Statistical Reasoning",
+    "total_credits": 3,
+    "description": "This is an introductory course in statistics whose purpose is to promote understanding of statistical reasoning and using numerical information to make data-informed judgments and decisions. Students will learn to understand graphical and numerical presentations of data, and to understand the concept of sampling. The methods and concepts studied will be presented in the context of the real-world problems, with the aim of making the student statistically literate.",
+    "prerequisites": "MATH 101 or MATH 103.",
+    "corequisites": null,
+    "offered_in_codes": [
+      "F",
+      "S",
+      "SS"
+    ],
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=50217",
+    "catalog_match_status": "matched"
+  }
+]

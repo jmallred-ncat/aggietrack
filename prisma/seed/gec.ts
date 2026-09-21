@@ -1,362 +1,304 @@
-import { GenEdTag } from "../../lib/generated/prisma/client";
+import { GenEdTag, TermSeason } from "../../lib/generated/prisma/client";
 import { type CourseRef, type CourseSeed, courseKey } from "./courses";
 import { type AttributeSeed } from "./curriculum";
+import ncatGenEdCourses from "./ncat_gen_ed_courses_detailed.json";
 
 /**
- * NCAT General Education Course List (revised 11/25/2025).
- * https://www.ncat.edu/provost/general-education-resources/gec-list.php
+ * NCAT General Education list + catalog details.
+ * Source: prisma/seed/ncat_gen_ed_courses_detailed.json
+ * (GEC list + catalog enrichment)
  *
- * Credits are typical catalog values (GEC page does not list hours).
- * Courses may appear under multiple outcomes; progress must still count
- * each course toward only one gen-ed requirement.
+ * Maps onto Course:
+ *   course_code       → subject + number
+ *   course_name       → title
+ *   total_credits     → credits
+ *   description       → description
+ *   offered_in_codes  → offeredIn (F→FALL, S→SPRING, SS→SUMMER)
+ *   isLab             ← inferred from title
+ *
+ * Maps onto CourseAttribute via gen_ed_categories:
+ *   WC → WRITTEN_COMMUNICATION
+ *   HFA → HUMANITIES_FINE_ARTS
+ *   SBS → SOCIAL_BEHAVIORAL
+ *   GL → GLOBAL_AWARENESS
+ *   AA → AFRICAN_AMERICAN
+ *   SR → SCIENTIFIC_REASONING
+ *        labs also get SCIENTIFIC_REASONING_LAB (qualifier, not a separate pool)
+ *
+ * Skipped for attributes (no GenEdTag / not CST pool blockers):
+ *   SS (Student Success), MLAR (math/logic)
+ *
+ * Skipped rows: catalog_match_status !== "matched" or missing credits.
+ *
+ * Courses may carry multiple tags; progress must still count each course
+ * toward only one gen-ed requirement.
  */
 
-const c = (
-  subject: string,
-  number: string,
-  title: string,
-  credits: number,
-  isLab = false,
-): CourseSeed => ({ subject, number, title, credits, isLab });
+type NcatGenEdCourse = {
+  course_code: string;
+  gen_ed_listed_titles: string[];
+  gen_ed_categories: string[];
+  course_name: string | null;
+  total_credits: number | null;
+  description: string | null;
+  prerequisites: string | null;
+  corequisites: string | null;
+  offered_in_codes: string[] | null;
+  source_url: string | null;
+  catalog_match_status: string;
+  catalog_note?: string;
+};
 
-/** All GEC courses needed for CST gen-ed pool pickers (WC/HFA/GL/AA/SBS/SR). */
-export const gecCourses: CourseSeed[] = [
-  // Written Communication
-  c("ENGL", "100", "Ideas and their Expressions I", 3),
-  c("ENGL", "101", "Ideas and their Expressions II", 3),
+export type CourseRelationSeed = {
+  course: CourseRef;
+  requires: CourseRef;
+  isConcurrent: boolean;
+};
 
-  // Scientific Reasoning
-  c("BIOL", "100", "Biological Science", 3),
-  c("BIOL", "101", "Concepts of Biology I", 3),
-  c("BIOL", "102", "Concepts of Biology II", 3),
-  c("CHEM", "100", "Physical Science", 3),
-  c("CHEM", "104", "General Chemistry IV", 3),
-  c("CHEM", "106", "General Chemistry VI", 3),
-  c("CHEM", "107", "General Chemistry VII", 3),
-  c("CHEM", "110", "Physical Science Lab", 1, true),
-  c("CHEM", "114", "General Chemistry IV Lab", 1, true),
-  c("CHEM", "116", "General Chemistry VI Lab", 1, true),
-  c("CHEM", "117", "General Chemistry VII Lab", 1, true),
-  c("ASME", "234", "Weather and Climate Studies", 3),
-  c("ENVS", "201", "The Earth's Environment", 3),
-  c("PHYS", "101", "Introduction to Astronomy", 3),
-  c("PHYS", "104", "Introduction to Cosmology", 3),
-  c("PHYS", "105", "Physics for Non-Scientists", 3),
-  c("PHYS", "110", "Survey of Physics", 3),
-  c("PHYS", "111", "Survey of Physics Lab", 1, true),
-  c("PHYS", "214", "Astronomy I", 3),
-  c("PHYS", "215", "Astronomy II", 3),
-  c("PHYS", "224", "Astronomy I Lab", 1, true),
-  c("PHYS", "225", "College Physics I", 3),
-  c("PHYS", "226", "College Physics II", 3),
-  c("PHYS", "235", "College Physics I Lab", 1, true),
-  c("PHYS", "236", "College Physics II Lab", 1, true),
-  c("PHYS", "241", "General Physics I", 3),
-  c("PHYS", "242", "General Physics II", 3),
-  c("PHYS", "251", "General Physics I Lab", 1, true),
-  c("PHYS", "252", "General Physics II Lab", 1, true),
+const COURSE_CODE = /^([A-Z]{2,8})\s+(\d{3}[A-Z]?)$/;
+const COURSE_TOKEN = /\b([A-Z]{2,8})\s+(\d{3}[A-Z]?)\b/g;
 
-  // Global Awareness
-  c("HIST", "130", "The Contemporary Global Experience", 3),
-  c("HIST", "206", "Pre-Modern World History", 3),
-  c("HIST", "207", "Modern World History", 3),
-  c("HIST", "216", "African History Since 1800", 3),
-  c("HIST", "231", "Genocide", 3),
-  c("MGMT", "221", "Global Business Environment", 3),
-  c("PHIL", "103", "World Religions", 3),
-  c("PHIL", "201", "Business Ethics", 3),
+const OFFERED_CODE_TO_SEASON: Record<string, TermSeason> = {
+  F: TermSeason.FALL,
+  S: TermSeason.SPRING,
+  SS: TermSeason.SUMMER,
+};
 
-  // Humanities and Fine Arts
-  c("ENGL", "200", "Survey of Humanities I", 3),
-  c("ENGL", "201", "Survey of Humanities II", 3),
-  c("ENGL", "230", "World Literature I", 3),
-  c("ENGL", "231", "World Literature II", 3),
-  c("ENGL", "211", "Survey of African American Literature I", 3),
-  c("ENGL", "212", "Survey of African American Literature II", 3),
-  c("LIBS", "202", "Introduction to African American Studies", 3),
-  c("MUSI", "216", "Music Appreciation", 3),
-  c("MUSI", "220", "History of Black Music in America", 3),
-  c("PHIL", "101", "Introduction to Philosophy", 3),
-  c("PHIL", "104", "Introduction to Ethics", 3),
-  c("PHIL", "266", "Contemporary Moral Problems", 3),
-  c("PHIL", "267", "Philosophy of Love and Friendship", 3),
-  c("SPCH", "250", "Fundamentals of Speech Communication", 3),
-  c("SPCH", "251", "Public Speaking", 3),
+const CATEGORY_TO_TAG: Record<string, GenEdTag> = {
+  WC: GenEdTag.WRITTEN_COMMUNICATION,
+  HFA: GenEdTag.HUMANITIES_FINE_ARTS,
+  SBS: GenEdTag.SOCIAL_BEHAVIORAL,
+  GL: GenEdTag.GLOBAL_AWARENESS,
+  AA: GenEdTag.AFRICAN_AMERICAN,
+  SR: GenEdTag.SCIENTIFIC_REASONING,
+};
 
-  // African American Culture and History
-  c("HIST", "103", "NC A&T State University History", 3),
-  c("HIST", "106", "African American History to 1877", 3),
-  c("HIST", "107", "African American History 1877 to Present", 3),
+function isLabCourse(name: string) {
+  return /\bLaborator(y|ies)\b/i.test(name) || /\bLab\b/i.test(name);
+}
 
-  // Social and Behavioral Sciences
-  c("FIN", "279", "Personal Finance", 3),
-  c("ECON", "200", "Introductory Microeconomics", 3),
-  c("ECON", "201", "Introductory Macroeconomics", 3),
-  c("FCS", "135", "Food and Man's Survival", 3),
-  c("FCS", "181", "Social-Psychological Aspects of Dress", 3),
-  c("FCS", "260", "Introduction to Human Development", 3),
-  c("HIST", "104", "U.S. History from 1492-1877", 3),
-  c("HIST", "105", "U.S. History from 1877-Present", 3),
-  c("JOMC", "240", "Media History", 3),
-  c("POLI", "110", "American Government and Politics", 3),
-  c("PSYC", "101", "General Psychology for Non-Majors", 3),
-  c("SOCI", "100", "Principles of Sociology", 3),
-  c("SOCI", "200", "Introduction to Anthropology", 3),
-  c("SSFM", "226", "A Personal Approach to Health", 3),
-];
+function parseCourseCode(code: string): CourseRef {
+  const match = code.trim().match(COURSE_CODE);
+  if (!match) {
+    throw new Error(`Unrecognized course_code: ${code}`);
+  }
+  return { subject: match[1], number: match[2] };
+}
 
-/** Lecture/lab pairs implied by the GEC Scientific Reasoning list. */
-export const gecConcurrentPairs: [CourseRef, CourseRef][] = [
-  [{ subject: "CHEM", number: "100" }, { subject: "CHEM", number: "110" }],
-  [{ subject: "CHEM", number: "104" }, { subject: "CHEM", number: "114" }],
-  [{ subject: "CHEM", number: "106" }, { subject: "CHEM", number: "116" }],
-  [{ subject: "CHEM", number: "107" }, { subject: "CHEM", number: "117" }],
-  [{ subject: "PHYS", number: "110" }, { subject: "PHYS", number: "111" }],
-  [{ subject: "PHYS", number: "214" }, { subject: "PHYS", number: "224" }],
-  [{ subject: "PHYS", number: "241" }, { subject: "PHYS", number: "251" }],
-  [{ subject: "PHYS", number: "242" }, { subject: "PHYS", number: "252" }],
-];
+function parseOfferedIn(codes: string[] | null | undefined): TermSeason[] {
+  if (!codes?.length) {
+    return [];
+  }
 
-type Tagged = { course: CourseRef; tags: GenEdTag[] };
+  const seasons: TermSeason[] = [];
+  const seen = new Set<TermSeason>();
 
-const ref = (subject: string, number: string): CourseRef => ({ subject, number });
+  for (const code of codes) {
+    const season = OFFERED_CODE_TO_SEASON[code.trim().toUpperCase()];
+    if (!season) {
+      throw new Error(`Unrecognized offered_in_code: ${code}`);
+    }
+    if (seen.has(season)) {
+      continue;
+    }
+    seen.add(season);
+    seasons.push(season);
+  }
 
-/**
- * Eligible outcomes per course. Overlaps are intentional (GEC allows HFA *or* AA,
- * etc.); each course may still only satisfy one requirement at progress time.
- */
-const tagged: Tagged[] = [
-  // WC
-  { course: ref("ENGL", "100"), tags: [GenEdTag.WRITTEN_COMMUNICATION] },
-  { course: ref("ENGL", "101"), tags: [GenEdTag.WRITTEN_COMMUNICATION] },
+  return seasons;
+}
 
-  // SR lecture
-  {
-    course: ref("BIOL", "100"),
-    tags: [GenEdTag.SCIENTIFIC_REASONING],
-  },
-  {
-    course: ref("BIOL", "101"),
-    tags: [GenEdTag.SCIENTIFIC_REASONING],
-  },
-  {
-    course: ref("BIOL", "102"),
-    tags: [GenEdTag.SCIENTIFIC_REASONING],
-  },
-  {
-    course: ref("CHEM", "100"),
-    tags: [GenEdTag.SCIENTIFIC_REASONING],
-  },
-  {
-    course: ref("CHEM", "104"),
-    tags: [GenEdTag.SCIENTIFIC_REASONING],
-  },
-  {
-    course: ref("CHEM", "106"),
-    tags: [GenEdTag.SCIENTIFIC_REASONING],
-  },
-  {
-    course: ref("CHEM", "107"),
-    tags: [GenEdTag.SCIENTIFIC_REASONING],
-  },
-  {
-    course: ref("ASME", "234"),
-    tags: [GenEdTag.SCIENTIFIC_REASONING],
-  },
-  {
-    course: ref("ENVS", "201"),
-    tags: [GenEdTag.SCIENTIFIC_REASONING],
-  },
-  {
-    course: ref("PHYS", "101"),
-    tags: [GenEdTag.SCIENTIFIC_REASONING],
-  },
-  {
-    course: ref("PHYS", "104"),
-    tags: [GenEdTag.SCIENTIFIC_REASONING],
-  },
-  {
-    course: ref("PHYS", "105"),
-    tags: [GenEdTag.SCIENTIFIC_REASONING],
-  },
-  {
-    course: ref("PHYS", "110"),
-    tags: [GenEdTag.SCIENTIFIC_REASONING],
-  },
-  {
-    course: ref("PHYS", "214"),
-    tags: [GenEdTag.SCIENTIFIC_REASONING],
-  },
-  {
-    course: ref("PHYS", "215"),
-    tags: [GenEdTag.SCIENTIFIC_REASONING],
-  },
-  {
-    course: ref("PHYS", "225"),
-    tags: [GenEdTag.SCIENTIFIC_REASONING],
-  },
-  {
-    course: ref("PHYS", "226"),
-    tags: [GenEdTag.SCIENTIFIC_REASONING],
-  },
-  {
-    course: ref("PHYS", "241"),
-    tags: [GenEdTag.SCIENTIFIC_REASONING],
-  },
-  {
-    course: ref("PHYS", "242"),
-    tags: [GenEdTag.SCIENTIFIC_REASONING],
-  },
+function tagsForRow(categories: string[], isLab: boolean): GenEdTag[] {
+  const tags = new Set<GenEdTag>();
 
-  // SR lab
-  {
-    course: ref("CHEM", "110"),
-    tags: [GenEdTag.SCIENTIFIC_REASONING_LAB],
-  },
-  {
-    course: ref("CHEM", "114"),
-    tags: [GenEdTag.SCIENTIFIC_REASONING_LAB],
-  },
-  {
-    course: ref("CHEM", "116"),
-    tags: [GenEdTag.SCIENTIFIC_REASONING_LAB],
-  },
-  {
-    course: ref("CHEM", "117"),
-    tags: [GenEdTag.SCIENTIFIC_REASONING_LAB],
-  },
-  {
-    course: ref("PHYS", "111"),
-    tags: [GenEdTag.SCIENTIFIC_REASONING_LAB],
-  },
-  {
-    course: ref("PHYS", "224"),
-    tags: [GenEdTag.SCIENTIFIC_REASONING_LAB],
-  },
-  {
-    course: ref("PHYS", "235"),
-    tags: [GenEdTag.SCIENTIFIC_REASONING_LAB],
-  },
-  {
-    course: ref("PHYS", "236"),
-    tags: [GenEdTag.SCIENTIFIC_REASONING_LAB],
-  },
-  {
-    course: ref("PHYS", "251"),
-    tags: [GenEdTag.SCIENTIFIC_REASONING_LAB],
-  },
-  {
-    course: ref("PHYS", "252"),
-    tags: [GenEdTag.SCIENTIFIC_REASONING_LAB],
-  },
+  for (const category of categories) {
+    const code = category.trim().toUpperCase();
+    if (code === "SS" || code === "MLAR") {
+      continue;
+    }
 
-  // Global Awareness
-  { course: ref("HIST", "130"), tags: [GenEdTag.GLOBAL_AWARENESS] },
-  {
-    course: ref("HIST", "206"),
-    tags: [GenEdTag.GLOBAL_AWARENESS, GenEdTag.SOCIAL_BEHAVIORAL],
-  },
-  {
-    course: ref("HIST", "207"),
-    tags: [GenEdTag.GLOBAL_AWARENESS, GenEdTag.SOCIAL_BEHAVIORAL],
-  },
-  {
-    course: ref("HIST", "216"),
-    tags: [GenEdTag.GLOBAL_AWARENESS, GenEdTag.SOCIAL_BEHAVIORAL],
-  },
-  {
-    course: ref("HIST", "231"),
-    tags: [GenEdTag.GLOBAL_AWARENESS, GenEdTag.SOCIAL_BEHAVIORAL],
-  },
-  { course: ref("MGMT", "221"), tags: [GenEdTag.GLOBAL_AWARENESS] },
-  {
-    course: ref("PHIL", "103"),
-    tags: [GenEdTag.GLOBAL_AWARENESS, GenEdTag.HUMANITIES_FINE_ARTS],
-  },
-  {
-    course: ref("PHIL", "201"),
-    tags: [GenEdTag.GLOBAL_AWARENESS, GenEdTag.HUMANITIES_FINE_ARTS],
-  },
+    if (code === "SR") {
+      tags.add(GenEdTag.SCIENTIFIC_REASONING);
+      if (isLab) {
+        tags.add(GenEdTag.SCIENTIFIC_REASONING_LAB);
+      }
+      continue;
+    }
 
-  // Humanities / Fine Arts
-  { course: ref("ENGL", "200"), tags: [GenEdTag.HUMANITIES_FINE_ARTS] },
-  { course: ref("ENGL", "201"), tags: [GenEdTag.HUMANITIES_FINE_ARTS] },
-  { course: ref("ENGL", "230"), tags: [GenEdTag.HUMANITIES_FINE_ARTS] },
-  { course: ref("ENGL", "231"), tags: [GenEdTag.HUMANITIES_FINE_ARTS] },
-  {
-    course: ref("ENGL", "211"),
-    tags: [GenEdTag.HUMANITIES_FINE_ARTS, GenEdTag.AFRICAN_AMERICAN],
-  },
-  {
-    course: ref("ENGL", "212"),
-    tags: [GenEdTag.HUMANITIES_FINE_ARTS, GenEdTag.AFRICAN_AMERICAN],
-  },
-  {
-    course: ref("LIBS", "202"),
-    tags: [GenEdTag.HUMANITIES_FINE_ARTS, GenEdTag.AFRICAN_AMERICAN],
-  },
-  { course: ref("MUSI", "216"), tags: [GenEdTag.HUMANITIES_FINE_ARTS] },
-  {
-    course: ref("MUSI", "220"),
-    tags: [GenEdTag.HUMANITIES_FINE_ARTS, GenEdTag.AFRICAN_AMERICAN],
-  },
-  { course: ref("PHIL", "101"), tags: [GenEdTag.HUMANITIES_FINE_ARTS] },
-  { course: ref("PHIL", "104"), tags: [GenEdTag.HUMANITIES_FINE_ARTS] },
-  { course: ref("PHIL", "266"), tags: [GenEdTag.HUMANITIES_FINE_ARTS] },
-  { course: ref("PHIL", "267"), tags: [GenEdTag.HUMANITIES_FINE_ARTS] },
-  { course: ref("SPCH", "250"), tags: [GenEdTag.HUMANITIES_FINE_ARTS] },
-  { course: ref("SPCH", "251"), tags: [GenEdTag.HUMANITIES_FINE_ARTS] },
+    const tag = CATEGORY_TO_TAG[code];
+    if (!tag) {
+      throw new Error(`Unrecognized gen_ed_category: ${category}`);
+    }
+    tags.add(tag);
+  }
 
-  // African American
-  {
-    course: ref("HIST", "103"),
-    tags: [GenEdTag.AFRICAN_AMERICAN, GenEdTag.SOCIAL_BEHAVIORAL],
-  },
-  {
-    course: ref("HIST", "106"),
-    tags: [GenEdTag.AFRICAN_AMERICAN, GenEdTag.SOCIAL_BEHAVIORAL],
-  },
-  {
-    course: ref("HIST", "107"),
-    tags: [GenEdTag.AFRICAN_AMERICAN, GenEdTag.SOCIAL_BEHAVIORAL],
-  },
+  return [...tags];
+}
 
-  // Social / Behavioral (remaining)
-  { course: ref("FIN", "279"), tags: [GenEdTag.SOCIAL_BEHAVIORAL] },
-  { course: ref("ECON", "200"), tags: [GenEdTag.SOCIAL_BEHAVIORAL] },
-  { course: ref("ECON", "201"), tags: [GenEdTag.SOCIAL_BEHAVIORAL] },
-  { course: ref("FCS", "135"), tags: [GenEdTag.SOCIAL_BEHAVIORAL] },
-  { course: ref("FCS", "181"), tags: [GenEdTag.SOCIAL_BEHAVIORAL] },
-  { course: ref("FCS", "260"), tags: [GenEdTag.SOCIAL_BEHAVIORAL] },
-  { course: ref("HIST", "104"), tags: [GenEdTag.SOCIAL_BEHAVIORAL] },
-  { course: ref("HIST", "105"), tags: [GenEdTag.SOCIAL_BEHAVIORAL] },
-  { course: ref("JOMC", "240"), tags: [GenEdTag.SOCIAL_BEHAVIORAL] },
-  { course: ref("POLI", "110"), tags: [GenEdTag.SOCIAL_BEHAVIORAL] },
-  { course: ref("PSYC", "101"), tags: [GenEdTag.SOCIAL_BEHAVIORAL] },
-  { course: ref("SOCI", "100"), tags: [GenEdTag.SOCIAL_BEHAVIORAL] },
-  { course: ref("SOCI", "200"), tags: [GenEdTag.SOCIAL_BEHAVIORAL] },
-  { course: ref("SSFM", "226"), tags: [GenEdTag.SOCIAL_BEHAVIORAL] },
-];
+function extractCourseRefs(text: string): CourseRef[] {
+  const refs: CourseRef[] = [];
+  for (const match of text.matchAll(COURSE_TOKEN)) {
+    refs.push({ subject: match[1], number: match[2] });
+  }
+  return refs;
+}
 
-export const gecAttributes: AttributeSeed[] = tagged.flatMap(({ course, tags }) =>
-  tags.map((tag) => ({ course, tag })),
+function parseAndPrerequisiteRefs(text: string): CourseRef[] | null {
+  const cleaned = text.trim().replace(/\.$/, "");
+  if (!cleaned || /\bor\b/i.test(cleaned)) {
+    return null;
+  }
+
+  const withoutConsent = cleaned.replace(
+    /\s*(?:,?\s*)?(?:or\s+)?consent(?:\s+of|\s+from)?\s+instructor\.?/gi,
+    "",
+  );
+  if (/\bor\b/i.test(withoutConsent)) {
+    return null;
+  }
+
+  const refs = extractCourseRefs(withoutConsent);
+  return refs.length > 0 ? refs : null;
+}
+
+function parseCorequisiteRefs(text: string): CourseRef[] | null {
+  const cleaned = text.trim().replace(/\.$/, "");
+  if (!cleaned || /\bor\b/i.test(cleaned)) {
+    return null;
+  }
+  const refs = extractCourseRefs(cleaned);
+  return refs.length > 0 ? refs : null;
+}
+
+function isSeedableRow(row: NcatGenEdCourse): boolean {
+  return (
+    row.catalog_match_status === "matched" &&
+    typeof row.total_credits === "number" &&
+    Boolean(row.course_name?.trim())
+  );
+}
+
+type ParsedGenEd = {
+  course: CourseSeed;
+  tags: GenEdTag[];
+  row: NcatGenEdCourse;
+};
+
+const parsedRows: ParsedGenEd[] = (ncatGenEdCourses as NcatGenEdCourse[])
+  .filter(isSeedableRow)
+  .map((row) => {
+    const { subject, number } = parseCourseCode(row.course_code);
+    const title = row.course_name!.trim();
+    const isLab = isLabCourse(title);
+
+    return {
+      row,
+      tags: tagsForRow(row.gen_ed_categories ?? [], isLab),
+      course: {
+        subject,
+        number,
+        title,
+        credits: row.total_credits!,
+        description: row.description?.trim() || undefined,
+        isLab,
+        offeredIn: parseOfferedIn(row.offered_in_codes),
+      },
+    };
+  });
+
+export const gecCourses: CourseSeed[] = parsedRows.map(({ course }) => course);
+
+export const gecAttributes: AttributeSeed[] = parsedRows.flatMap(
+  ({ course, tags }) =>
+    tags.map((tag) => ({
+      course: { subject: course.subject, number: course.number },
+      tag,
+    })),
 );
 
-/** GEC courses not already present in another seed list. */
+const gecCourseKeys = new Set(gecCourses.map(courseKey));
+
+/** Same-subject coreqs (lecture/lab). Cross-subject coreqs stay description-only. */
+export const gecCatalogRelations: CourseRelationSeed[] = parsedRows.flatMap(
+  ({ course, row }) => {
+    const courseRef = { subject: course.subject, number: course.number };
+    const relations: CourseRelationSeed[] = [];
+
+    if (row.corequisites) {
+      for (const requires of parseCorequisiteRefs(row.corequisites) ?? []) {
+        if (requires.subject !== course.subject) {
+          continue;
+        }
+        if (!gecCourseKeys.has(courseKey(requires))) {
+          continue;
+        }
+        relations.push({ course: courseRef, requires, isConcurrent: true });
+        relations.push({
+          course: requires,
+          requires: courseRef,
+          isConcurrent: true,
+        });
+      }
+    }
+
+    if (row.prerequisites) {
+      for (const requires of parseAndPrerequisiteRefs(row.prerequisites) ?? []) {
+        relations.push({ course: courseRef, requires, isConcurrent: false });
+      }
+    }
+
+    return relations;
+  },
+);
+
 export function mergeGecCourses(existing: CourseSeed[]): CourseSeed[] {
-  const seen = new Set(existing.map(courseKey));
-  const additions = gecCourses.filter((course) => !seen.has(courseKey(course)));
-  return [...existing, ...additions];
+  const byKey = new Map(existing.map((course) => [courseKey(course), course]));
+
+  for (const course of gecCourses) {
+    const key = courseKey(course);
+    const prior = byKey.get(key);
+    if (!prior) {
+      byKey.set(key, course);
+      continue;
+    }
+
+    byKey.set(key, {
+      ...prior,
+      title: course.title,
+      credits: course.credits,
+      description: course.description ?? prior.description,
+      isLab: course.isLab || prior.isLab,
+      offeredIn:
+        course.offeredIn && course.offeredIn.length > 0
+          ? course.offeredIn
+          : prior.offeredIn,
+    });
+  }
+
+  return [...byKey.values()];
 }
 
 export function mergeGecConcurrentPairs(
   existing: [CourseRef, CourseRef][],
 ): [CourseRef, CourseRef][] {
   const seen = new Set(
-    existing.map(([a, b]) => `${courseKey(a)}|${courseKey(b)}`),
+    existing.map(([a, b]) => [courseKey(a), courseKey(b)].sort().join("|")),
   );
-  const additions = gecConcurrentPairs.filter(
-    ([a, b]) => !seen.has(`${courseKey(a)}|${courseKey(b)}`),
-  );
-  return [...existing, ...additions];
+  const pairs = [...existing];
+
+  for (const relation of gecCatalogRelations) {
+    if (!relation.isConcurrent) {
+      continue;
+    }
+    const key = [courseKey(relation.course), courseKey(relation.requires)]
+      .sort()
+      .join("|");
+    if (seen.has(key)) {
+      continue;
+    }
+    seen.add(key);
+    pairs.push([relation.course, relation.requires]);
+  }
+
+  return pairs;
 }

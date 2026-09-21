@@ -12,12 +12,19 @@ import { departments } from "./seed/departments";
 import { elet2025 } from "./seed/elet-2025";
 import {
   gecAttributes,
+  gecCourses,
+  gecCatalogRelations,
   mergeGecConcurrentPairs,
   mergeGecCourses,
 } from "./seed/gec";
 import { info2025 } from "./seed/info-2025";
-import { mergeCstCatalogCourses, cstTechnicalElectiveCandidates } from "./seed/cst-catalog";
-import { mergeMgmtCourses, mgmtElectives } from "./seed/mgmt";
+import { mergeCstCatalogCourses, mergeCstCatalogConcurrentPairs, cstTechnicalElectiveCandidates, cstCatalogRelations } from "./seed/cst-catalog";
+import {
+  mergeMgmtConcurrentPairs,
+  mergeMgmtCourses,
+  mgmtCatalogRelations,
+  mgmtElectives,
+} from "./seed/mgmt";
 
 const INFO_YEARS = [2020, 2021, 2022, 2023, 2024, 2025, 2026] as const;
 const HANDBOOK_YEAR = 2025;
@@ -25,7 +32,16 @@ const HANDBOOK_YEAR = 2025;
 const courses = mergeCstCatalogCourses(
   mergeMgmtCourses(mergeGecCourses(handbookCourses)),
 );
-const concurrentPairs = mergeGecConcurrentPairs(handbookConcurrentPairs);
+const concurrentPairs = mergeMgmtConcurrentPairs(
+  mergeCstCatalogConcurrentPairs(
+    mergeGecConcurrentPairs(handbookConcurrentPairs),
+  ),
+);
+const catalogPrerequisiteRelations = [
+  ...cstCatalogRelations,
+  ...gecCatalogRelations,
+  ...mgmtCatalogRelations,
+];
 
 async function seedDegrees() {
   const seeded = await Promise.all(
@@ -70,14 +86,18 @@ async function seedCourses() {
       update: {
         title: course.title,
         credits: course.credits,
+        description: course.description ?? null,
         isLab: course.isLab ?? false,
+        offeredIn: course.offeredIn ?? [],
       },
       create: {
         subject: course.subject,
         number: course.number,
         title: course.title,
         credits: course.credits,
+        description: course.description ?? null,
         isLab: course.isLab ?? false,
+        offeredIn: course.offeredIn ?? [],
       },
     });
 
@@ -118,6 +138,33 @@ async function seedCourses() {
         courseId: labId,
         requiresId: lectureId,
         isConcurrent: true,
+      },
+    });
+  }
+
+  for (const relation of catalogPrerequisiteRelations) {
+    if (relation.isConcurrent) {
+      continue; // already handled via concurrentPairs
+    }
+
+    const courseId = courseIds.get(courseKey(relation.course));
+    const requiresId = courseIds.get(courseKey(relation.requires));
+    if (!courseId || !requiresId) {
+      continue; // missing targets stay description-only
+    }
+
+    await prisma.coursePrerequisite.upsert({
+      where: {
+        courseId_requiresId: {
+          courseId,
+          requiresId,
+        },
+      },
+      update: { isConcurrent: false },
+      create: {
+        courseId,
+        requiresId,
+        isConcurrent: false,
       },
     });
   }
@@ -273,7 +320,7 @@ async function main() {
   await replaceCurriculum(prisma, elet2025Year.id, courseIds, elet2025);
 
   console.log(
-    `Seeded ${degrees.length} degrees, ${departments.length} departments, ${terms.length} academic terms (NCAT Fall/Spring/Summer/I/II; removed ${termsRemoved} out-of-scope), ${courses.length} courses (${gecAttributes.length} GEC attributes, ${mgmtElectives.length} MGMT electives, ${cstTechnicalElectiveCandidates.length} CST ≥200 catalog courses), programs ${informationTechnology.code} and ${electronicsTechnology.code}, and 2025 CST handbook curricula.`,
+    `Seeded ${degrees.length} degrees, ${departments.length} departments, ${terms.length} academic terms (NCAT Fall/Spring/Summer/I/II; removed ${termsRemoved} out-of-scope), ${courses.length} courses (${gecCourses.length} GEC catalog courses / ${gecAttributes.length} GEC attributes, ${mgmtElectives.length} MGMT electives, ${cstTechnicalElectiveCandidates.length} CST ≥200 catalog courses), programs ${informationTechnology.code} and ${electronicsTechnology.code}, and 2025 CST handbook curricula.`,
   );
 }
 

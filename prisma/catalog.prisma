@@ -1,5 +1,5 @@
 model AcademicTerm {
-  id       String      @id @default(cuid())
+  id       String     @id @default(cuid())
   season   TermSeason
   year     Int
   startsOn DateTime
@@ -16,13 +16,15 @@ model AcademicTerm {
 }
 
 model Course {
-  id          String  @id @default(cuid())
+  id          String       @id @default(cuid())
   subject     String // "CST", "MATH", "MGMT"
   number      String // "140", "110"
   title       String
   credits     Int
   description String?
-  isLab       Boolean @default(false)
+  isLab       Boolean      @default(false)
+  /// Catalog typically-offered seasons (F/S/SS → FALL/SPRING/SUMMER)
+  offeredIn   TermSeason[] @default([])
 
   attributes        CourseAttribute[]
   requirementItems  RequirementItem[]

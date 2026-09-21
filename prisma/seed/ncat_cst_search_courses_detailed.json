@@ -1,0 +1,859 @@
+[
+  {
+    "course_code": "CST 101",
+    "course_name": "Microcomputer Applications",
+    "total_credits": 3,
+    "description": "This course is designed to provide the student with basic computer skills as required in a typical business and technical environment. Emphasis is on business and technical software packages including spreadsheets, database management, word-processing, etc. as run on a Windows platform.",
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=48597",
+    "prerequisites": null,
+    "corequisites": null,
+    "offered_in_codes": [
+      "F",
+      "SS"
+    ]
+  },
+  {
+    "course_code": "CST 112",
+    "course_name": "Electric Circuits I",
+    "total_credits": 3,
+    "description": "This course is a study of the fundamentals of direct current electrical circuits. Topics include series, parallel, series-parallel networks, Ohm’s Law, Kirchhoff’s Laws, network theorems, and practical applications.",
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=48598",
+    "prerequisites": "MATH 110 or CST 120.",
+    "corequisites": null,
+    "offered_in_codes": [
+      "F",
+      "S",
+      "SS"
+    ]
+  },
+  {
+    "course_code": "CST 120",
+    "course_name": "Fundamentals of Technology",
+    "total_credits": 3,
+    "description": "This course provides the quantitative background needed in the field of electronics, computer, and information technology. Topics include arithmetic review, algebra, basic trigonometry, complex algebra, statistics, and Boolean algebra and fundamental units, as they relate to electronics, information and computer technology.",
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=48599",
+    "prerequisites": null,
+    "corequisites": null,
+    "offered_in_codes": [
+      "F",
+      "S",
+      "SS"
+    ]
+  },
+  {
+    "course_code": "CST 122",
+    "course_name": "Electric Circuits I Laboratory",
+    "total_credits": 1,
+    "description": "In this laboratory, students will conduct experiments on direct current electrical circuits. Topics include: series and parallel networks, Ohm’s Law, Kirchoff’s Law, network theorems, and practical DC circuit applications.",
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=48600",
+    "prerequisites": null,
+    "corequisites": "CST 112.",
+    "offered_in_codes": [
+      "F",
+      "S",
+      "SS"
+    ]
+  },
+  {
+    "course_code": "CST 130",
+    "course_name": "Introduction to Unix/Linux",
+    "total_credits": 3,
+    "description": "The course will cover network management utilizing various Unix products, such as Linux and Solaris operating systems. Topics will include networking operating system (NOS) setup, network resource management, user and group management, and the security model.",
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=48601",
+    "prerequisites": null,
+    "corequisites": null,
+    "offered_in_codes": [
+      "F",
+      "S",
+      "SS"
+    ]
+  },
+  {
+    "course_code": "CST 140",
+    "course_name": "Introduction to Computer Programming",
+    "total_credits": 3,
+    "description": "This course gives an introduction to computer programming. Topics include structured program development and the use of a high level programming language to develop software applications.",
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=48602",
+    "prerequisites": null,
+    "corequisites": null,
+    "offered_in_codes": [
+      "F",
+      "S",
+      "SS"
+    ]
+  },
+  {
+    "course_code": "CST 150",
+    "course_name": "Introduction to Computer Programming Laboratory",
+    "total_credits": 1,
+    "description": "In this laboratory, students will apply the concepts and practices learned in the programming lecture by completing relevant programs with a practical or information technology focus.",
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=48603",
+    "prerequisites": null,
+    "corequisites": "CST 140.",
+    "offered_in_codes": [
+      "F",
+      "S",
+      "SS"
+    ]
+  },
+  {
+    "course_code": "CST 212",
+    "course_name": "Electric Circuits II",
+    "total_credits": 3,
+    "description": "This course is a continuation of Electric Circuits I. Topics include network analysis, power factor correction, complex impedance, polyphase systems, filters, resonance, and simple dynamos.",
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=48604",
+    "prerequisites": "CST 112.",
+    "corequisites": null,
+    "offered_in_codes": [
+      "F",
+      "SS"
+    ]
+  },
+  {
+    "course_code": "CST 213",
+    "course_name": "Digital Circuits",
+    "total_credits": 3,
+    "description": "This course deals with digital logic fundamentals and field programmable gate arrays (FPGAs). Topics include: combinational circuits, sequential circuits and circuit modeling and simulation using a hardware description language. Software tools are used for circuit analysis and logic synthesis.",
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=48605",
+    "prerequisites": "CST 112.",
+    "corequisites": null,
+    "offered_in_codes": [
+      "S",
+      "SS"
+    ]
+  },
+  {
+    "course_code": "CST 222",
+    "course_name": "Electric Circuits II Laboratory",
+    "total_credits": 1,
+    "description": "In this laboratory, students will conduct experiments on DC/AC electrical circuits. Topics include network analysis, power factor correction, complex impedance, polyphase systems, filters, resonance, and simple dynamos.",
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=48606",
+    "prerequisites": null,
+    "corequisites": "CST 212.",
+    "offered_in_codes": [
+      "F",
+      "SS"
+    ]
+  },
+  {
+    "course_code": "CST 223",
+    "course_name": "Digital Circuits Laboratory",
+    "total_credits": 1,
+    "description": "In this laboratory, students will conduct experiments on digital circuits and field programmable gate arrays (FPGAs). Topics include: combinational circuits, sequential circuits, and circuit modeling and simulation using a hardware description language. Software tools are used for circuit analysis and logic synthesis.",
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=48607",
+    "prerequisites": null,
+    "corequisites": "CST 213.",
+    "offered_in_codes": [
+      "S",
+      "SS"
+    ]
+  },
+  {
+    "course_code": "CST 225",
+    "course_name": "Computer Database Management I",
+    "total_credits": 3,
+    "description": "This course focuses on the study of relational database management systems. Topics include conceptual data model, logical data model, schema normalization and query languages.",
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=48608",
+    "prerequisites": null,
+    "corequisites": null,
+    "offered_in_codes": [
+      "S",
+      "SS"
+    ]
+  },
+  {
+    "course_code": "CST 231",
+    "course_name": "Web Systems",
+    "total_credits": 3,
+    "description": "This course provides integration of graphic communication application, the principles and elements of graphic design, and streamlined workflow for students to design and develop Web sites using Web development software. This course explores the fundamentals of Web design principles and elements. Students will develop dynamic, interactive, and multimedia Web sites.",
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=48609",
+    "prerequisites": "Sophomore status.",
+    "corequisites": null,
+    "offered_in_codes": [
+      "F",
+      "SS"
+    ]
+  },
+  {
+    "course_code": "CST 235",
+    "course_name": "Computer Database Management Laboratory",
+    "total_credits": 1,
+    "description": "In this laboratory, students focus exclusively on the design and system issues related to distribution database systems via conducting experiments and projects. Students learn the usage of different design strategies for distributed databases; they study query processing techniques and algorithms, as well as transaction management and concurrency control concepts used in such systems. Additionally, design and implementation issues related to multi-database systems are discussed. Finally, the course focuses on applying the techniques learned in the course to commercial database management systems.",
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=48610",
+    "prerequisites": null,
+    "corequisites": "CST 225.",
+    "offered_in_codes": [
+      "S",
+      "SS"
+    ]
+  },
+  {
+    "course_code": "CST 240",
+    "course_name": "Applied Java Programming",
+    "total_credits": 3,
+    "description": "The course provides a comprehensive overview of basic programming concepts, the Java programming language using an object-oriented approach, and the software development life cycle. The course emphasizes problem solving and good practices for program construction, documentation, testing, and debugging.",
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=48611",
+    "prerequisites": "CST 201.",
+    "corequisites": null,
+    "offered_in_codes": [
+      "F",
+      "S"
+    ]
+  },
+  {
+    "course_code": "CST 250",
+    "course_name": "Communications Systems",
+    "total_credits": 3,
+    "description": "This course investigates the fundamental concepts of electronic communications systems. Topics include: Amplitude Modulation (AM), Frequency Modulation (FM), Phase Modulation (PM), digital modulation schemes, principles of power spectra and time domain analysis.",
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=48612",
+    "prerequisites": "CST 112.",
+    "corequisites": null,
+    "offered_in_codes": [
+      "S",
+      "SS"
+    ]
+  },
+  {
+    "course_code": "CST 260",
+    "course_name": "Communication Systems Laboratory",
+    "total_credits": 1,
+    "description": "This lab will accompany the CST 250 Communications course. This lab will emphasize practical applications of analog and digital modulation schemes, principles of power spectra and time domain analysis.",
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=48613",
+    "prerequisites": null,
+    "corequisites": "CST 250.",
+    "offered_in_codes": [
+      "S",
+      "SS"
+    ]
+  },
+  {
+    "course_code": "CST 285",
+    "course_name": "Economic and Social Impacts of Information Technology",
+    "total_credits": 3,
+    "description": "This course is designed to access critically the institutional forces that shape and create the demand for Information Technology (IT). It also discusses how the consumption of new technologies impacts the economy and society. This course also helps students to think critically about the ethics of new technologies and their impact on society in a climate of ever-changing social and economic conditions.",
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=48614",
+    "prerequisites": null,
+    "corequisites": null,
+    "offered_in_codes": [
+      "S",
+      "SS"
+    ]
+  },
+  {
+    "course_code": "CST 300",
+    "course_name": "Introduction to Project Management for Information Technology Professionals",
+    "total_credits": 3,
+    "description": "This course introduces the concept of project management to information technology majors. It will also teach students to create work breakdown structures, identify task dependencies and",
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=48615",
+    "prerequisites": "prerequisites, and identify a critical path to completion of a project.",
+    "corequisites": null,
+    "offered_in_codes": [
+      "S",
+      "SS"
+    ],
+    "catalog_note": "The catalog prerequisite field appears malformed; its text is preserved verbatim."
+  },
+  {
+    "course_code": "CST 305",
+    "course_name": "Foundations of Storage Technology",
+    "total_credits": 3,
+    "description": "This course provides a comprehensive introduction to data storage technology fundamentals using case studies and laboratory experiments. Students will gain knowledge of the core logical and physical components that make up a storage system’s infrastructure.",
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=48616",
+    "prerequisites": null,
+    "corequisites": null,
+    "offered_in_codes": [
+      "F",
+      "SS"
+    ]
+  },
+  {
+    "course_code": "CST 306",
+    "course_name": "Big Data Analytics",
+    "total_credits": 3,
+    "description": "This course provides an introduction to big data and Data Analytics Lifecycle to address business challenges leveraging big data. The course covers basic and advanced data analytics tools and technology, including MapReduce and Hadoop. The course teaches several technologies used in manipulating storing and analyzing big data using both SQL and NoSQL storage solutions.",
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=48617",
+    "prerequisites": "CST 140.",
+    "corequisites": null,
+    "offered_in_codes": [
+      "F",
+      "SS"
+    ]
+  },
+  {
+    "course_code": "CST 312",
+    "course_name": "Active Circuits I",
+    "total_credits": 3,
+    "description": "This course is an introduction to active electronic circuitry. Topics include power supplies, small and large amplifiers and linear integrated circuits.",
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=48618",
+    "prerequisites": "CST 112.",
+    "corequisites": null,
+    "offered_in_codes": [
+      "F",
+      "SS"
+    ]
+  },
+  {
+    "course_code": "CST 313",
+    "course_name": "Applied Hardware and Software Systems I",
+    "total_credits": 3,
+    "description": "In this course, students will use the concepts learned in circuits and programming to study the principles of designing and implementing electronic systems that are controlled by software. Students will use various microcontroller boards and programming languages to learn these principles.",
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=48619",
+    "prerequisites": "CST 312 and CST 140.",
+    "corequisites": null,
+    "offered_in_codes": [
+      "S",
+      "SS"
+    ]
+  },
+  {
+    "course_code": "CST 314",
+    "course_name": "Active Circuits II",
+    "total_credits": 3,
+    "description": "This course is continuation of CST 312 - Active Circuits I. Topics include: oscillators, phase locked loops, current differencing amplifiers, logarithmic amplifiers, trans conductance amplifiers, voltage regulators and specialized communications circuits.",
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=48620",
+    "prerequisites": "CST 312.",
+    "corequisites": null,
+    "offered_in_codes": [
+      "F",
+      "SS"
+    ]
+  },
+  {
+    "course_code": "CST 315",
+    "course_name": "Network Security for Information Technology Professionals",
+    "total_credits": 3,
+    "description": "This course focuses on basic concepts in network security. It aims to introduce students to the fundamental techniques used in implementing secure network communications, and to give them an understanding of common threats and attacks, as well as some practical experience in attacking and defending networked systems.",
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=48621",
+    "prerequisites": null,
+    "corequisites": null,
+    "offered_in_codes": [
+      "S",
+      "SS"
+    ]
+  },
+  {
+    "course_code": "CST 316",
+    "course_name": "Information Security",
+    "total_credits": 3,
+    "description": "This course covers various aspects of data integrity, privacy and security from several perspectives including: legal issues, technical tools and methods, social and ethical concerns and applicable standards.",
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=48622",
+    "prerequisites": "CST 315.",
+    "corequisites": null,
+    "offered_in_codes": [
+      "S",
+      "SS"
+    ]
+  },
+  {
+    "course_code": "CST 317",
+    "course_name": "Human Computer Interaction",
+    "total_credits": 3,
+    "description": "The study of human-computer interaction enables system architects to design useful, efficient, and enjoyable computer interfaces. This course teaches the theory, design procedure, and programming practices behind effective human interaction with computers, and - a particular focus this quarter: smart phones and tablets.",
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=48623",
+    "prerequisites": "Junior or senior status.",
+    "corequisites": null,
+    "offered_in_codes": [
+      "S",
+      "SS"
+    ]
+  },
+  {
+    "course_code": "CST 322",
+    "course_name": "Active Circuits I Laboratory",
+    "total_credits": 1,
+    "description": "In this laboratory, students conduct experiments and complete projects focusing on active electronic circuitry. Topics include power supplies, small and large amplifiers and linear integrated circuits.",
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=48624",
+    "prerequisites": null,
+    "corequisites": "CST 312.",
+    "offered_in_codes": [
+      "F",
+      "SS"
+    ]
+  },
+  {
+    "course_code": "CST 323",
+    "course_name": "Applied Hardware and Software Laboratory",
+    "total_credits": 1,
+    "description": "In this laboratory, students will apply the concepts and practices learned in the applied hardware and software lecture by building projects that have a practical purpose.",
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=48625",
+    "prerequisites": null,
+    "corequisites": "CST 313.",
+    "offered_in_codes": [
+      "S",
+      "SS"
+    ]
+  },
+  {
+    "course_code": "CST 325",
+    "course_name": "Computer Database Management II",
+    "total_credits": 3,
+    "description": "This course is a continuation of CST 225. Topics include advanced query languages, query processing and optimization, transaction processing, concurrency control, backup and recovery, indexing and replication.",
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=48626",
+    "prerequisites": "CST 225.",
+    "corequisites": null,
+    "offered_in_codes": [
+      "F",
+      "SS"
+    ]
+  },
+  {
+    "course_code": "CST 326",
+    "course_name": "Database Security",
+    "total_credits": 3,
+    "description": "This course explores policies, methods and mechanisms for protecting enterprise data. Topics include data reliability, integrity, confidentiality, discretionary and mandatory access controls, and secure database architectures.",
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=48627",
+    "prerequisites": "CST 325.",
+    "corequisites": null,
+    "offered_in_codes": [
+      "S",
+      "SS"
+    ]
+  },
+  {
+    "course_code": "CST 329",
+    "course_name": "Computer Networking I",
+    "total_credits": 3,
+    "description": "This course introduces the student to Local Area Networks (LAN) and introduction to Wide Area Networks (WAN). The course also will provide the basic understanding of network concepts and router programming.",
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=48628",
+    "prerequisites": null,
+    "corequisites": null,
+    "offered_in_codes": [
+      "F",
+      "SS"
+    ]
+  },
+  {
+    "course_code": "CST 330",
+    "course_name": "Computer Networking II",
+    "total_credits": 3,
+    "description": "This course covers the advanced study of Local Area Networks (LAN) and Wide Area Networks (WAN). The students will develop competences in designing and implementing enterprise-wide networks using routers and switches.",
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=48629",
+    "prerequisites": null,
+    "corequisites": null,
+    "offered_in_codes": [
+      "S",
+      "SS"
+    ]
+  },
+  {
+    "course_code": "CST 339",
+    "course_name": "Computer Networking I Laboratory",
+    "total_credits": 1,
+    "description": "In this laboratory, students will conduct experiments with and simulations on Local Area Networks (LANs) and Wide Area Networks (WANs). This course also presents lab projects involving a basic understanding of network concepts and router programming.",
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=48630",
+    "prerequisites": null,
+    "corequisites": "CST 329.",
+    "offered_in_codes": [
+      "F",
+      "SS"
+    ]
+  },
+  {
+    "course_code": "CST 340",
+    "course_name": "Introduction to Mainframe Operations",
+    "total_credits": 3,
+    "description": "This course is an introduction to mainframe operations including concepts and functions of the OS/MVS operating system. Topics include virtual storage, Job Control Language (JCL), data management, data set organization, compilers, and linkage editor. Additional, topics include the study of instream data sets, portioned data sets, temporary and cataloged sequential data sets, and cataloged procedures.",
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=48631",
+    "prerequisites": "CST 140 or consent of instructor.",
+    "corequisites": null,
+    "offered_in_codes": [
+      "F",
+      "SS"
+    ]
+  },
+  {
+    "course_code": "CST 346",
+    "course_name": "Intermediate Enterprise Sys Operations",
+    "total_credits": 3,
+    "description": "This course is a continuation of CST 340, and will focus on the application of concepts acquired in CST 340. Topics will include: COBOL, DB2, CICS, JCL, ISPF, RDz, Sysplex and z/VM.",
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=48632",
+    "prerequisites": "CST 340 or Consent from Instructor.",
+    "corequisites": null,
+    "offered_in_codes": [
+      "S",
+      "SS"
+    ]
+  },
+  {
+    "course_code": "CST 347",
+    "course_name": "Advanced Enterprise Sys Operations",
+    "total_credits": 3,
+    "description": "This course will be a semester long focused project on an enterprise systems topic. Student will work under the direct supervision of the instructor on a project selected by industry. Students may continue on a project begun on a recent internship or co-op, or have a topic selected by a Department Industry Partner.",
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=48633",
+    "prerequisites": "CST 346 or consent of instructor.",
+    "corequisites": null,
+    "offered_in_codes": [
+      "F",
+      "S",
+      "SS"
+    ]
+  },
+  {
+    "course_code": "CST 355",
+    "course_name": "Electrical Power and Machinery",
+    "total_credits": 3,
+    "description": "This course is a study of electrical machines and power systems. Topics include dc motors, single phase and 3 phase induction motors, synchronous generators, motor drives and power system transmission and distribution.",
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=48634",
+    "prerequisites": "CST 212.",
+    "corequisites": null,
+    "offered_in_codes": [
+      "S",
+      "SS"
+    ]
+  },
+  {
+    "course_code": "CST 357",
+    "course_name": "Network Servers",
+    "total_credits": 3,
+    "description": "This course is a survey of enterprise network technologies. Topics will include virtualization, security and hardware implementation.",
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=48635",
+    "prerequisites": "CST 340.",
+    "corequisites": null,
+    "offered_in_codes": [
+      "S",
+      "SS"
+    ]
+  },
+  {
+    "course_code": "CST 383",
+    "course_name": "Alternative Energy Systems",
+    "total_credits": 3,
+    "description": "This course will cover the production of electric energy from alternate energy sources including solar, wind, hydro, biomass, geothermal and ocean. It will provide the background knowledge of the characteristics of direct conversion, electromechanical conversion, and storage devices used in alternate energy systems. Power system issues associated with the integration of small scale energy sources into the electricity grid will be investigated.",
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=48636",
+    "prerequisites": "CST 355.",
+    "corequisites": null,
+    "offered_in_codes": [
+      "F",
+      "SS"
+    ]
+  },
+  {
+    "course_code": "CST 384",
+    "course_name": "Energy, Power and the Environment",
+    "total_credits": 3,
+    "description": "This course will cover the basic concepts of electric power generation, utilization and power networks. This course covers the development and current status of energy sources, technologies, consumption patterns, conservation and energy policies. The course will place emphasis on the environmental effects of various choices made at each step of the energy cycle. The course will also examine those choices from technological and socioeconomic points of view. How total energy consumption and the global economy, affects the environment will be studied.",
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=48637",
+    "prerequisites": "CST 312.",
+    "corequisites": null,
+    "offered_in_codes": [
+      "S",
+      "SS"
+    ]
+  },
+  {
+    "course_code": "CST 390",
+    "course_name": "Special Topics in CST",
+    "total_credits": 3,
+    "description": "This course is used to introduce new topics in the field of computer systems technology. The subject matter will be identified prior to the beginning of the course.",
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=48638",
+    "prerequisites": "Junior status. Repeatable.",
+    "corequisites": null,
+    "offered_in_codes": [
+      "F",
+      "S",
+      "SS"
+    ]
+  },
+  {
+    "course_code": "CST 405",
+    "course_name": "Cloud Infrastructure and Services",
+    "total_credits": 3,
+    "description": "This course teaches students cloud deployment and service models, cloud infrastructure, and the key considerations in migrating to cloud computing using hands-on labs. The course covers key technologies to include compute, storage, networking, desktop and application virtualization. In addition, course also includes topics on backup/recovery, business continuity, security and management. Students learn about the key consideration and steps involved to setup a complete cloud computing environment. Virtual Computing Lab (VCL) environment is used for lab exercises.",
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=48639",
+    "prerequisites": null,
+    "corequisites": null,
+    "offered_in_codes": [
+      "F",
+      "SS"
+    ]
+  },
+  {
+    "course_code": "CST 406",
+    "course_name": "Backup Recovery Systems and Architectures",
+    "total_credits": 3,
+    "description": "The Backup Recovery Systems and Architecture (BRSA) course provides students with a solid foundation in Backup and Recovery infrastructure. The course focuses on the concepts and technologies used in Backup and Recovery environments. Students learn about backup and recovery theory, including backup methods, planning, and key terminology. The course includes topics on how storage technologies work and how their features such as replication and snapshot can be used for backup. This is followed by a look into data sources at the backup client and storage node backup targets. The course ends with backup and recovery planning and a high level look at the current industry trends.",
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=48640",
+    "prerequisites": "CST 405.",
+    "corequisites": null,
+    "offered_in_codes": [
+      "S",
+      "SS"
+    ]
+  },
+  {
+    "course_code": "CST 413",
+    "course_name": "Applied Hardware and Software Systems II",
+    "total_credits": 3,
+    "description": "In this course, students will place emphasis on moderate to complex digital and analog systems. Students will expound upon the concepts learned in circuits and programming to study the principles of designing and implementing electronic systems that are controlled by software. Students will use various microcontroller boards and programming languages to learn these principles.",
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=48641",
+    "prerequisites": "CST 312 and CST 140.",
+    "corequisites": null,
+    "offered_in_codes": [
+      "F",
+      "SS"
+    ]
+  },
+  {
+    "course_code": "CST 414",
+    "course_name": "ASIC/FPGA Design",
+    "total_credits": 3,
+    "description": "This course provides an introduction to Application Specific Integrated Circuits (ASIC) design. It introduces design tools that can be used to automate ASIC design. Similar tools will be used to develop designs for field programmable gate arrays, traditional gate arrays. Students will also be exposed to custom design tools and techniques.",
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=48642",
+    "prerequisites": "CST 213.",
+    "corequisites": null,
+    "offered_in_codes": [
+      "S",
+      "SS"
+    ]
+  },
+  {
+    "course_code": "CST 425",
+    "course_name": "Data Warehousing",
+    "total_credits": 3,
+    "description": "This course introduces the fundamental concepts in developing data warehousing systems. Topics include concepts, architectures, modeling, physical design, ETL processes, and OLAP.",
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=48643",
+    "prerequisites": "CST 325.",
+    "corequisites": null,
+    "offered_in_codes": [
+      "S",
+      "SS"
+    ]
+  },
+  {
+    "course_code": "CST 426",
+    "course_name": "Actionable Knowledge Mining",
+    "total_credits": 3,
+    "description": "This course introduces advanced information technologies for extracting non-trivial, actionable and novel knowledge from data for organizational decision-making. Topics cover mining classification rules, association rules, clustering and anomaly.",
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=48644",
+    "prerequisites": "CST 325.",
+    "corequisites": null,
+    "offered_in_codes": [
+      "F",
+      "SS"
+    ]
+  },
+  {
+    "course_code": "CST 430",
+    "course_name": "Linux Systems Administration",
+    "total_credits": 3,
+    "description": "This course presents the fundamental knowledge and skills needed to install, manage, and maintain a Linux Operating System. Students will learn to install the system, add users, configure devices, and maintain system security.",
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=48645",
+    "prerequisites": "CST 130.",
+    "corequisites": null,
+    "offered_in_codes": [
+      "F",
+      "SS"
+    ]
+  },
+  {
+    "course_code": "CST 432",
+    "course_name": "Computer Systems Architecture",
+    "total_credits": 3,
+    "description": "This course introduces the organization and design philosophy of computer systems with respect to resource management, throughput, and operating system interaction. Topics include instruction sets, registers, data types, memory management and hierarchy, virtual memory, cache, storage management, vector and multi-processing, CPU design, arithmetic algorithms, I/O communication techniques, RISC architectures, and pipelining.",
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=48646",
+    "prerequisites": "CST 213",
+    "corequisites": null,
+    "offered_in_codes": [
+      "F",
+      "SS"
+    ]
+  },
+  {
+    "course_code": "CST 433",
+    "course_name": "Introduction to High Performance Computing",
+    "total_credits": 3,
+    "description": "This course provides an overview of the basic system, network, security, and programming aspects of High Performance Computing. Students will be introduced to the advantages and disadvantages of various machine architectures, programming models, and problem types. Students will learn basic high performance computing cluster configuration and use.",
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=48647",
+    "prerequisites": null,
+    "corequisites": null,
+    "offered_in_codes": [
+      "S",
+      "SS"
+    ]
+  },
+  {
+    "course_code": "CST 434",
+    "course_name": "High Performance Computer Architecture and System Administration",
+    "total_credits": 3,
+    "description": "Topics covered in this course include: classification and management of high performance computing clusters. The course also includes an in-dept study of high performance system board components, memory management, supporting input and output devices, troubleshooting, and disaster recovery techniques.",
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=48648",
+    "prerequisites": null,
+    "corequisites": null,
+    "offered_in_codes": [
+      "S",
+      "SS"
+    ]
+  },
+  {
+    "course_code": "CST 435",
+    "course_name": "Introduction Parallel Pro",
+    "total_credits": 3,
+    "description": "Topics covers parallel computing fundamentals including models of parallel computing, architecture taxonomy, memory architecture, performance, design, and scalability considerations, parallel programming paradigms, techniques and issues in parallel program creation, and parallel programming examples.",
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=48649",
+    "prerequisites": "CST 433.",
+    "corequisites": null,
+    "offered_in_codes": [
+      "F",
+      "SS"
+    ]
+  },
+  {
+    "course_code": "CST 448",
+    "course_name": "Advanced Networking Security Applications",
+    "total_credits": 3,
+    "description": "This course explores security items, definitions, concepts, and issues that face industries today. This course also will examine how the concept of security, and being secure, integrates into the overall enterprise mission. The importance of user involvement, security training, ethics, trust and informed management will be explored.",
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=48650",
+    "prerequisites": "CST 315.",
+    "corequisites": null,
+    "offered_in_codes": [
+      "F",
+      "SS"
+    ]
+  },
+  {
+    "course_code": "CST 450",
+    "course_name": "Wireless Communications Sys I",
+    "total_credits": 3,
+    "description": "This course covers fundamental theory and design of high capacity wireless communication systems. Topics include trunking, propagation effects, frequency reuse, modulation methods, coding and equalization. Emerging cellular and next generation personal communication systems will also be analyzed.",
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=48651",
+    "prerequisites": "CST 250.",
+    "corequisites": null,
+    "offered_in_codes": [
+      "S",
+      "SS"
+    ]
+  },
+  {
+    "course_code": "CST 460",
+    "course_name": "System Integration and Architecture",
+    "total_credits": 3,
+    "description": "Examines the issues related to system integration. Topics include: data integration, business process integration, integration architecture, middleware, system security, and system management.",
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=48652",
+    "prerequisites": "Senior status.",
+    "corequisites": null,
+    "offered_in_codes": [
+      "F",
+      "S",
+      "SS"
+    ]
+  },
+  {
+    "course_code": "CST 465",
+    "course_name": "Wireless Geo-Location Systems",
+    "total_credits": 3,
+    "description": "This course describes the concepts and mechanics of Global Positioning Systems (GPS) and Inertial Navigation Systems (INS). Practical applications of GPS, INS and GPS/INS are discussed. Simple algebraic mathematical calculations are used to convey concepts and properties of these systems.",
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=48653",
+    "prerequisites": null,
+    "corequisites": null,
+    "offered_in_codes": [
+      "F",
+      "SS"
+    ]
+  },
+  {
+    "course_code": "CST 475",
+    "course_name": "Video Communication Systems",
+    "total_credits": 3,
+    "description": "This course will study the techniques used to transmit and receive analog and digital video information. This course will also discuss current state of the art video technology such as High Definition Television (HDTV).",
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=48654",
+    "prerequisites": null,
+    "corequisites": null,
+    "offered_in_codes": [
+      "S",
+      "SS"
+    ]
+  },
+  {
+    "course_code": "CST 481",
+    "course_name": "Power System Analysis and Control",
+    "total_credits": 3,
+    "description": "This course covers the development of methods for power system analysis and control. An analysis and implementation of systems for steady state, transient, and dynamic conditions will be studied. Digital solutions will be emphasized.",
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=48655",
+    "prerequisites": "CST 355.",
+    "corequisites": null,
+    "offered_in_codes": [
+      "F",
+      "SS"
+    ]
+  },
+  {
+    "course_code": "CST 483",
+    "course_name": "Solar Energy",
+    "total_credits": 3,
+    "description": "In this course students will learn the fundamentals of solar energy and how it can be used as a source of renewable energy. Principles of solar home design, solar hot water, pool and space heating and solar cooling for both new and existing structures are presented.",
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=48656",
+    "prerequisites": "CST 383.",
+    "corequisites": null,
+    "offered_in_codes": [
+      "S",
+      "SS"
+    ]
+  },
+  {
+    "course_code": "CST 484",
+    "course_name": "Wind and Water Energy",
+    "total_credits": 3,
+    "description": "In this course students will learn the fundamentals of wind and water energy and how it can be used as a source of renewable energy. Principles of and concepts of mechanics and power generation from wind and water are considered.",
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=48657",
+    "prerequisites": "CST 356.",
+    "corequisites": null,
+    "offered_in_codes": [
+      "F",
+      "SS"
+    ]
+  },
+  {
+    "course_code": "CST 496",
+    "course_name": "Senior Colloquium",
+    "total_credits": 1,
+    "description": "This course provides a forum for dialogue among students, industry, and academia. It will address the processes and skills needed for becoming a successful professional in the information technology field.",
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=48658",
+    "prerequisites": "Senior status.",
+    "corequisites": null,
+    "offered_in_codes": [
+      "F"
+    ]
+  },
+  {
+    "course_code": "CST 497",
+    "course_name": "Independent Study",
+    "total_credits": 3,
+    "description": "The student selects a technical problem in electronics or computer technology for special research and study in consultation with a faculty member in area of interest. The student will spend a minimum of six hours per week in library research or laboratory experimentation. A technical report in standard format is required for completion and approved by faculty.",
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=48659",
+    "prerequisites": "Junior or senior status.",
+    "corequisites": null,
+    "offered_in_codes": [
+      "F",
+      "S",
+      "SS"
+    ]
+  },
+  {
+    "course_code": "CST 498",
+    "course_name": "Senior Project: A Capstone Experience",
+    "total_credits": 3,
+    "description": "Students are required to complete projects that demonstrate a comprehensive understanding of basic concepts taught throughout the curriculum. Each project will be accompanied by a formal report on the project. Students will also make regular presentations of project status. Proficiency in effective technical writing, technical presentation and project management skills are emphasized.",
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=48660",
+    "prerequisites": null,
+    "corequisites": null,
+    "offered_in_codes": [
+      "F",
+      "S",
+      "SS"
+    ]
+  },
+  {
+    "course_code": "CST 499",
+    "course_name": "Senior Project II: A Capstone Experience",
+    "total_credits": 3,
+    "description": "Students are required to complete projects that demonstrate a comprehensive understanding of basic concepts taught throughout the curriculum. Each project will be accompanied by a formal report on the project. Students will also make regular presentations of project status. Proficiency in effective technical writing, technical presentation and project management skills are emphasized.",
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=48661",
+    "prerequisites": null,
+    "corequisites": null,
+    "offered_in_codes": [
+      "F",
+      "S",
+      "SS"
+    ]
+  }
+]

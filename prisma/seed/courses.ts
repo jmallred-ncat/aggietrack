@@ -1,9 +1,14 @@
+import type { TermSeason } from "../../lib/generated/prisma/client";
+
 export type CourseSeed = {
   subject: string;
   number: string;
   title: string;
   credits: number;
+  description?: string;
   isLab?: boolean;
+  /** Catalog typically-offered seasons (F/S/SS → FALL/SPRING/SUMMER). */
+  offeredIn?: TermSeason[];
 };
 
 export type CourseRef = Pick<CourseSeed, "subject" | "number">;

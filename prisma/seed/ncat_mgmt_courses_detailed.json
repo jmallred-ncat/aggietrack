@@ -1,0 +1,426 @@
+[
+  {
+    "course_code": "MGMT 110",
+    "course_name": "Business Environment",
+    "total_credits": 3,
+    "description": "The purpose of this course is to provide an understanding of the evolution of American business and an appreciation of the growing responsibilities facing both the company and its leaders. This course also covers business functions, the nature and problems of establishing a business enterprise, elementary mathematical problems and computer concepts for business.",
+    "prerequisites": null,
+    "corequisites": null,
+    "offered_in_codes": [
+      "F",
+      "S",
+      "SS"
+    ],
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=49627"
+  },
+  {
+    "course_code": "MGMT 201",
+    "course_name": "Principles of Management",
+    "total_credits": 3,
+    "description": "This course focuses on developing an understanding of the basic management functions of planning, organizing, leading and controlling material and human resources to achieve organizational goals. It includes an overview of organization theory, multicultural global competitive environment, strategic management, ethics and social responsibility, and entrepreneurial processes.",
+    "prerequisites": "Sophomore standing.",
+    "corequisites": null,
+    "offered_in_codes": [
+      "F",
+      "S",
+      "SS"
+    ],
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=49628"
+  },
+  {
+    "course_code": "MGMT 221",
+    "course_name": "Global Business Environment",
+    "total_credits": 3,
+    "description": "Global Business Environment provides students with both an understanding of the fast changing global society and an awareness of the challenges and opportunities in the global economy. It provides approaches to understanding international relationships among nations (the political, socio-cultural, legal, economic, and technological factors influencing international operations). Emphasis is placed on the cultural challenges of global business as well as maintenance of a global perspective in all business decision making.",
+    "prerequisites": null,
+    "corequisites": null,
+    "offered_in_codes": [],
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=49629"
+  },
+  {
+    "course_code": "MGMT 260",
+    "course_name": "Business Communication",
+    "total_credits": 3,
+    "description": "This course focuses on the study and application of communication theory using state-of-the-art communication technology and techniques to develop correspondence and reports. Attention is also given to oral communication, business ethics, and global interaction.",
+    "prerequisites": "ENGL 100 or equivalent, minimum grade of C; ENGL 101 or equivalent, minimum grade of C; or approval of the chairperson.",
+    "corequisites": null,
+    "offered_in_codes": [
+      "F",
+      "S",
+      "SS"
+    ],
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=49630"
+  },
+  {
+    "course_code": "MGMT 303",
+    "course_name": "Legal Environment of Business",
+    "total_credits": 3,
+    "description": "This course is an introduction to the legal system and environment in which business and the government operate and examines the creation of rights, liabilities, and regulations under the law as expressions of social and economic forces. Substantive coverage includes the U.S. Constitution, court systems and procedure, federal market regulation, administrative agencies, consumer protection, contractual relations, agency, and employment law, including equal employment opportunity law.",
+    "prerequisites": null,
+    "corequisites": null,
+    "offered_in_codes": [
+      "F",
+      "S",
+      "SS"
+    ],
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=49631"
+  },
+  {
+    "course_code": "MGMT 315",
+    "course_name": "Management Science I",
+    "total_credits": 3,
+    "description": "This course introduces the student to operations research. Basic concepts of management science will be covered, including selected quantitative models applicable to management decisions involving production, marketing, and finance functions. Coverage will also include analytical and theoretical techniques for production and job design, location and layout, scheduling, inventory, linear programming and network models.",
+    "prerequisites": "MATH 112 or MATH 115; and ECON 206; and Junior standing.",
+    "corequisites": null,
+    "offered_in_codes": [
+      "F",
+      "S",
+      "SS"
+    ],
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=49632"
+  },
+  {
+    "course_code": "MGMT 321",
+    "course_name": "Organizational Behavior",
+    "total_credits": 3,
+    "description": "This course introduces behavioral concepts of concern to management. Emphasis is placed upon the analysis of interpersonal relations, communication practices, and moral factors relative to their effect upon productivity, organizational effectiveness, and personnel systems.",
+    "prerequisites": "MGMT 201.",
+    "corequisites": null,
+    "offered_in_codes": [
+      "F",
+      "S"
+    ],
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=49633"
+  },
+  {
+    "course_code": "MGMT 322",
+    "course_name": "Human Resource Management",
+    "total_credits": 3,
+    "description": "This course offers an introductory overview of human management functions, including the processes or systems that are designed to recruit, select, train, develop, motivate and retain a productive workforce. The emphasis is on management and utilization of people as organizational resources to achieve organizational objectives. The course covers relevant social, cultural, political, legal and global environment developments and provides the student with both general and specialized knowledge of the field and practice of human resource management in a variety of organizational settings.",
+    "prerequisites": "MGMT 201.",
+    "corequisites": null,
+    "offered_in_codes": [
+      "F",
+      "S",
+      "SS"
+    ],
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=49634"
+  },
+  {
+    "course_code": "MGMT 323",
+    "course_name": "Leading Work Groups and Teams",
+    "total_credits": 3,
+    "description": "This course is for students who will be responsible for managing, leading, or participating in task performing work groups and teams. Behavioral science concepts are used to explore how to lead and create effective group and team environments. Course topics will include theories on group and team development, group decision making process, leading work groups and teams, project management and the social construction of groups. A highly experiential teaching approach will be used to create a learning context. Course completion should enable students to lead task performing work groups and teams.",
+    "prerequisites": "MGMT 201.",
+    "corequisites": null,
+    "offered_in_codes": [
+      "F",
+      "S",
+      "SS"
+    ],
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=49635"
+  },
+  {
+    "course_code": "MGMT 330",
+    "course_name": "Operations Management",
+    "total_credits": 3,
+    "description": "This course is a survey of the major production and operations functions of organizations using various productive systems. It stresses the identification of major problem areas associated with these functions (e.g., aggregate planning, scheduling, man-machine systems, inventory control) and the development of concepts and decision processes for achieving managerial solutions. It also emphasizes the application of modern quantitative techniques relevant to production management.",
+    "prerequisites": "MGMT 315 and junior status.",
+    "corequisites": null,
+    "offered_in_codes": [
+      "F",
+      "S",
+      "SS"
+    ],
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=49636"
+  },
+  {
+    "course_code": "MGMT 343",
+    "course_name": "Entrepreneurship",
+    "total_credits": 3,
+    "description": "This course examines the unique aspects of small businesses. Attention will be given to competitive strategy, regulatory environment, and sources of financing. The role of the small business within the macro economy is also explored.",
+    "prerequisites": null,
+    "corequisites": null,
+    "offered_in_codes": [
+      "F",
+      "S"
+    ],
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=49637"
+  },
+  {
+    "course_code": "MGMT 345",
+    "course_name": "Entrepreneurship Consulting",
+    "total_credits": 3,
+    "description": "This course offers students a unique opportunity to develop consulting skills and entrepreneurial expertise by working as student consultants and interns, individually or in teams, with start-up and early-stage companies. Emphasis is placed on the consulting process including evaluation of various aspects of the business, identification of operational and strategic planning problems, development of recommendations, and preparation of a final report. A review of teamwork, report writing, business presentations, and ethical aspects of student consulting is also provided.",
+    "prerequisites": "MGMT 343.",
+    "corequisites": null,
+    "offered_in_codes": [
+      "S"
+    ],
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=49638"
+  },
+  {
+    "course_code": "MGMT 347",
+    "course_name": "Entrepreneurial Financing",
+    "total_credits": 3,
+    "description": "This course examines financing the start-up of a new business venture or growing venture. The advantages and disadvantages of the sources of new venture financing are studied from commercial banks, angel funding, private placement, venture capitalist, public equity markets and financial plan preparation.",
+    "prerequisites": "MGMT 343 and ACCT 221.",
+    "corequisites": null,
+    "offered_in_codes": [
+      "S"
+    ],
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=49639"
+  },
+  {
+    "course_code": "MGMT 349",
+    "course_name": "New Venture Creation",
+    "total_credits": 3,
+    "description": "This course integrates theory and concepts from entrepreneurship and other courses to help students implement their business ideas. The course addresses such topics as conducting an in-depth market analysis, preparing a product or service design, developing a marketing campaign, building a realistic financial forecast, and completing other pre-launch activities. Working with mentors individually or in teams, students will refine their business ideas into effective written and oral presentations ready to seek funding and to begin operation.",
+    "prerequisites": "MGMT 343; permission of instructor.",
+    "corequisites": null,
+    "offered_in_codes": [
+      "F",
+      "S",
+      "SS"
+    ],
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=49640"
+  },
+  {
+    "course_code": "MGMT 353",
+    "course_name": "Cross Cultural Communication and Negotiation",
+    "total_credits": 3,
+    "description": "Cross-cultural communications and negotiations introduces students to effective negotiation processes with a focus on different levels (government vs. government; business vs. business; NGO vs Government; etc.) of negotiation and the impact of cultural differences and communication styles on negotiation outcomes. Students will learn how to prepare and engage in interaction concerning cross cultural negotiation. They will develop the ability to recognize the cultural differences, the implications for effective negotiation, and the influence of government on business negotiation. Emphasis on impact of non-verbal and paralanguage will also be covered.",
+    "prerequisites": "MGMT 221.",
+    "corequisites": null,
+    "offered_in_codes": [
+      "S"
+    ],
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=49641"
+  },
+  {
+    "course_code": "MGMT 355",
+    "course_name": "International Business Management",
+    "total_credits": 3,
+    "description": "The course is comprehensive in nature and covers all international business. Appropriate consideration is given to current topics and/or concerns in international business. Case and area studies are utilized to make the course more practical than theoretical. Projects emphasizing major issues in international business are assigned and discussed.",
+    "prerequisites": "Senior standing.",
+    "corequisites": null,
+    "offered_in_codes": [
+      "F",
+      "S"
+    ],
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=49642"
+  },
+  {
+    "course_code": "MGMT 373",
+    "course_name": "Managing Process Improvement",
+    "total_credits": 3,
+    "description": "This course is a synthesis of transformational business process improvement frameworks including Lean Thinking, Six Sigma, Lean Six Sigma, and Theory of Constraints. The course will develop the student’s mind-set to consistently redefine customer quality requirements as measurable goal to effectively drive business process improvements.",
+    "prerequisites": "ECON 206.",
+    "corequisites": null,
+    "offered_in_codes": [
+      "F"
+    ],
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=49643"
+  },
+  {
+    "course_code": "MGMT 375",
+    "course_name": "Service Innovation and Project Management",
+    "total_credits": 3,
+    "description": "This course examines the special requirements of managing projects that include service innovations. A central theme is the exploration of project management tools and strategies to facilitate service excellence and innovation in a diverse range of service industries.",
+    "prerequisites": "MGMT 315.",
+    "corequisites": null,
+    "offered_in_codes": [
+      "S"
+    ],
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=49644"
+  },
+  {
+    "course_code": "MGMT 398",
+    "course_name": "Internship in Entrepreneurship",
+    "total_credits": 3,
+    "description": "This course provides experiential learning in entrepreneurship. Students work directly with entrepreneurs and participate in activities which give them a comprehensive understanding about owning and operating a business.",
+    "prerequisites": "MGMT 343.",
+    "corequisites": null,
+    "offered_in_codes": [
+      "SS"
+    ],
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=49645"
+  },
+  {
+    "course_code": "MGMT 427",
+    "course_name": "Business, Ethics and Social Responsibility",
+    "total_credits": 3,
+    "description": "This course explores and examines the role of business in modern civil societies from the perspectives of business ethics and corporate social responsibility. It studies theoretical, philosophical foundations and models of personal and managerial ethical decision-making process, and corporate social responsibility and philanthropy in a domestic and global business environment. The approach is to explore competing views.",
+    "prerequisites": "MGMT 110, MGMT 303.",
+    "corequisites": null,
+    "offered_in_codes": [
+      "S"
+    ],
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=49646"
+  },
+  {
+    "course_code": "MGMT 429",
+    "course_name": "Business Law",
+    "total_credits": 3,
+    "description": "Using the background provided in MGMT 303, topics related to the legal implications of business activity will be examined in detail. Coverage includes legal aspects of supply chain management, sales of goods, product liability, negotiable instruments, security and debt, bankruptcy, business organizations and society, securities regulation, and management of corporations.",
+    "prerequisites": "MGMT 303 and senior standing.",
+    "corequisites": null,
+    "offered_in_codes": [
+      "F",
+      "S",
+      "SS"
+    ],
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=49647"
+  },
+  {
+    "course_code": "MGMT 430",
+    "course_name": "Organizational Design and Change",
+    "total_credits": 3,
+    "description": "This course focuses on developing an understanding of how organizations function; the basics of organizational design, how to utilize organizational design principles to manage change and innovation; and to achieve strategic alignment in a changing competitive environment. It includes study and understanding of organizational structures, the basic work patterns of the organization through functional integration, organizational cultures, managerial roles, and the use of cross functional teams.",
+    "prerequisites": "MGMT 201 and Senior Standing.",
+    "corequisites": null,
+    "offered_in_codes": [
+      "F",
+      "S",
+      "SS"
+    ],
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=49648"
+  },
+  {
+    "course_code": "MGMT 442",
+    "course_name": "Marketing for Entrepreneurs",
+    "total_credits": 3,
+    "description": "This course is designed to address the reality of marketing in a start-up venture. Topics in this course include, but are not limited to, marketing to investors, marketing products/services without a marketing budget, applying marketing concepts within the realm of entrepreneurial company challenges and developing and maintaining key internal and external marketing relationships.",
+    "prerequisites": "MGMT 343.",
+    "corequisites": null,
+    "offered_in_codes": [
+      "F"
+    ],
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=49649"
+  },
+  {
+    "course_code": "MGMT 446",
+    "course_name": "Entrepreneurial Strategy",
+    "total_credits": 3,
+    "description": "This course focuses on development of skills for intrapreneurial and entrepreneurial opportunity recognition and evaluation to include integration of knowledge of the functional strategies needed to successfully develop and manage new entrepreneurial ventures. Topics to be covered include sources of ideas about potential new business ventures, new venture financing options, environmental analysis, assessing risk, resources, and marketing through the different stages of business growth.",
+    "prerequisites": "MGMT 343.",
+    "corequisites": null,
+    "offered_in_codes": [
+      "F",
+      "S",
+      "SS"
+    ],
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=49650"
+  },
+  {
+    "course_code": "MGMT 463",
+    "course_name": "Commercial Law",
+    "total_credits": 3,
+    "description": "In this course, the critical provisions of Uniform Commercial Code will be examined in detail. Other topics will include anti-trust, security law, suretyship, professional liability, bulk transfers, and labor law.",
+    "prerequisites": "MGMT 303.",
+    "corequisites": null,
+    "offered_in_codes": [
+      "S"
+    ],
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=49651"
+  },
+  {
+    "course_code": "MGMT 466",
+    "course_name": "Emerging Issues in Human Resource Management",
+    "total_credits": 3,
+    "description": "This course considers current and relevant emerging topics impacting the performance management of human resources in the global environment. Topics vary and depend on the current HRM environment and global trends. Experiential learning opportunities emphasized.",
+    "prerequisites": "MGMT 322.",
+    "corequisites": null,
+    "offered_in_codes": [
+      "F",
+      "S",
+      "SS"
+    ],
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=49652"
+  },
+  {
+    "course_code": "MGMT 467",
+    "course_name": "Human Resource Management Strategy and Practice",
+    "total_credits": 3,
+    "description": "This course focuses on the formulation and implementation of human resource management strategies. Emphasis is placed on the strategic dimensions of recruitment, selection, development and retention of a workforce needed to accomplish organizational strategic objectives. Issues considered will include HR information systems, HR analytics, mergers & acquisitions, outsourcing, consulting and topics relevant to the current Human Resource Management environment. In addition, this course will prepare students to take the Assurance of Learning Assessment administered by the Society of Human Resource Management Foundation.",
+    "prerequisites": "MGMT 322.",
+    "corequisites": null,
+    "offered_in_codes": [
+      "F",
+      "S",
+      "SS"
+    ],
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=49653"
+  },
+  {
+    "course_code": "MGMT 474",
+    "course_name": "Service Operations Management",
+    "total_credits": 3,
+    "description": "This course focuses on the creation of value through service system design, service quality assurance, scheduling, performance metrics and the management of customer interactions.",
+    "prerequisites": "MGMT 330 or instructor approval.",
+    "corequisites": null,
+    "offered_in_codes": [
+      "F",
+      "S",
+      "SS"
+    ],
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=49654"
+  },
+  {
+    "course_code": "MGMT 485",
+    "course_name": "Special Topics in Management",
+    "total_credits": 3,
+    "description": "This course allows for the in-depth coverage of topics addressing emerging issues in the field of Management. Content will be selected before the beginning of the semester.",
+    "prerequisites": "Senior Standing and Management Major.",
+    "corequisites": null,
+    "offered_in_codes": [
+      "F",
+      "S",
+      "SS"
+    ],
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=49655"
+  },
+  {
+    "course_code": "MGMT 490",
+    "course_name": "Independent Study in Business",
+    "total_credits": 3,
+    "description": "Today’s dynamic environment requires students to acquire both general and specific education. This course is designed to provide students the opportunity to acquire in-depth knowledge in special topics or area studies where the University does not offer a specific course. Examples include ethical issues, global area studies, culture, research skills, entrepreneurship, etc. The course will be offered on an independent study basis with topics developed between the students and the supervising faculty.",
+    "prerequisites": "Advanced junior or senior standing.",
+    "corequisites": null,
+    "offered_in_codes": [
+      "F",
+      "S",
+      "SS"
+    ],
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=49656"
+  },
+  {
+    "course_code": "MGMT 492",
+    "course_name": "Senior Management Seminars",
+    "total_credits": 3,
+    "description": "This is a reading, research and discussion course for undergrad management majors. The course will include a research paper/project to be selected by student and instructor.",
+    "prerequisites": "Senior standing and Management major.",
+    "corequisites": null,
+    "offered_in_codes": [
+      "F",
+      "S",
+      "SS"
+    ],
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=49657"
+  },
+  {
+    "course_code": "MGMT 495",
+    "course_name": "Strategic Management",
+    "total_credits": 3,
+    "description": "This is an integrative course that focuses on strategic planning, policy formulation and corporate-wide decision making. The performance objectives of this course involve analysis of complex organizations to:",
+    "prerequisites": "MGMT 201, MKTG 230; FIN 343 ACCT 221 and ACCT 222; senior status.",
+    "corequisites": null,
+    "offered_in_codes": [
+      "F",
+      "S",
+      "SS"
+    ],
+    "source_url": "https://catalog.ncat.edu/preview_course_nopop.php?catoid=19&coid=49658",
+    "catalog_note": "The catalog description ends with an unfinished phrase (to:); the source text is preserved."
+  }
+]
