@@ -88,7 +88,7 @@ export async function sendWelcomeEmail(
   appUrl = appUrlFromLink(verificationUrl),
 ) {
   const firstName = firstNameFrom(user);
-  const dashboardUrl = `${appUrl}/dashboard`;
+  const dashboardUrl = `${appUrl}/student`;
   const html = await render(
     WelcomeEmail({ firstName, dashboardUrl, verificationUrl }),
   );

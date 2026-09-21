@@ -2,6 +2,7 @@ import RegisterDialog from "@/components/auth/RegisterDialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { auth } from "@/lib/auth";
+import { homePathForRole } from "@/lib/roles";
 import { ArrowsLeftRightIcon, BookOpenIcon, CalendarCheckIcon, CalendarIcon, CalendarPlusIcon, ChartBarIcon, ChecksIcon, LockSimpleIcon, NotePencilIcon, PlayCircleIcon, SealCheckIcon, UserListIcon, UsersThreeIcon, WarningCircleIcon } from "@phosphor-icons/react/dist/ssr";
 import { headers } from "next/headers";
 import Link from "next/link";
@@ -109,7 +110,7 @@ export default async function Home() {
           </h1>
           <p>AggieTrack maps the B.S. in Information Technology at North Carolina A&T — your catalog year, what’s left, and the terms that finish it.</p>
           {session ? (
-            <Button className="mt-4 not-typeset" nativeButton={false} render={<Link href="/dashboard">Dashboard</Link>} />
+            <Button className="mt-4 not-typeset" nativeButton={false} render={<Link href={homePathForRole(session.user.role)}>Dashboard</Link>} />
           ) : (
             <RegisterDialog trigger={<Button className="mt-4 not-typeset">Get started</Button>} />
           )}

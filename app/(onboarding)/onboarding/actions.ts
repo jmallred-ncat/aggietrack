@@ -22,7 +22,7 @@ export async function createStudentProfileAction(input: unknown) {
     const existing = await getStudentProfile();
 
     if (existing) {
-        redirect("/dashboard");
+        redirect("/student");
     }
 
     const parsed = payloadSchema.safeParse(input);
@@ -55,12 +55,12 @@ export async function createStudentProfileAction(input: unknown) {
             if (Array.isArray(target) && target.includes("bannerId")) {
                 return { error: "That banner ID is already in use." }
             }
-            redirect("/dashboard");
+            redirect("/student");
         }
         throw error;
     }
 
-    redirect("/dashboard/account/profile");
+    redirect("/account/profile");
 }
 
 export async function searchProgramsAction(query: string) {

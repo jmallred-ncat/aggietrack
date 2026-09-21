@@ -43,11 +43,11 @@ export default function LoginDialog() {
         const { error } = await authReactClient.signIn.email({
             email: data.email,
             password: data.password,
-            callbackURL: "/dashboard",
+            callbackURL: "/enter",
         }, {
             onSuccess: () => {
                 setOpen(false);
-                router.push("/dashboard");
+                router.push("/enter");
             },
             onError: (ctx) => {
                 if (ctx.error.status === 403) {

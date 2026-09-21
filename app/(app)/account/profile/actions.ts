@@ -32,6 +32,6 @@ export async function updateBannerId(bannerId: string) {
         return { success: false as const, error: "Failed to update student profile." };
     }
 
-    revalidatePath("/dashboard/account/profile");
+    revalidatePath("/account/profile");
     return { success: true as const };
 }

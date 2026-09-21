@@ -13,20 +13,31 @@ import {
 import type { User } from "@/lib/generated/prisma/client";
 import { formatProgramName } from "@/lib/program";
 import type { StudentProfileWithCatalog } from "@/lib/student";
-import { BookOpenIcon, CalendarIcon, ChartBarIcon, HouseIcon, UserListIcon } from "@phosphor-icons/react/dist/ssr";
+import { BackpackIcon, BooksIcon, CalendarIcon, ChatsTeardropIcon, CheckSquareIcon, PathIcon, UsersThreeIcon } from "@phosphor-icons/react/dist/ssr";
 import Link from "next/link";
 import BookAdvisingButton from "./book-advising-button";
 
-const navigation = [
-    { href: "/dashboard/", label: "Dashboard", icon: <HouseIcon weight="duotone" /> },
-    { href: "/dashboard/progress", label: "Progress", icon: <ChartBarIcon weight="duotone" /> },
-    { href: "/dashboard/courses", label: "Courses", icon: <BookOpenIcon weight="duotone" /> },
-    { href: "/dashboard/planner", label: "Planner", icon: <CalendarIcon weight="duotone" /> },
-    { href: "/dashboard/advising", label: "Advising", icon: <UserListIcon weight="duotone" /> },
-]
+const navigationByRole = {
+    STUDENT: [
+        { href: "/student", label: "Dashboard", icon: <BackpackIcon weight="duotone" /> },
+        { href: "/student/courses", label: "Courses", icon: <BooksIcon weight="duotone" /> },
+        { href: "/student/planner", label: "Planner", icon: <CheckSquareIcon weight="duotone" /> },
+        { href: "/student/progress", label: "Progress", icon: <PathIcon weight="duotone" /> },
+        { href: "/student/advising", label: "Advising", icon: <ChatsTeardropIcon weight="duotone" /> },
+    ],
+    ADVISOR: [
+        { href: "/advisor", label: "Dashboard", icon: <BackpackIcon weight="duotone" /> },
+        { href: "/advisor/students", label: "Students", icon: <UsersThreeIcon weight="duotone" /> },
+        { href: "/advisor/appointments", label: "Appointments", icon: <CalendarIcon weight="duotone" /> },
+    ],
+    ADMIN: [
+        { href: "/admin", label: "Dashboard", icon: <BackpackIcon weight="duotone" /> },
+    ],
+}
 
 export default async function DashboardSidebar({ user, profile }: { user: User, profile: StudentProfileWithCatalog | null }) {
-    const subtitle = profile ? formatProgramName(profile.catalogYear.program) : (user.role === "ADVISOR" ? "advisor" : user.role === "ADMIN" ? "Admin" : null);
+    const navigation = navigationByRole[user.role] ?? navigationByRole.STUDENT;
+    const subtitle = profile ? formatProgramName(profile.catalogYear.program) : (user.role === "ADVISOR" ? "Advisor" : user.role === "ADMIN" ? "Admin" : null);
     return <Sidebar variant="inset">
         <SidebarHeader>
             <div className="text-sm flex items-center gap-2 not-typeset relative">
@@ -37,11 +48,10 @@ export default async function DashboardSidebar({ user, profile }: { user: User, 
                     <span className="font-bold">{user.name}</span>
                     <span className="text-muted-foreground">{subtitle}</span>
                 </div>
-                <Link href="/dashboard/account" className="not-typeset absolute inset-0 hover:pointer" />
+                <Link href="/account" className="not-typeset absolute inset-0 hover:pointer" />
             </div>
         </SidebarHeader>
         <SidebarContent>
-            {/* STUDENT NAVIGATION */}
             <SidebarGroup className="not-typeset flex flex-col h-full">
                 <SidebarMenu className="flex-1">
                     {navigation.map((item) => (
@@ -51,9 +61,11 @@ export default async function DashboardSidebar({ user, profile }: { user: User, 
                         </SidebarMenuItem>
                     ))}
 
-                    <SidebarMenu className="mt-auto">
-                        <BookAdvisingButton />
-                    </SidebarMenu>
+                    {user.role === "STUDENT" && (
+                        <SidebarMenu className="mt-auto">
+                            <BookAdvisingButton />
+                        </SidebarMenu>
+                    )}
                 </SidebarMenu>
             </SidebarGroup>
         </SidebarContent>

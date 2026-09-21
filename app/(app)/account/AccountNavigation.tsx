@@ -6,22 +6,22 @@ import Link from "next/link";
 const navigation = [
     {
         name: 'Account',
-        href: '/dashboard/account',
+        href: '/account',
         icon: 'gear',
     },
     {
         name: 'Profile',
-        href: '/dashboard/account/profile',
+        href: '/account/profile',
         icon: 'user',
     },
     {
         name: 'Security',
-        href: '/dashboard/account/security',
+        href: '/account/security',
         icon: 'bell',
     },
     {
         name: 'Notifications',
-        href: '/dashboard/account/notifications',
+        href: '/account/notifications',
         icon: 'bell',
     },
 ]

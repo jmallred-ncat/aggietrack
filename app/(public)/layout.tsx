@@ -3,6 +3,7 @@ import RegisterDialog from "@/components/auth/RegisterDialog";
 import { Button } from "@/components/ui/button";
 import { ButtonGroup } from "@/components/ui/button-group";
 import { auth } from "@/lib/auth";
+import { homePathForRole } from "@/lib/roles";
 import { UserIcon } from "@phosphor-icons/react/dist/ssr";
 import { headers } from "next/headers";
 import Link from "next/link";
@@ -33,7 +34,7 @@ export default async function PublicLayout({ children }: { children: React.React
                 </ul>
                 {session ?
                     (
-                        <Button nativeButton={false} size="sm" render={<Link href="/dashboard" />}>
+                        <Button nativeButton={false} size="sm" render={<Link href={homePathForRole(session.user.role)} />}>
                             <UserIcon weight="fill" />
                             Dashboard
                         </Button>

@@ -45,8 +45,8 @@ const tailwindConfig = {
 
 export const WelcomeEmail = ({
   firstName = "Aggie",
-  dashboardUrl = "http://localhost:3000/dashboard",
-  verificationUrl = "http://localhost:3000/api/auth/verify-email?token=preview&callbackURL=/dashboard",
+  dashboardUrl = "http://localhost:3000/student",
+  verificationUrl = "http://localhost:3000/api/auth/verify-email?token=preview&callbackURL=/enter",
 }: WelcomeEmailProps) => {
   const previewText = `Confirm your email, ${firstName}. Then three things to do next.`;
 
@@ -208,9 +208,9 @@ export const WelcomeEmail = ({
 
 WelcomeEmail.PreviewProps = {
   firstName: "James",
-  dashboardUrl: "http://localhost:3000/dashboard",
+  dashboardUrl: "http://localhost:3000/student",
   verificationUrl:
-    "http://localhost:3000/api/auth/verify-email?token=preview&callbackURL=/dashboard",
+    "http://localhost:3000/api/auth/verify-email?token=preview&callbackURL=/enter",
 } satisfies WelcomeEmailProps;
 
 export default WelcomeEmail;

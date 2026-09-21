@@ -53,7 +53,7 @@ export default function RegisterDialog({ trigger }: { trigger?: ReactElement }) 
             name: `${data.firstName} ${data.lastName}`,
             firstName: data.firstName,
             lastName: data.lastName,
-            callbackURL: "/dashboard",
+            callbackURL: "/enter",
         }, {
             onSuccess: () => {
                 setSubmittedEmail(data.email);
@@ -88,7 +88,7 @@ export default function RegisterDialog({ trigger }: { trigger?: ReactElement }) 
         setResendNote(null);
         const { error } = await authReactClient.sendVerificationEmail({
             email: submittedEmail,
-            callbackURL: "/dashboard",
+            callbackURL: "/enter",
         });
         setResending(false);
         setResendNote(error ? (error.message ?? "Could not resend.") : "Sent again. Check your inbox.");

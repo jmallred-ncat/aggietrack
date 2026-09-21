@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { prisma } from "@/lib/prisma";
+import { homePathForRole } from "@/lib/roles";
 import { getSessionUser, getStudentProfile } from "@/lib/student";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -10,12 +11,12 @@ export default async function OnboardingPage() {
     const user = await getSessionUser();
 
     if (user.role !== "STUDENT") {
-        return redirect("/dashboard");
+        return redirect(homePathForRole(user.role));
     }
 
     const profile = await getStudentProfile();
 
-    if (profile) return redirect("/dashboard");
+    if (profile) return redirect("/student");
 
     const hasPrograms = await prisma.program.count() > 0;
 

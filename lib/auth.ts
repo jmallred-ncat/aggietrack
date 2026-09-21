@@ -22,7 +22,7 @@ async function verificationUrlFor(email: string, request?: Request) {
         email,
     );
     const origin = appUrlFromRequest(request);
-    return `${origin}/api/auth/verify-email?token=${token}&callbackURL=${encodeURIComponent("/dashboard")}`;
+    return `${origin}/api/auth/verify-email?token=${token}&callbackURL=${encodeURIComponent("/enter")}`;
 }
 
 async function sendWelcomeVerification(user: MailUser, url: string) {

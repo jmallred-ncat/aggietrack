@@ -6,34 +6,12 @@ import { Button } from "@/components/ui/button";
 import { CircularProgress } from "@/components/ui/circular-progress";
 import { prisma } from "@/lib/prisma";
 import { formatProgramName } from "@/lib/program";
-import { getSessionUser, getStudentProfile } from "@/lib/student";
+import { getSessionUser, requireStudentProfile } from "@/lib/student";
 import { FlaskIcon, GraduationCapIcon, MedalIcon, NoteIcon } from "@phosphor-icons/react/dist/ssr";
-import { redirect } from "next/navigation";
 
 export default async function Dashboard() {
     const user = await getSessionUser();
-
-    const profile = await getStudentProfile();
-
-    if (!profile) {
-        if (user.role === "STUDENT") {
-            return redirect("/onboarding");
-        }
-
-        return (
-            <div className="flex flex-col gap-16 py-16">
-                <section>
-                    <header className="not-typeset">
-                        <Badge>Overview</Badge>
-                        <h1 className="text-5xl font-bold">Dashboard</h1>
-                        <p className="text-lg text-muted-foreground max-w-prose w-full text-balance leading-tight mt-3">
-                            Welcome back, {user.firstName}.
-                        </p>
-                    </header>
-                </section>
-            </div>
-        )
-    }
+    const profile = await requireStudentProfile();
 
     const courses = await prisma.course.findMany({
         where: {
