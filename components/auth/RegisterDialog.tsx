@@ -10,15 +10,12 @@ import { Button } from "../ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "../ui/dialog";
 import { Field, FieldError, FieldGroup, FieldLabel } from "../ui/field";
 import { Input } from "../ui/input";
-import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput, InputGroupText } from "../ui/input-group";
+import { InputGroup, InputGroupButton, InputGroupInput } from "../ui/input-group";
 
 const schema = z.object({
     firstName: z.string().min(1, "First names must be at least 1 character long"),
     lastName: z.string().min(1, "Last names must be at least 1 character long"),
-    email: z.string().min(1, "Email is required").refine((value) => {
-        const email = value.includes("@") ? value : `${value}@aggies.ncat.edu`;
-        return /^[a-zA-Z0-9._%+-]+@aggies\.ncat\.edu$/.test(email);
-    }, "Email must be a valid NCAT email address"),
+    email: z.email("Enter a valid email address"),
     password: z.string().min(8, "Passwords must be at least 8 characters long"),
     verifyPassword: z.string().min(8, "Passwords must be at least 8 characters long"),
 }).refine((data) => data.password === data.verifyPassword, {
@@ -50,9 +47,8 @@ export default function RegisterDialog({ trigger }: { trigger?: ReactElement }) 
 
     async function onSubmit(data: z.infer<typeof schema>) {
         setSubmitError(null);
-        const email = data.email.includes("@") ? data.email : `${data.email}@aggies.ncat.edu`;
         const { error } = await authReactClient.signUp.email({
-            email,
+            email: data.email,
             password: data.password,
             name: `${data.firstName} ${data.lastName}`,
             firstName: data.firstName,
@@ -60,7 +56,7 @@ export default function RegisterDialog({ trigger }: { trigger?: ReactElement }) 
             callbackURL: "/dashboard",
         }, {
             onSuccess: () => {
-                setSubmittedEmail(email);
+                setSubmittedEmail(data.email);
                 setResendNote(null);
                 setCheckEmail(true);
             },
@@ -95,7 +91,7 @@ export default function RegisterDialog({ trigger }: { trigger?: ReactElement }) 
             callbackURL: "/dashboard",
         });
         setResending(false);
-        setResendNote(error ? (error.message ?? "Could not resend.") : "Sent again. Check your Aggie inbox.");
+        setResendNote(error ? (error.message ?? "Could not resend.") : "Sent again. Check your inbox.");
     }
 
     return (
@@ -105,9 +101,9 @@ export default function RegisterDialog({ trigger }: { trigger?: ReactElement }) 
                 {checkEmail ? (
                     <>
                         <DialogHeader>
-                            <DialogTitle>Check your Aggie email</DialogTitle>
+                            <DialogTitle>Check your email</DialogTitle>
                             <DialogDescription>
-                                You&apos;re in — almost. Confirm the email we just sent, then you can start.
+                                You&apos;re in — almost. Confirm the email we just sent to {submittedEmail}, then you can start.
                             </DialogDescription>
                         </DialogHeader>
                         {resendNote && (
@@ -168,13 +164,14 @@ export default function RegisterDialog({ trigger }: { trigger?: ReactElement }) 
                                     render={({ field, fieldState }) => (
                                         <Field data-invalid={fieldState.invalid}>
                                             <FieldLabel>Email</FieldLabel>
-                                            <InputGroup>
-                                                <InputGroupInput {...field} id={field.name} aria-invalid={fieldState.invalid} placeholder="Email" autoComplete="email" />
-                                                <InputGroupAddon align={"inline-end"} >
-                                                    <InputGroupText>@aggies.ncat.edu</InputGroupText>
-                                                </InputGroupAddon>
-                                            </InputGroup>
-
+                                            <Input
+                                                {...field}
+                                                id={field.name}
+                                                aria-invalid={fieldState.invalid}
+                                                placeholder="you@example.com"
+                                                autoComplete="email"
+                                                type="email"
+                                            />
                                             {fieldState.invalid && <FieldError errors={[{ message: fieldState.error?.message }]} />}
                                         </Field>
                                     )}
