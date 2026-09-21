@@ -4,9 +4,10 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { CircularProgress } from "@/components/ui/circular-progress";
+import { prisma } from "@/lib/prisma";
 import { formatProgramName } from "@/lib/program";
 import { getSessionUser, getStudentProfile } from "@/lib/student";
-import { GraduationCapIcon, MedalIcon, NoteIcon } from "@phosphor-icons/react/dist/ssr";
+import { FlaskIcon, GraduationCapIcon, MedalIcon, NoteIcon } from "@phosphor-icons/react/dist/ssr";
 import { redirect } from "next/navigation";
 
 export default async function Dashboard() {
@@ -34,6 +35,16 @@ export default async function Dashboard() {
         )
     }
 
+    const courses = await prisma.course.findMany({
+        where: {
+            subject: "CST",
+        },
+        orderBy: {
+            number: "asc",
+        },
+        take: 4,
+    })
+
     const notes = Array.from({ length: 6 }, (_, index) => (`Lorem ipsum dolor, sit amet consectetur adipisicing elit. Molestias eligendi magni obcaecati eum ex officia provident adipisci nobis error similique sequi quia magnam iusto animi minima harum, rem debitis odio praesentium voluptatem deleniti sunt impedit velit amet? Ipsam nobis est ipsum, quidem in saepe repellat fugiat fuga quos consequuntur, maxime incidunt aspernatur et officia recusandae necessitatibus. Accusamus nisi, eveniet autem repellat quaerat cupiditate eligendi assumenda adipisci cum dolorum, sapiente tempora quisquam sint obcaecati illum earum? ${index + 1}`));
 
     return <div className="flex flex-col gap-16 py-16">
@@ -48,8 +59,8 @@ export default async function Dashboard() {
         <section className="grid sm:grid-cols-2 md:grid-cols-3 gap-4">
             <div className="flex flex-col items-center w-full rounded-lg bg-muted p-4 border border-border space-y-3 not-typeset">
                 <span className="text-sm font-semibold">Degree Completion</span>
-                <CircularProgress strokeWidth={16} size={120} value={102} max={120} label labelClassName="text-2xl font-bold" />
-                <p className="text-sm text-muted-foreground text-center leading-tight mt-1">102 of 120 Credits</p>
+                <CircularProgress strokeWidth={16} size={120} value={102} max={profile.catalogYear.program.totalCredits} label labelClassName="text-2xl font-bold" />
+                <p className="text-sm text-muted-foreground text-center leading-tight mt-1">102 of {profile.catalogYear.program.totalCredits} Credits</p>
                 <div className="flex items-center justify-center">
                     <GraduationCapIcon weight="fill" size={24} className="text-primary mr-2" />
                     <Badge variant="default">Spring 2027</Badge>
@@ -72,26 +83,20 @@ export default async function Dashboard() {
                 </header>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="flex flex-col items-start w-full rounded-lg bg-muted p-4 border border-border space-y-3 not-typeset">
-                        <Badge variant="default">CST 100</Badge>
-                        <h3 className="text-lg font-bold">Course Name</h3>
-                        <p className="text-sm text-muted-foreground">Course Description</p>
-                    </div>
-                    <div className="flex flex-col items-start w-full rounded-lg bg-muted p-4 border border-border space-y-3 not-typeset">
-                        <Badge variant="default">CST 100</Badge>
-                        <h3 className="text-lg font-bold">Course Name</h3>
-                        <p className="text-sm text-muted-foreground">Course Description</p>
-                    </div>
-                    <div className="flex flex-col items-start w-full rounded-lg bg-muted p-4 border border-border space-y-3 not-typeset">
-                        <Badge variant="default">CST 100</Badge>
-                        <h3 className="text-lg font-bold">Course Name</h3>
-                        <p className="text-sm text-muted-foreground">Course Description</p>
-                    </div>
-                    <div className="flex flex-col items-start w-full rounded-lg bg-muted p-4 border border-border space-y-3 not-typeset">
-                        <Badge variant="default">CST 100</Badge>
-                        <h3 className="text-lg font-bold">Course Name</h3>
-                        <p className="text-sm text-muted-foreground">Course Description</p>
-                    </div>
+                    {courses.map((course) => (
+                        <div className="flex flex-col items-start w-full rounded-lg bg-muted p-4 border border-border space-y-3 not-typeset">
+                            <div className="flex items-center justify-between gap-2 w-full">
+
+                                <Badge variant="default">{course.subject} {course.number}</Badge>
+
+                                {course.isLab &&
+                                    <FlaskIcon size={20} weight="fill" />}
+                            </div>
+                            <h3 className="text-lg font-bold">{course.title}</h3>
+                            <span className="text-sm text-muted-foreground">{course.credits} credits</span>
+                            <p className="text-sm text-muted-foreground line-clamp-3">{course.description}</p>
+                        </div>
+                    ))}
                 </div>
             </section>
             <section className="space-y-6">
