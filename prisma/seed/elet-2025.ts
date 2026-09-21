@@ -1,10 +1,12 @@
 import {
+  GenEdTag,
   Grade,
   RequirementKind,
+  RequirementSlot,
   TermSeason,
 } from "../../lib/generated/prisma/client";
 import { type CourseRef } from "./courses";
-import { type CurriculumSeed } from "./curriculum";
+import { genEdRequirement, type CurriculumSeed } from "./curriculum";
 import { gecAttributes } from "./gec";
 import { mgmtElectives } from "./mgmt";
 
@@ -48,6 +50,7 @@ export const elet2025: CurriculumSeed = {
     {
       name: "CST Major Core",
       kind: RequirementKind.ALL_OF,
+      slot: RequirementSlot.PROGRAM_CORE,
       minCredits: 54,
       minGrade: Grade.C,
       sortOrder: 10,
@@ -56,6 +59,7 @@ export const elet2025: CurriculumSeed = {
     {
       name: "Mathematics",
       kind: RequirementKind.ALL_OF,
+      slot: RequirementSlot.SUPPORTING_REQUIRED,
       minCredits: 15,
       sortOrder: 20,
       courses: [math("110"), math("131"), math("132"), math("224")],
@@ -63,6 +67,7 @@ export const elet2025: CurriculumSeed = {
     {
       name: "Written Communication",
       kind: RequirementKind.ALL_OF,
+      slot: RequirementSlot.SUPPORTING_REQUIRED,
       minCredits: 6,
       sortOrder: 30,
       courses: [engl("100"), engl("101")],
@@ -70,6 +75,7 @@ export const elet2025: CurriculumSeed = {
     {
       name: "College Success",
       kind: RequirementKind.ALL_OF,
+      slot: RequirementSlot.SUPPORTING_REQUIRED,
       minCredits: 1,
       sortOrder: 40,
       courses: [frst("101")],
@@ -77,6 +83,7 @@ export const elet2025: CurriculumSeed = {
     {
       name: "Speech Fundamentals",
       kind: RequirementKind.ALL_OF,
+      slot: RequirementSlot.SUPPORTING_REQUIRED,
       minCredits: 3,
       sortOrder: 50,
       courses: [spch("250")],
@@ -84,6 +91,7 @@ export const elet2025: CurriculumSeed = {
     {
       name: "Physics",
       kind: RequirementKind.ALL_OF,
+      slot: RequirementSlot.SUPPORTING_REQUIRED,
       minCredits: 8,
       sortOrder: 60,
       courses: [phys("225"), phys("235"), phys("226"), phys("236")],
@@ -91,6 +99,7 @@ export const elet2025: CurriculumSeed = {
     {
       name: "Business Environment",
       kind: RequirementKind.ALL_OF,
+      slot: RequirementSlot.SUPPORTING_REQUIRED,
       minCredits: 3,
       sortOrder: 70,
       courses: [mgmt("110")],
@@ -98,32 +107,31 @@ export const elet2025: CurriculumSeed = {
     {
       name: "Management Electives",
       kind: RequirementKind.CREDITS_FROM_POOL,
+      slot: RequirementSlot.RELATED_POOL,
       minCredits: 6,
       sortOrder: 80,
       subject: "MGMT",
       courses: mgmtElectives,
     },
-    {
-      name: "Global Awareness",
-      kind: RequirementKind.CREDITS_FROM_POOL,
+    genEdRequirement({
+      category: GenEdTag.GLOBAL_AWARENESS,
       minCredits: 3,
       sortOrder: 90,
-    },
-    {
-      name: "African American Studies",
-      kind: RequirementKind.CREDITS_FROM_POOL,
+    }),
+    genEdRequirement({
+      category: GenEdTag.AFRICAN_AMERICAN,
       minCredits: 3,
       sortOrder: 100,
-    },
-    {
-      name: "Social/Behavioral Sciences",
-      kind: RequirementKind.CREDITS_FROM_POOL,
+    }),
+    genEdRequirement({
+      category: GenEdTag.SOCIAL_BEHAVIORAL,
       minCredits: 3,
       sortOrder: 110,
-    },
+    }),
     {
       name: "Technical Electives",
       kind: RequirementKind.SUBJECT_ELECTIVE,
+      slot: RequirementSlot.TECHNICAL_ELECTIVE,
       minCredits: 9,
       sortOrder: 120,
       subject: "CST",
@@ -132,6 +140,7 @@ export const elet2025: CurriculumSeed = {
     {
       name: "Free Electives",
       kind: RequirementKind.FREE_ELECTIVE,
+      slot: RequirementSlot.FREE_ELECTIVE,
       minCredits: 6,
       sortOrder: 130,
       minNumber: 100,

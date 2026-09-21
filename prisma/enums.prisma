@@ -52,10 +52,19 @@ enum TranscriptStatus {
 }
 
 enum RequirementKind {
-  ALL_OF // every listed course (major core)
+  ALL_OF // every listed course
   CREDITS_FROM_POOL // N credits from tagged/listed courses (gen-ed, MGMT electives)
   SUBJECT_ELECTIVE // e.g. any CST course not already used in major core
   FREE_ELECTIVE // any course at/above a level
+}
+
+enum RequirementSlot {
+  PROGRAM_CORE
+  SUPPORTING_REQUIRED
+  RELATED_POOL
+  GEN_ED_POOL
+  TECHNICAL_ELECTIVE
+  FREE_ELECTIVE
 }
 
 enum GenEdTag {

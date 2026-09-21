@@ -73,20 +73,26 @@ model RequirementGroup {
   catalogYearId String
   catalogYear   CatalogYear @relation(fields: [catalogYearId], references: [id], onDelete: Cascade)
 
-  name       String
-  kind       RequirementKind
-  minCredits Int
-  minGrade   Grade?
-  sortOrder  Int
-  subject    String? // "CST" for technical electives, "MGMT" for MGMT electives
-  minNumber  Int? // 100 for free electives
+  name             String
+  kind             RequirementKind
+  slot             RequirementSlot
+  minCredits       Int
+  minGrade         Grade?
+  sortOrder        Int
+  subject          String? // "CST" for technical electives, "MGMT" for MGMT electives
+  minNumber        Int? // 100 for free electives
+  /// GEC category this pool consumes. Null on non-gen-ed slots.
+  genEdCategory    GenEdTag?
+  /// Extra qualifier on the same pool (e.g. lab) so constraints don't add groups.
+  requiredGenEdTag GenEdTag?
 
   items RequirementItem[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@index([catalogYearId])
+  @@unique([catalogYearId, genEdCategory])
+  @@index([catalogYearId, slot])
 }
 
 model RequirementItem {
@@ -100,9 +106,9 @@ model RequirementItem {
 }
 
 model RecommendedTerm {
-  id            String      @id @default(cuid())
+  id            String                  @id @default(cuid())
   catalogYearId String
-  catalogYear   CatalogYear @relation(fields: [catalogYearId], references: [id], onDelete: Cascade)
+  catalogYear   CatalogYear             @relation(fields: [catalogYearId], references: [id], onDelete: Cascade)
   sequence      Int // 1 = freshman fall
   season        TermSeason
   courses       RecommendedTermCourse[]
