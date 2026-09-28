@@ -26,6 +26,8 @@ export type RecommendedTermSeed = {
   sequence: number;
   season: TermSeason;
   courses: CourseRef[];
+  /** Requirement group names for slots the guide has not assigned to a course. */
+  placeholders?: string[];
 };
 
 export type AttributeSeed = {
@@ -176,6 +178,14 @@ function validateRequirementGroups(groups: RequirementSeed[]) {
   }
 }
 
+function resolveGroupId(groupIds: Map<string, string>, name: string) {
+  const id = groupIds.get(name);
+  if (!id) {
+    throw new Error(`Recommended term names an unknown requirement group: ${name}`);
+  }
+  return id;
+}
+
 export function resolveCourseId(
   courseIds: Map<string, string>,
   course: CourseRef,
@@ -200,8 +210,10 @@ export async function replaceCurriculum(
     await tx.recommendedTerm.deleteMany({ where: { catalogYearId } });
     await tx.courseAttribute.deleteMany({ where: { catalogYearId } });
 
+    const groupIds = new Map<string, string>();
+
     for (const group of curriculum.groups) {
-      await tx.requirementGroup.create({
+      const created = await tx.requirementGroup.create({
         data: {
           catalogYearId,
           name: group.name,
@@ -223,18 +235,27 @@ export async function replaceCurriculum(
             : undefined,
         },
       });
+      groupIds.set(group.name, created.id);
     }
 
     for (const term of curriculum.recommended) {
+      const placeholders = term.placeholders ?? [];
       await tx.recommendedTerm.create({
         data: {
           catalogYearId,
           sequence: term.sequence,
           season: term.season,
           courses: {
-            create: term.courses.map((course) => ({
-              courseId: resolveCourseId(courseIds, course),
-            })),
+            create: [
+              ...term.courses.map((course, index) => ({
+                sortOrder: index,
+                courseId: resolveCourseId(courseIds, course),
+              })),
+              ...placeholders.map((name, index) => ({
+                sortOrder: term.courses.length + index,
+                requirementGroupId: resolveGroupId(groupIds, name),
+              })),
+            ],
           },
         },
       });

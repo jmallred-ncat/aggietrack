@@ -86,7 +86,8 @@ model RequirementGroup {
   /// Extra qualifier on the same pool (e.g. lab) so constraints don't add groups.
   requiredGenEdTag GenEdTag?
 
-  items RequirementItem[]
+  items         RequirementItem[]
+  recommendedIn RecommendedTermCourse[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -117,11 +118,17 @@ model RecommendedTerm {
 }
 
 model RecommendedTermCourse {
-  id       String          @id @default(cuid())
-  termId   String
-  term     RecommendedTerm @relation(fields: [termId], references: [id], onDelete: Cascade)
-  courseId String
-  course   Course          @relation(fields: [courseId], references: [id])
+  id                 String            @id @default(cuid())
+  termId             String
+  term               RecommendedTerm   @relation(fields: [termId], references: [id], onDelete: Cascade)
+  /// Set for a named course. Null when the guide only names a requirement group.
+  courseId           String?
+  course             Course?           @relation(fields: [courseId], references: [id])
+  /// Set for an undecided slot (gen-ed, elective). Null when courseId is set.
+  requirementGroupId String?
+  requirementGroup   RequirementGroup? @relation(fields: [requirementGroupId], references: [id], onDelete: Cascade)
+  sortOrder          Int               @default(0)
 
   @@unique([termId, courseId])
+  @@index([requirementGroupId])
 }

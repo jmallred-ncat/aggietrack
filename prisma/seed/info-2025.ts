@@ -141,6 +141,9 @@ export const info2025: CurriculumSeed = {
       minNumber: 100,
     },
   ],
+  // Named courses are the handbook sequence. Placeholders are the open groups
+  // (34 gen-ed/elective credits plus 6 management-elective credits) set on the
+  // lighter terms so each semester lands near 15 credits.
   recommended: [
     {
       sequence: 1,
@@ -156,31 +159,42 @@ export const info2025: CurriculumSeed = {
       sequence: 3,
       season: TermSeason.FALL,
       courses: [cst("231"), cst("240"), mgmt("110")],
+      placeholders: ["Social/Behavioral Sciences", "Global Awareness"],
     },
     {
       sequence: 4,
       season: TermSeason.SPRING,
       courses: [cst("225"), cst("235"), cst("285"), spch("250")],
+      placeholders: ["African American Studies", "Free Electives"],
     },
     {
       sequence: 5,
       season: TermSeason.FALL,
       courses: [cst("325"), cst("329"), cst("339"), math("224")],
+      placeholders: ["Social/Behavioral Sciences", "Technical Electives"],
     },
     {
       sequence: 6,
       season: TermSeason.SPRING,
       courses: [cst("300"), cst("315"), cst("317"), cst("430")],
+      placeholders: ["Management Electives"],
     },
     {
       sequence: 7,
       season: TermSeason.FALL,
       courses: [cst("460"), cst("496"), cst("498")],
+      placeholders: ["Scientific Reasoning", "Technical Electives"],
     },
     {
       sequence: 8,
       season: TermSeason.SPRING,
       courses: [cst("499")],
+      placeholders: [
+        "Technical Electives",
+        "Technical Electives",
+        "Management Electives",
+        "Free Electives",
+      ],
     },
   ],
   attributes: gecAttributes,
