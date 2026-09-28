@@ -3,7 +3,7 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import type { CurriculumCourseSection } from "@/lib/catalog";
 import { GenEdTag, RequirementKind, type Course } from "@/lib/generated/prisma/browser";
@@ -25,14 +25,16 @@ function courseMatchesSearch(course: Course, search: string) {
 }
 
 export function CourseBrowser({
-    program,
+    profile,
     sections,
 }: {
-    program: StudentProfileWithCatalog["catalogYear"]["program"];
+    profile: StudentProfileWithCatalog;
     sections: CurriculumCourseSection[];
 }) {
     const [query, setQuery] = useState("");
     const debouncedQuery = useDebounce(query, 250);
+
+    const program = profile.catalogYear.program;
 
     const filteredSections = useMemo(() => {
         const search = debouncedQuery.trim().toLowerCase();
@@ -60,9 +62,10 @@ export function CourseBrowser({
     const isSearchPending = query.trim() !== debouncedQuery.trim();
 
     return <div>
-        <header className="not-typeset py-6">
+        <header className="not-typeset py-6 space-y-2">
             <Badge>{program.department.name}</Badge>
-            <h1 className="text-4xl font-bold not-typeset text-balance max-w-prose w-full">{program.degree.abbreviation} in {program.name} Courses</h1>
+            <h1 className="text-4xl font-bold not-typeset text-balance max-w-prose w-full -mb-1.5">{program.degree.abbreviation} in {program.name} Courses</h1>
+            <span>{profile.catalogYear.year} Catalog Year</span>
             <p className="text-sm text-muted-foreground mt-2 max-w-prose w-full text-balance">
                 Quickly search, filter, and browse courses in your degree program. Enter a course code, title, or requirement name to find relevant courses, see which requirements they satisfy, and discover course details instantly.
             </p>
@@ -226,6 +229,9 @@ const CourseCard = memo(function CourseCard({ course }: { course: CurriculumCour
                         <RequirementGroups title="Corequisites" groups={corequisites} />
                         <p className="mt-3">{course.description}</p>
                     </div>
+                    <DialogFooter>
+                        <Button variant="secondary" className="w-full flex-1" size="sm">Add to Planner</Button>
+                    </DialogFooter>
                 </DialogContent>
             </Dialog>
 
@@ -255,14 +261,14 @@ function RequirementGroups({
                 {groups.map((group) => (
                     <li key={group.id}>
                         {group.options.length > 1 && (
-                            <p className="text-muted-foreground">One of</p>
+                            <p className="text-foreground/75 leading-none font-medium mb-1 text-xs">Satisfy one of the following:</p>
                         )}
                         {group.options.length > 0 && (
-                            <ul className="space-y-1">
+                            <ul className="space-y-1 list-inside list-disc">
                                 {group.options.map((option) => (
                                     <li key={option.requires.id}>
-                                        <span className="font-mono text-sm tracking-tighter">{option.requires.subject} {option.requires.number}</span>
-                                        <span className="font-medium"> {option.requires.title}</span>
+                                        <span className="font-mono text-sm tracking-tighter">{option.requires.subject}{" "}{option.requires.number}</span>{" "}&mdash;{" "}
+                                        <span className="text-sm"> {option.requires.title}</span>
                                     </li>
                                 ))}
                             </ul>
