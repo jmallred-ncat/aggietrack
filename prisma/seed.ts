@@ -27,7 +27,7 @@ import {
 } from "./seed/mgmt";
 import type { PrerequisiteGroupSeed } from "./seed/prerequisite-text";
 
-const INFO_YEARS = [2020, 2021, 2022, 2023, 2024, 2025, 2026] as const;
+/** CST Undergraduate Handbook (August 2025) is the only published curriculum in the seed. */
 const HANDBOOK_YEAR = 2025;
 
 const courses = mergeCstCatalogCourses(
@@ -230,7 +230,7 @@ async function seedProgram(input: {
 }
 
 async function seedCatalogYears(programId: string, years: readonly number[]) {
-  return Promise.all(
+  const seeded = await Promise.all(
     years.map((year) =>
       prisma.catalogYear.upsert({
         where: {
@@ -247,6 +247,32 @@ async function seedCatalogYears(programId: string, years: readonly number[]) {
       }),
     ),
   );
+
+  const keep = new Set<number>(years);
+  const existing = await prisma.catalogYear.findMany({
+    where: { programId },
+    select: { id: true, year: true },
+  });
+  const stale = existing.filter((row) => !keep.has(row.year));
+  if (stale.length === 0) {
+    return { seeded, removed: 0, reassigned: 0 };
+  }
+
+  const destination = seeded.find((row) => row.year === Math.max(...years));
+  if (!destination) {
+    throw new Error("Catalog year seed did not produce a year to keep");
+  }
+
+  const reassigned = await prisma.studentProfile.updateMany({
+    where: { catalogYearId: { in: stale.map((row) => row.id) } },
+    data: { catalogYearId: destination.id },
+  });
+
+  await prisma.catalogYear.deleteMany({
+    where: { id: { in: stale.map((row) => row.id) } },
+  });
+
+  return { seeded, removed: stale.length, reassigned: reassigned.count };
 }
 
 async function seedAcademicTerms() {
@@ -316,11 +342,11 @@ async function main() {
     departmentId: computerSystemsTechnology.id,
   });
 
-  const infoYears = await seedCatalogYears(informationTechnology.id, INFO_YEARS);
+  const infoYears = await seedCatalogYears(informationTechnology.id, [HANDBOOK_YEAR]);
   const eletYears = await seedCatalogYears(electronicsTechnology.id, [HANDBOOK_YEAR]);
 
-  const info2025Year = infoYears.find((year) => year.year === HANDBOOK_YEAR);
-  const elet2025Year = eletYears.find((year) => year.year === HANDBOOK_YEAR);
+  const info2025Year = infoYears.seeded.find((year) => year.year === HANDBOOK_YEAR);
+  const elet2025Year = eletYears.seeded.find((year) => year.year === HANDBOOK_YEAR);
   if (!info2025Year || !elet2025Year) {
     throw new Error("2025 catalog years were not seeded");
   }
@@ -329,7 +355,7 @@ async function main() {
   await replaceCurriculum(prisma, elet2025Year.id, courseIds, elet2025);
 
   console.log(
-    `Seeded ${degrees.length} degrees, ${departments.length} departments, ${terms.length} academic terms (NCAT Fall/Spring/Summer/I/II; removed ${termsRemoved} out-of-scope), ${courses.length} courses (${gecCourses.length} GEC catalog courses / ${gecAttributes.length} GEC attributes, ${mgmtElectives.length} MGMT electives, ${cstTechnicalElectiveCandidates.length} CST ≥200 catalog courses), programs ${informationTechnology.code} and ${electronicsTechnology.code}, and 2025 CST handbook curricula.`,
+    `Seeded ${degrees.length} degrees, ${departments.length} departments, ${terms.length} academic terms (NCAT Fall/Spring/Summer/I/II; removed ${termsRemoved} out-of-scope), ${courses.length} courses (${gecCourses.length} GEC catalog courses / ${gecAttributes.length} GEC attributes, ${mgmtElectives.length} MGMT electives, ${cstTechnicalElectiveCandidates.length} CST ≥200 catalog courses), programs ${informationTechnology.code} and ${electronicsTechnology.code}, and the ${HANDBOOK_YEAR} CST handbook catalog (removed ${infoYears.removed + eletYears.removed} placeholder years; reassigned ${infoYears.reassigned + eletYears.reassigned} students).`,
   );
 }
 
