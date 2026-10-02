@@ -10,6 +10,7 @@ const labels: Record<string, string> = {
     advisor: "Dashboard",
     admin: "Dashboard",
     students: "Students",
+    plans: "Plans",
     appointments: "Appointments",
     progress: "Progress",
     courses: "Courses",
@@ -19,6 +20,7 @@ const labels: Record<string, string> = {
     security: "Security",
     notifications: "Notifications",
     account: "Account",
+    outline: "Program Outline",
 }
 
 export default function DashboardBreadcrumbs() {
