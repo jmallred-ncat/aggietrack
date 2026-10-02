@@ -24,7 +24,8 @@ import { type PrerequisiteGroupSeed, prerequisiteGroupsFor } from "./prerequisit
  *   GL → GLOBAL_AWARENESS
  *   AA → AFRICAN_AMERICAN
  *   SR → SCIENTIFIC_REASONING
- *        labs also get SCIENTIFIC_REASONING_LAB (qualifier, not a separate pool)
+ *        Standalone labs, and courses that include their own laboratory,
+ *        also get SCIENTIFIC_REASONING_LAB (qualifier, not a separate pool).
  *
  * Skipped for attributes (no GenEdTag / not CST pool blockers):
  *   SS (Student Success), MLAR (math/logic)
@@ -69,6 +70,11 @@ const CATEGORY_TO_TAG: Record<string, GenEdTag> = {
 
 function isLabCourse(name: string) {
   return /\bLaborator(y|ies)\b/i.test(name) || /\bLab\b/i.test(name);
+}
+
+/** A scientific-reasoning course that carries its laboratory, such as BIOL 100. */
+function includesLaboratory(title: string, description: string | null | undefined) {
+  return isLabCourse(title) || /\bthe laboratory will\b/i.test(description ?? "");
 }
 
 function parseCourseCode(code: string): CourseRef {
@@ -152,7 +158,7 @@ const parsedRows: ParsedGenEd[] = (ncatGenEdCourses as NcatGenEdCourse[])
 
     return {
       row,
-      tags: tagsForRow(row.gen_ed_categories ?? [], isLab),
+      tags: tagsForRow(row.gen_ed_categories ?? [], includesLaboratory(title, row.description)),
       course: {
         subject,
         number,
