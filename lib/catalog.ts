@@ -1,6 +1,6 @@
 import {
     Prisma,
-    RequirementKind,
+    RequirementSlot,
     type Course,
 } from "./generated/prisma/client";
 import { prisma } from "./prisma";
@@ -124,7 +124,7 @@ export async function getCatalogYearsForPrograms(searchQuery?: string) {
     return [];
 }
 
-function compareCourses(a: Course, b: Course) {
+function compareCourses(a: Pick<Course, "subject" | "number">, b: Pick<Course, "subject" | "number">) {
     return a.subject.localeCompare(b.subject)
         || a.number.localeCompare(b.number, undefined, { numeric: true });
 }
@@ -147,7 +147,6 @@ export async function getCurriculumCourseSections() {
         select: {
             id: true,
             name: true,
-            kind: true,
             slot: true,
             minCredits: true,
             minGrade: true,
@@ -169,9 +168,9 @@ export async function getCurriculumCourseSections() {
 
     const genEdTags = [
         ...new Set(
-            groupsWithItems
-                .map((group) => group.genEdCategory)
-                .filter((tag): tag is NonNullable<typeof tag> => tag != null),
+            groupsWithItems.flatMap((group) =>
+                [group.genEdCategory, group.requiredGenEdTag].filter((tag): tag is NonNullable<typeof tag> => tag != null),
+            ),
         ),
     ];
     const dynamicSubjects = [
@@ -181,9 +180,9 @@ export async function getCurriculumCourseSections() {
                     (group) =>
                         group.subject
                         && (
-                            group.kind === RequirementKind.SUBJECT_ELECTIVE
+                            group.slot === RequirementSlot.TECHNICAL_ELECTIVE
                             || (
-                                group.kind === RequirementKind.CREDITS_FROM_POOL
+                                group.slot === RequirementSlot.RELATED_POOL
                                 && group.items.length === 0
                             )
                         ),
@@ -225,16 +224,34 @@ export async function getCurriculumCourseSections() {
     return groupsWithItems.map(({ items, ...group }) => {
         let courses: CourseWithRequirements[];
 
-        switch (group.kind) {
-            case RequirementKind.ALL_OF:
+        switch (group.slot) {
+            case RequirementSlot.PROGRAM_CORE:
+            case RequirementSlot.SUPPORTING_REQUIRED:
                 courses = items.map((item) => item.course);
                 break;
 
-            case RequirementKind.CREDITS_FROM_POOL:
-                if (group.genEdCategory) {
-                    courses = (coursesByTag.get(group.genEdCategory) ?? [])
-                        .map((attribute) => attribute.course);
-                } else if (items.length > 0) {
+            case RequirementSlot.GEN_ED_POOL: {
+                if (!group.genEdCategory) {
+                    throw new Error(`${group.name} does not define a gen-ed category`);
+                }
+                let tagged = (coursesByTag.get(group.genEdCategory) ?? [])
+                    .map((attribute) => attribute.course);
+                if (group.requiredGenEdTag) {
+                    const requiredIds = new Set(
+                        (coursesByTag.get(group.requiredGenEdTag) ?? [])
+                            .map((attribute) => attribute.course.id),
+                    );
+                    tagged = tagged.filter((course) => requiredIds.has(course.id));
+                }
+                courses = applyMinimumNumber(
+                    [...new Map(tagged.map((course) => [course.id, course])).values()],
+                    group.minNumber,
+                );
+                break;
+            }
+
+            case RequirementSlot.RELATED_POOL:
+                if (items.length > 0) {
                     courses = items.map((item) => item.course);
                 } else if (group.subject) {
                     courses = coursesBySubject.get(group.subject) ?? [];
@@ -244,7 +261,7 @@ export async function getCurriculumCourseSections() {
                 courses = applyMinimumNumber(courses, group.minNumber);
                 break;
 
-            case RequirementKind.SUBJECT_ELECTIVE:
+            case RequirementSlot.TECHNICAL_ELECTIVE:
                 if (!group.subject) {
                     throw new Error(`${group.name} does not define a subject`);
                 }
@@ -254,12 +271,12 @@ export async function getCurriculumCourseSections() {
                 ).filter((course) => !explicitlyListedIds.has(course.id));
                 break;
 
-            case RequirementKind.FREE_ELECTIVE:
+            case RequirementSlot.FREE_ELECTIVE:
                 courses = [];
                 break;
 
             default:
-                throw new Error(`Unsupported requirement kind: ${group.kind}`);
+                throw new Error(`Unsupported requirement slot: ${group.slot}`);
         }
 
         return {
@@ -271,3 +288,4 @@ export async function getCurriculumCourseSections() {
 
 export type CurriculumCourseSection =
     Awaited<ReturnType<typeof getCurriculumCourseSections>>[number];
+

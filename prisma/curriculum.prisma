@@ -74,12 +74,12 @@ model RequirementGroup {
   catalogYear   CatalogYear @relation(fields: [catalogYearId], references: [id], onDelete: Cascade)
 
   name             String
-  kind             RequirementKind
   slot             RequirementSlot
   minCredits       Int
   minGrade         Grade?
   sortOrder        Int
-  subject          String? // "CST" for technical electives, "MGMT" for MGMT electives
+  /// Subject rule for a group that has no course list, such as CST technical electives.
+  subject          String?
   minNumber        Int? // 100 for free electives
   /// GEC category this pool consumes. Null on non-gen-ed slots.
   genEdCategory    GenEdTag?
@@ -110,8 +110,8 @@ model RecommendedTerm {
   id            String                  @id @default(cuid())
   catalogYearId String
   catalogYear   CatalogYear             @relation(fields: [catalogYearId], references: [id], onDelete: Cascade)
-  sequence      Int // 1 = freshman fall
-  season        TermSeason
+  /// 1 = freshman fall. Odd sequences are fall; even sequences are spring.
+  sequence      Int
   courses       RecommendedTermCourse[]
 
   @@unique([catalogYearId, sequence])

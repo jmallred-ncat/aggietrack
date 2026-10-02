@@ -1,9 +1,7 @@
 import {
   GenEdTag,
   Grade,
-  RequirementKind,
   RequirementSlot,
-  TermSeason,
   type PrismaClient,
 } from "../../lib/generated/prisma/client";
 import { type CourseRef, courseKey } from "./courses";
@@ -11,7 +9,6 @@ import { type CourseRef, courseKey } from "./courses";
 export type RequirementSeed = {
   name: string;
   slot: RequirementSlot;
-  kind?: RequirementKind;
   minCredits: number;
   minGrade?: Grade;
   sortOrder: number;
@@ -24,7 +21,6 @@ export type RequirementSeed = {
 
 export type RecommendedTermSeed = {
   sequence: number;
-  season: TermSeason;
   courses: CourseRef[];
   /** Requirement group names for slots the guide has not assigned to a course. */
   placeholders?: string[];
@@ -41,15 +37,6 @@ export type CurriculumSeed = {
   attributes?: AttributeSeed[];
 };
 
-const kindBySlot: Record<RequirementSlot, RequirementKind> = {
-  [RequirementSlot.PROGRAM_CORE]: RequirementKind.ALL_OF,
-  [RequirementSlot.SUPPORTING_REQUIRED]: RequirementKind.ALL_OF,
-  [RequirementSlot.RELATED_POOL]: RequirementKind.CREDITS_FROM_POOL,
-  [RequirementSlot.GEN_ED_POOL]: RequirementKind.CREDITS_FROM_POOL,
-  [RequirementSlot.TECHNICAL_ELECTIVE]: RequirementKind.SUBJECT_ELECTIVE,
-  [RequirementSlot.FREE_ELECTIVE]: RequirementKind.FREE_ELECTIVE,
-};
-
 const GEN_ED_CATEGORY_NAMES: Partial<Record<GenEdTag, string>> = {
   [GenEdTag.WRITTEN_COMMUNICATION]: "Written Communication",
   [GenEdTag.HUMANITIES_FINE_ARTS]: "Humanities and Fine Arts",
@@ -58,10 +45,6 @@ const GEN_ED_CATEGORY_NAMES: Partial<Record<GenEdTag, string>> = {
   [GenEdTag.AFRICAN_AMERICAN]: "African American Studies",
   [GenEdTag.SCIENTIFIC_REASONING]: "Scientific Reasoning",
 };
-
-function kindFor(group: RequirementSeed) {
-  return group.kind ?? kindBySlot[group.slot];
-}
 
 function genEdDisplayName(category: GenEdTag) {
   const name = GEN_ED_CATEGORY_NAMES[category];
@@ -82,7 +65,6 @@ export function genEdRequirement(input: {
   return {
     name: input.name ?? genEdDisplayName(input.category),
     slot: RequirementSlot.GEN_ED_POOL,
-    kind: RequirementKind.CREDITS_FROM_POOL,
     genEdCategory: input.category,
     requiredGenEdTag: input.requiredTag,
     minCredits: input.minCredits,
@@ -97,15 +79,12 @@ function validateRequirementGroups(groups: RequirementSeed[]) {
   for (const group of groups) {
     slotCounts.set(group.slot, (slotCounts.get(group.slot) ?? 0) + 1);
 
-    const expectedKind = kindBySlot[group.slot];
-    const kind = kindFor(group);
-    if (kind !== expectedKind) {
+    const hasCourses = Boolean(group.courses?.length);
+    if (hasCourses && group.subject) {
       throw new Error(
-        `${group.name} uses ${kind}, but ${group.slot} requires ${expectedKind}`,
+        `${group.name} lists its courses, so it cannot also store a subject rule`,
       );
     }
-
-    const hasCourses = Boolean(group.courses?.length);
     if (
       (group.slot === RequirementSlot.PROGRAM_CORE ||
         group.slot === RequirementSlot.SUPPORTING_REQUIRED) &&
@@ -217,7 +196,6 @@ export async function replaceCurriculum(
         data: {
           catalogYearId,
           name: group.name,
-          kind: kindFor(group),
           slot: group.slot,
           minCredits: group.minCredits,
           minGrade: group.minGrade,
@@ -244,7 +222,6 @@ export async function replaceCurriculum(
         data: {
           catalogYearId,
           sequence: term.sequence,
-          season: term.season,
           courses: {
             create: [
               ...term.courses.map((course, index) => ({
