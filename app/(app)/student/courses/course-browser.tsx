@@ -2,15 +2,39 @@
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { ButtonGroup } from "@/components/ui/button-group";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { toast } from "@/components/ui/toast";
 import type { CurriculumCourseSection } from "@/lib/catalog";
-import { GenEdTag, RequirementKind, type Course } from "@/lib/generated/prisma/browser";
+import { GenEdTag, RequirementSlot, type Course } from "@/lib/generated/prisma/browser";
+import { coursePrerequisitesSatisfied } from "@/lib/prerequisites";
 import type { StudentProfileWithCatalog } from "@/lib/student";
+import { cn } from "@/lib/utils";
 import { FlaskIcon, LecternIcon, MagnifyingGlassIcon } from "@phosphor-icons/react";
 import { useDebounce } from "@uidotdev/usehooks";
-import { memo, useMemo, useState } from "react";
+import * as pluralize from "pluralize";
+import { memo, useMemo, useState, useTransition } from "react";
+import { addPlannedCourse } from "../planner/actions";
+
+type PlanningTerm = {
+    id: string;
+    label: string;
+    locked: boolean;
+    startsOn: string;
+};
+
+type PlannedCourseTiming = {
+    courseId: string;
+    startsOn: string;
+};
+
+type PlanPlacement = {
+    courseId: string;
+    termLabel: string;
+    locked: boolean;
+};
 
 function courseMatchesSearch(course: Course, search: string) {
     const values = [
@@ -27,9 +51,19 @@ function courseMatchesSearch(course: Course, search: string) {
 export function CourseBrowser({
     profile,
     sections,
+    planningTerms,
+    placements,
+    satisfiedCourseIds,
+    completedCourseIds,
+    plannedCourses,
 }: {
     profile: StudentProfileWithCatalog;
     sections: CurriculumCourseSection[];
+    planningTerms: PlanningTerm[];
+    placements: PlanPlacement[];
+    satisfiedCourseIds: string[];
+    completedCourseIds: string[];
+    plannedCourses: PlannedCourseTiming[];
 }) {
     const [query, setQuery] = useState("");
     const debouncedQuery = useDebounce(query, 250);
@@ -102,7 +136,15 @@ export function CourseBrowser({
         </div>
 
         {filteredSections.map((section) => (
-            <RequirementCourseSection key={section.group.id} section={section} />
+            <RequirementCourseSection
+                key={section.group.id}
+                section={section}
+                planningTerms={planningTerms}
+                placements={placements}
+                satisfiedCourseIds={satisfiedCourseIds}
+                completedCourseIds={completedCourseIds}
+                plannedCourses={plannedCourses}
+            />
         ))}
 
         {query && !isSearchPending && filteredSections.length === 0
@@ -115,8 +157,18 @@ export function CourseBrowser({
 
 const RequirementCourseSection = memo(function RequirementCourseSection({
     section,
+    planningTerms,
+    placements,
+    satisfiedCourseIds,
+    completedCourseIds,
+    plannedCourses,
 }: {
     section: CurriculumCourseSection;
+    planningTerms: PlanningTerm[];
+    placements: PlanPlacement[];
+    satisfiedCourseIds: string[];
+    completedCourseIds: string[];
+    plannedCourses: PlannedCourseTiming[];
 }) {
     const { group, courses } = section;
     const creditLabel = `${group.minCredits} ${group.minCredits === 1 ? "credit" : "credits"}`;
@@ -126,9 +178,12 @@ const RequirementCourseSection = memo(function RequirementCourseSection({
             : "";
 
     let requirementCopy: string;
-    if (group.kind === RequirementKind.ALL_OF) {
+    if (
+        group.slot === RequirementSlot.PROGRAM_CORE
+        || group.slot === RequirementSlot.SUPPORTING_REQUIRED
+    ) {
         requirementCopy = `${creditLabel} • All listed courses required`;
-    } else if (group.kind === RequirementKind.FREE_ELECTIVE) {
+    } else if (group.slot === RequirementSlot.FREE_ELECTIVE) {
         requirementCopy = group.minNumber
             ? `${creditLabel} from courses numbered ${group.minNumber} or above`
             : creditLabel;
@@ -145,7 +200,16 @@ const RequirementCourseSection = memo(function RequirementCourseSection({
         {courses.length > 0
             ? <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
                 {courses.map((course) => (
-                    <CourseCard key={`${group.id}-${course.id}`} course={course} />
+                    <CourseCard
+                        key={`${group.id}-${course.id}`}
+                        course={course}
+                        planningTerms={planningTerms}
+                        placement={placements.find((item) => item.courseId === course.id) ?? null}
+                        placements={placements}
+                        satisfiedCourseIds={satisfiedCourseIds}
+                        completedCourseIds={completedCourseIds}
+                        plannedCourses={plannedCourses}
+                    />
                 ))}
             </div>
             : <p className="mt-4 text-sm text-muted-foreground">
@@ -169,39 +233,140 @@ function requirementGroups(course: CurriculumCourse, concurrent: boolean) {
         }));
 }
 
-const CourseCard = memo(function CourseCard({ course }: { course: CurriculumCourse }) {
+type CompanionCourse = {
+    id: string;
+    code: string;
+    title: string;
+};
+
+function corequisiteCourses(course: CurriculumCourse) {
+    const seen = new Set<string>();
+    const companions: CompanionCourse[] = [];
+    for (const group of requirementGroups(course, true)) {
+        for (const option of group.options) {
+            if (seen.has(option.requires.id)) {
+                continue;
+            }
+            seen.add(option.requires.id);
+            companions.push({
+                id: option.requires.id,
+                code: `${option.requires.subject} ${option.requires.number}`,
+                title: option.requires.title,
+            });
+        }
+    }
+    return companions;
+}
+
+function joinCourses(codes: string[]) {
+    if (codes.length <= 1) {
+        return codes[0] ?? "";
+    }
+    if (codes.length === 2) {
+        return `${codes[0]} and ${codes[1]}`;
+    }
+    return `${codes.slice(0, -1).join(", ")}, and ${codes.at(-1)}`;
+}
+
+const CourseCard = memo(function CourseCard({
+    course,
+    planningTerms,
+    placement,
+    placements,
+    satisfiedCourseIds,
+    completedCourseIds,
+    plannedCourses,
+}: {
+    course: CurriculumCourse;
+    planningTerms: PlanningTerm[];
+    placement: PlanPlacement | null;
+    placements: PlanPlacement[];
+    satisfiedCourseIds: string[];
+    completedCourseIds: string[];
+    plannedCourses: PlannedCourseTiming[];
+}) {
     const prerequisites = requirementGroups(course, false);
     const corequisites = requirementGroups(course, true);
     const hasRequirements = prerequisites.length > 0 || corequisites.length > 0;
+    const prerequisiteGroups = course.prerequisiteGroups.map((group) => ({
+        isConcurrent: group.isConcurrent,
+        optionIds: group.options.map((option) => option.requires.id),
+    }));
+    const hasCoursePrerequisites = prerequisiteGroups.some((group) => !group.isConcurrent && group.optionIds.length > 0);
+    const prerequisitesMet = (term: PlanningTerm) => {
+        const satisfied = new Set(satisfiedCourseIds);
+        for (const planned of plannedCourses) {
+            if (planned.startsOn < term.startsOn) {
+                satisfied.add(planned.courseId);
+            }
+        }
+        return coursePrerequisitesSatisfied(prerequisiteGroups, satisfied);
+    };
+    const eligibleTerms = planningTerms.filter((term) => !term.locked && prerequisitesMet(term));
+    const blockedByPrerequisites = !placement && hasCoursePrerequisites && !planningTerms.some(prerequisitesMet);
+    const completed = new Set(completedCourseIds);
+    const taken = new Set([
+        ...satisfiedCourseIds,
+        ...placements.map((item) => item.courseId),
+    ]);
+    const companions = corequisiteCourses(course);
+    const companionsToAdd = companions.filter((item) => !taken.has(item.id));
+    const completedCorequisites = companions.filter((item) => completed.has(item.id));
+    const corequisiteGroups = course.prerequisiteGroups.filter((group) => group.isConcurrent && group.options.length > 0);
+    const addWithOverride = !blockedByPrerequisites
+        && corequisiteGroups.length > 0
+        && companionsToAdd.length === 0
+        && corequisiteGroups.every((group) => group.options.some((option) => completed.has(option.requires.id)));
+    const addButton = () => (
+        <AddToPlannerButton
+            course={course}
+            terms={eligibleTerms}
+            placement={placement}
+            blockedByPrerequisites={blockedByPrerequisites}
+            companions={companionsToAdd}
+            completedCorequisites={completedCorequisites}
+            addWithOverride={addWithOverride}
+        />
+    );
 
     return <Card className="not-typeset">
-        <CardHeader>
-            <div className="flex w-full items-center justify-between gap-2">
-                <Badge className="font-mono">{course.subject} {course.number}</Badge>
-                <span className="flex items-center gap-2">
-                    {hasRequirements && (
-                        <span
-                            className="size-2 shrink-0 rounded-full bg-destructive"
-                            role="img"
-                            aria-label="Has a prerequisite or corequisite"
-                        />
-                    )}
-                    {course.isLab
-                        ? <FlaskIcon size={16} weight="bold" />
-                        : <LecternIcon size={16} weight="bold" />}
-                </span>
-            </div>
-            <CardTitle className="line-clamp-2">{course.title}</CardTitle>
-            <CardDescription>
-                {course.credits} Credits • {convertCourseOfferedIn(course.offeredIn, true)}
-            </CardDescription>
-        </CardHeader>
-        <CardContent className="flex-1">
-            <p className="line-clamp-2 text-sm text-muted-foreground">{course.description}</p>
-        </CardContent>
+        <div className={cn("flex flex-1 flex-col", blockedByPrerequisites && "opacity-60")}>
+            <CardHeader>
+                <div className="flex w-full items-center justify-between gap-2">
+                    <Badge className="font-mono">{course.subject} {course.number}</Badge>
+                    <span className="flex items-center gap-2">
+                        {hasRequirements && (
+                            <span
+                                className="size-2 shrink-0 rounded-full bg-destructive"
+                                role="img"
+                                aria-label="Has a prerequisite or corequisite"
+                            />
+                        )}
+                        {course.isLab
+                            ? <FlaskIcon size={16} weight="bold" />
+                            : <LecternIcon size={16} weight="bold" />}
+                    </span>
+                </div>
+                <CardTitle className="line-clamp-2">{course.title}</CardTitle>
+                <CardDescription className="text-xs">
+                    {course.credits} {pluralize("Credit", course.credits)} • {convertCourseOfferedIn(course.offeredIn, true)}
+                </CardDescription>
+            </CardHeader>
+            <CardContent className="flex-1 mt-2">
+                <p className="line-clamp-2 text-sm text-muted-foreground">{course.description}</p>
+            </CardContent>
+        </div>
         <CardFooter className="flex items-center justify-between gap-2">
             <Dialog>
-                <DialogTrigger render={<Button variant="ghost" className="w-full flex-1" size="sm">View Details</Button>} />
+                <DialogTrigger render={
+                    <Button
+                        variant={blockedByPrerequisites ? "outline" : "ghost"}
+                        className="w-full flex-1"
+                        size="sm"
+                    >
+                        View Details
+                    </Button>
+                } />
                 <DialogContent className="not-typeset w-full">
                     <DialogHeader>
                         <DialogTitle>
@@ -230,15 +395,188 @@ const CourseCard = memo(function CourseCard({ course }: { course: CurriculumCour
                         <p className="mt-3">{course.description}</p>
                     </div>
                     <DialogFooter>
-                        <Button variant="secondary" className="w-full flex-1" size="sm">Add to Planner</Button>
+                        {addButton()}
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
 
-            <Button variant="secondary" className="w-full flex-1" size="sm">Add to Planner</Button>
+            <div className={cn("flex min-w-0 flex-1", blockedByPrerequisites && "opacity-60")}>
+                {addButton()}
+            </div>
         </CardFooter>
     </Card>;
 });
+
+function AddToPlannerButton({
+    course,
+    terms,
+    placement,
+    blockedByPrerequisites,
+    companions,
+    completedCorequisites,
+    addWithOverride,
+}: {
+    course: CurriculumCourse;
+    terms: PlanningTerm[];
+    placement: PlanPlacement | null;
+    blockedByPrerequisites: boolean;
+    companions: CompanionCourse[];
+    completedCorequisites: CompanionCourse[];
+    addWithOverride: boolean;
+}) {
+    const [pending, startTransition] = useTransition();
+    const [added, setAdded] = useState<PlanPlacement | null>(null);
+    const [confirmOpen, setConfirmOpen] = useState(false);
+    const [includeCompanions, setIncludeCompanions] = useState(true);
+    const current = added ?? placement;
+    const label = `${course.subject} ${course.number}`;
+    const companionList = joinCourses(companions.map((item) => item.code));
+    const completedList = joinCourses(completedCorequisites.map((item) => item.code));
+    const triggerLabel = addWithOverride ? "Add with override" : "Add to Plan";
+
+    function add(term: PlanningTerm, companionIds: string[]) {
+        startTransition(async () => {
+            const result = await addPlannedCourse(term.id, course.id, companionIds);
+            if (!result.success) {
+                toast.add({ title: result.error ?? "That course could not be added." });
+                return;
+            }
+            const addedCodes = [
+                label,
+                ...companions
+                    .filter((item) => result.addedCourseIds.includes(item.id))
+                    .map((item) => item.code),
+            ];
+            setAdded({ courseId: course.id, termLabel: term.label, locked: false });
+            setConfirmOpen(false);
+            toast.add({ title: `${joinCourses(addedCodes)} added to ${term.label}` });
+        });
+    }
+
+    if (current) {
+        return (
+            <Button variant="secondary" className="w-full flex-1" size="sm" disabled>
+                {current.locked ? `On ${current.termLabel}` : "Added"}
+            </Button>
+        );
+    }
+
+    if (blockedByPrerequisites || terms.length === 0) {
+        return (
+            <Button
+                variant="secondary"
+                className="w-full flex-1"
+                size="sm"
+                disabled
+                aria-label={blockedByPrerequisites ? `Prerequisites for ${label} have not been completed` : "Add to Plan"}
+            >
+                Add to Plan
+            </Button>
+        );
+    }
+
+    const onlyTerm = terms.length === 1 ? terms[0] : null;
+    const companionIds = companions.map((item) => item.id);
+
+    return (
+        <Dialog
+            open={confirmOpen}
+            onOpenChange={(open) => {
+                setConfirmOpen(open);
+                if (open) {
+                    setIncludeCompanions(true);
+                }
+            }}
+        >
+            <DialogTrigger render={
+                <Button
+                    type="button"
+                    variant="secondary"
+                    className={cn("w-full flex-1", addWithOverride && "h-auto whitespace-normal px-2 text-center leading-tight")}
+                    size="sm"
+                >
+                    {triggerLabel}
+                </Button>
+            } />
+            <DialogContent className="not-typeset w-full sm:max-w-lg" showCloseButton={false}>
+                <DialogHeader className="min-w-0">
+                    <DialogTitle>
+                        {addWithOverride
+                            ? `Add ${label} with an override?`
+                            : onlyTerm
+                                ? `Add ${label} to ${onlyTerm.label}?`
+                                : `Add ${label} to your plan?`}
+                    </DialogTitle>
+                    <DialogDescription>
+                        {addWithOverride
+                            ? `${completedList} ${completedCorequisites.length === 1 ? "is" : "are"} already completed. Adding ${label} without ${completedCorequisites.length === 1 ? "that corequisite" : "those corequisites"} uses an override. You can remove it before submitting the plan for review.`
+                            : companions.length > 0
+                                ? `${label} is taken with ${companionList}. Add ${companions.length === 1 ? "both courses" : "all of these courses"} to the same plan, or add ${label} on its own. You can remove them before submitting the plan for review.`
+                                : onlyTerm
+                                    ? `${course.title} will be added to your ${onlyTerm.label} plan. You can remove it before submitting the plan for review.`
+                                    : "Choose the term this course should join. You can remove it before submitting the plan for review."}
+                    </DialogDescription>
+                </DialogHeader>
+                {onlyTerm ? (
+                    <DialogFooter className="min-w-0 sm:justify-between">
+                        <Button type="button" variant="destructive" size="sm" disabled={pending} onClick={() => setConfirmOpen(false)}>
+                            Cancel
+                        </Button>
+                        <ButtonGroup>
+                            {companions.length > 0 && (
+                                <Button type="button" variant="outline" size="sm" disabled={pending} onClick={() => add(onlyTerm, [])}>
+                                    Add {label} only
+                                </Button>
+                            )}
+                            <Button
+                                type="button"
+                                size="sm"
+                                disabled={pending}
+                                onClick={() => add(onlyTerm, companions.length > 0 ? companionIds : [])}
+                            >
+                                {addWithOverride
+                                    ? "Add with override"
+                                    : companions.length > 1
+                                        ? "Add all"
+                                        : companions.length === 1
+                                            ? `Add ${label} and ${companions[0].code}`
+                                            : "Add to Plan"}
+                            </Button>
+                        </ButtonGroup>
+                    </DialogFooter>
+                ) : (
+                    <div className="flex min-w-0 flex-col gap-2">
+                        {companions.length > 0 && (
+                            <label className="flex items-start gap-2 text-sm">
+                                <input
+                                    type="checkbox"
+                                    className="mt-0.5"
+                                    checked={includeCompanions}
+                                    onChange={(event) => setIncludeCompanions(event.target.checked)}
+                                />
+                                <span>Also add {companionList}</span>
+                            </label>
+                        )}
+                        {terms.map((term) => (
+                            <Button
+                                key={term.id}
+                                type="button"
+                                size="sm"
+                                disabled={pending}
+                                onClick={() => add(term, includeCompanions ? companionIds : [])}
+                            >
+                                {addWithOverride ? `${term.label} with override` : term.label}
+                            </Button>
+                        ))}
+                        <Button type="button" variant="destructive" size="sm" disabled={pending} onClick={() => setConfirmOpen(false)}>
+                            Cancel
+                        </Button>
+                    </div>
+                )}
+            </DialogContent>
+        </Dialog>
+    );
+}
 
 function RequirementGroups({
     title,
