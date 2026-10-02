@@ -6,7 +6,7 @@ model AcademicTerm {
   endsOn   DateTime
 
   transcriptEntries  TranscriptEntry[]
-  plannedCourses     PlannedCourse[]
+  plannedTerms       PlannedTerm[]
   graduatingStudents StudentProfile[]
 
   createdAt DateTime @default(now())

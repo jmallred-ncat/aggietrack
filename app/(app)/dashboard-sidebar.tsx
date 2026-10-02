@@ -13,21 +13,22 @@ import {
 import type { User } from "@/lib/generated/prisma/client";
 import { formatProgramName } from "@/lib/program";
 import type { StudentProfileWithCatalog } from "@/lib/student";
-import { BackpackIcon, BooksIcon, CalendarIcon, ChatsTeardropIcon, CheckSquareIcon, PathIcon, UsersThreeIcon } from "@phosphor-icons/react/dist/ssr";
+import { BackpackIcon, BooksIcon, CalendarIcon, ChatsTeardropIcon, CheckSquareIcon, ClipboardTextIcon, PathIcon, UsersThreeIcon } from "@phosphor-icons/react/dist/ssr";
 import Link from "next/link";
 import BookAdvisingButton from "./book-advising-button";
 
 const navigationByRole = {
     STUDENT: [
         { href: "/student", label: "Dashboard", icon: <BackpackIcon weight="duotone" /> },
-        { href: "/student/courses", label: "Courses", icon: <BooksIcon weight="duotone" /> },
-        { href: "/student/planner", label: "Planner", icon: <CheckSquareIcon weight="duotone" /> },
         { href: "/student/progress", label: "Progress", icon: <PathIcon weight="duotone" /> },
+        { href: "/student/planner", label: "Planner", icon: <CheckSquareIcon weight="duotone" /> },
+        { href: "/student/courses", label: "Courses", icon: <BooksIcon weight="duotone" /> },
         { href: "/student/advising", label: "Advising", icon: <ChatsTeardropIcon weight="duotone" /> },
     ],
     ADVISOR: [
         { href: "/advisor", label: "Dashboard", icon: <BackpackIcon weight="duotone" /> },
         { href: "/advisor/students", label: "Students", icon: <UsersThreeIcon weight="duotone" /> },
+        { href: "/advisor/plans", label: "Plans", icon: <ClipboardTextIcon weight="duotone" /> },
         { href: "/advisor/appointments", label: "Appointments", icon: <CalendarIcon weight="duotone" /> },
     ],
     ADMIN: [

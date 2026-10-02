@@ -1,83 +1,86 @@
-import { Badge } from "@/components/ui/badge";
-import { getCurriculumRecommendations } from "@/lib/planner";
+import { academicTermLabel, getCatalogCourses, getPlanningTerms, getStudentPlannedTerm } from "@/lib/planned-term";
+import { prisma } from "@/lib/prisma";
 import { requireStudentProfile } from "@/lib/student";
+import { getTranscript } from "@/lib/transcript";
+import { cn } from "@/lib/utils";
+import Link from "next/link";
+import PlanEditor from "./PlanEditor";
 
-export default async function PlannerPage() {
+export default async function PlannerPage({
+    searchParams,
+}: {
+    searchParams: Promise<{ term?: string }>;
+}) {
+    const params = await searchParams;
     const profile = await requireStudentProfile();
-    const program = profile.catalogYear.program;
-    const recommendations = await getCurriculumRecommendations();
+    const [terms, transcript, courses, advisor] = await Promise.all([
+        getPlanningTerms(),
+        getTranscript(),
+        getCatalogCourses(),
+        profile.advisorId
+            ? prisma.user.findUnique({
+                where: { id: profile.advisorId },
+                select: { firstName: true, lastName: true },
+            })
+            : null,
+    ]);
+    const selected = terms.find((term) => term.id === params.term) ?? terms[0] ?? null;
+    const plan = selected ? await getStudentPlannedTerm(selected.id) : null;
+    const blocked = new Set(
+        transcript
+            .filter((entry) => entry.courseId && (entry.status === "IN_PROGRESS" || entry.status === "COMPLETED"))
+            .map((entry) => entry.courseId as string),
+    );
 
-    const currentYear = new Date().getFullYear() + 1;
-
-    function termForSequence(sequence: number) {
-        const academicYear = currentYear + Math.floor((sequence - 1) / 2);
-        const isFall = sequence % 2 === 1;
-
-        return {
-            session: isFall ? "Fall" : "Spring",
-            calendarYear: isFall ? academicYear : academicYear + 1,
-            academicYear,
-        }
-    }
-
-    return <div>
-
-        <section>
+    return (
+        <div>
             <header className="not-typeset py-6 space-y-2">
-                <Badge>{program.department.name}</Badge>
-                <h1 className="text-4xl font-bold not-typeset text-balance max-w-xl w-full -mb-1.5">Your {program.degree.abbreviation} in {program.name} Course Plan</h1>
-                <span>{profile.catalogYear.year} Catalog Year</span>
-                <p className="text-sm text-muted-foreground mt-2 max-w-prose w-full text-balance">
-                    Your personalized course planner for your degree program. Add courses to your planner to track your progress and ensure you meet all degree requirements.
+                <h2 className="text-2xl font-bold not-typeset text-balance max-w-xl w-full -mb-1.5">Your Plan</h2>
+                <p className="max-w-prose text-sm text-balance text-muted-foreground">
+                    Build the courses for one registration term and submit them for your advisor to approve.
                 </p>
             </header>
-        </section>
 
-        <section>
-            <header className="not-typeset py-6 space-y-2">
-                <h2 className="text-2xl font-bold not-typeset text-balance max-w-xl w-full -mb-1.5">Recommended Program Plan</h2>
-            </header>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 gap-y-16">
-                {recommendations.map((recommendation, index) => {
-                    const sequence = termForSequence(recommendation.sequence);
-                    return (
-                        <div key={recommendation.id}>
-                            <h3 className="text-lg font-bold not-typeset text-balance max-w-xl w-full -mb-1.5">{sequence.session} {sequence.calendarYear}</h3>
-
-                            <div className="min-h-[300px] border border-dashed border-border rounded-lg px-4 py-3 space-y-2 not-typeset mt-4">
-                                {recommendation.courses.map((course) => {
-                                    if (course.course === null && course.requirementGroup !== null) {
-                                        return (
-                                            <div key={course.id} className="p-2 px-4 border border-dashed border-border rounded-lg not-typeset bg-muted">
-                                                <h4 className="text-base font-bold text-balance max-w-xl w-full text-muted-foreground">{course.requirementGroup.name}</h4>
-                                            </div>
-                                        )
-                                    } else if (course.course !== null) {
-                                        const courseRec = course.course;
-                                        return (
-                                            <div key={course.id} className="p-2 px-4 border border-border rounded-lg">
-                                                <h4 className="text-base font-bold not-typeset text-balance max-w-xl w-full line-clamp-1 inline-flex items-center">
-                                                    <Badge className="mr-3 font-meidum">
-                                                        {courseRec.subject}{" "}{courseRec.number}
-                                                    </Badge>
-                                                    <span>
-                                                        {courseRec.title}
-                                                    </span>
-                                                </h4>
-                                            </div>
-                                        )
-                                    }
-
-
-
-                                })}
-                            </div>
-                        </div>
-                    )
-                })}
-            </div>
-        </section>
-
-    </div>;
+            {terms.length > 0 && selected ? (
+                <>
+                    <nav className="not-typeset mb-6 flex flex-wrap gap-2">
+                        {terms.map((term) => (
+                            <Link
+                                key={term.id}
+                                href={`/student/planner?term=${term.id}`}
+                                className={cn(
+                                    "rounded-lg px-3 py-1.5 text-sm",
+                                    term.id === selected.id ? "bg-muted font-medium text-foreground" : "text-muted-foreground hover:bg-muted",
+                                )}
+                            >
+                                {academicTermLabel(term)}
+                            </Link>
+                        ))}
+                    </nav>
+                    <PlanEditor
+                        termId={selected.id}
+                        termLabel={academicTermLabel(selected)}
+                        advisorName={advisor ? `${advisor.firstName} ${advisor.lastName}` : null}
+                        courses={courses.filter((course) => !blocked.has(course.id))}
+                        plan={plan ? {
+                            id: plan.id,
+                            status: plan.status,
+                            registrationPin: plan.registrationPin,
+                            registered: plan.registeredAt !== null,
+                            courses: plan.courses.map((row) => ({
+                                plannedCourseId: row.id,
+                                id: row.course.id,
+                                subject: row.course.subject,
+                                number: row.course.number,
+                                title: row.course.title,
+                                credits: row.course.credits,
+                            })),
+                        } : null}
+                    />
+                </>
+            ) : (
+                <p className="text-sm text-muted-foreground">No terms are open for planning this semester.</p>
+            )}
+        </div>
+    );
 }

@@ -15,7 +15,7 @@ model StudentProfile {
   expectedGradTerm   AcademicTerm? @relation(fields: [expectedGradTermId], references: [id])
 
   transcript   TranscriptEntry[]
-  plan         PlannedCourse[]
+  plannedTerms PlannedTerm[]
   appointments AdvisingAppointment[]
   notes        AdvisingNote[]
 
@@ -59,18 +59,41 @@ model TranscriptEntry {
   @@index([recommendedTermCourseId])
 }
 
-model PlannedCourse {
+/// One registration term a student submits for an advisor to review.
+model PlannedTerm {
   id        String         @id @default(cuid())
   studentId String
   student   StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
-  courseId  String
-  course    Course         @relation(fields: [courseId], references: [id])
   termId    String
   term      AcademicTerm   @relation(fields: [termId], references: [id])
+
+  status          PlannedTermStatus @default(DRAFT)
+  registrationPin String?
+  submittedAt     DateTime?
+  reviewedAt      DateTime?
+  /// Set when the student records these courses as in progress after registering.
+  registeredAt    DateTime?
+
+  courses PlannedCourse[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@unique([studentId, courseId, termId])
-  @@index([studentId, termId])
+  @@unique([studentId, termId])
+  @@index([studentId])
+  @@index([status])
+}
+
+model PlannedCourse {
+  id            String      @id @default(cuid())
+  plannedTermId String
+  plannedTerm   PlannedTerm @relation(fields: [plannedTermId], references: [id], onDelete: Cascade)
+  courseId      String
+  course        Course      @relation(fields: [courseId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([plannedTermId, courseId])
+  @@index([courseId])
 }
