@@ -31,8 +31,13 @@ model TranscriptEntry {
   studentId String
   student   StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
 
-  courseId String
-  course   Course @relation(fields: [courseId], references: [id])
+  courseId String?
+  course   Course? @relation(fields: [courseId], references: [id], onDelete: Restrict)
+
+  /// Free-elective identity when the course is not in the catalog.
+  subject String?
+  number  String?
+  title   String?
 
   termId String?
   term   AcademicTerm? @relation(fields: [termId], references: [id])
@@ -42,12 +47,16 @@ model TranscriptEntry {
   source            TranscriptSource @default(NCAT)
   credits           Int
   sourceInstitution String?
+  /// Placeholder row this credit fills. Null when the course is a named plan requirement.
+  recommendedTermCourseId String?
+  recommendedTermCourse   RecommendedTermCourse? @relation(fields: [recommendedTermCourseId], references: [id], onDelete: SetNull)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([studentId, status])
   @@index([courseId])
+  @@index([recommendedTermCourseId])
 }
 
 model PlannedCourse {

@@ -4,7 +4,6 @@ import { Alert, AlertAction, AlertDescription, AlertTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty";
 import { Field, FieldContent, FieldDescription, FieldGroup, FieldLabel, FieldLegend, FieldSet, FieldTitle } from "@/components/ui/field";
-import { Input } from "@/components/ui/input";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { type CatalogYearsWithPrograms } from "@/lib/catalog";
@@ -21,7 +20,6 @@ import { createStudentProfileAction, searchProgramsAction } from "./actions";
 const profileSchema = z.object({
     programId: z.string().min(1, { message: "Program is required" }),
     catalogYearId: z.string().min(1, { message: "Catalog year is required" }),
-    bannerId: z.string().optional(),
 });
 
 export function StudentProfileForm({ user }: { user: User }) {
@@ -31,7 +29,6 @@ export function StudentProfileForm({ user }: { user: User }) {
         defaultValues: {
             programId: "",
             catalogYearId: "",
-            bannerId: "",
         },
         mode: "onChange",
         reValidateMode: "onChange",
@@ -74,7 +71,6 @@ export function StudentProfileForm({ user }: { user: User }) {
     const onSubmit = async (data: z.infer<typeof profileSchema>) => {
         const { error } = await createStudentProfileAction({
             catalogYearId: data.catalogYearId,
-            bannerId: data.bannerId,
         });
 
         if (error) {
@@ -98,22 +94,6 @@ export function StudentProfileForm({ user }: { user: User }) {
                     </AlertAction>
                 </Alert>
             )}
-            <FieldSet>
-                <FieldGroup className="not-typeset grid sm:grid-cols-2">
-                    <Controller control={form.control} name="bannerId" render={({ field }) => (
-                        <Field orientation={"vertical"}>
-                            <FieldLabel htmlFor={field.name}>
-                                Banner ID
-                            </FieldLabel>
-                            <FieldDescription>
-                                This can be found on Aggie Access Online.
-                            </FieldDescription>
-                            <Input type="text" {...field} placeholder="Optional" />
-
-                        </Field>
-                    )} />
-                </FieldGroup>
-            </FieldSet>
             <FieldGroup className="space-y-12">
                 <FieldSet className="not-typeset">
                     <div className="flex-col flex">

@@ -289,3 +289,71 @@ export async function getCurriculumCourseSections() {
 export type CurriculumCourseSection =
     Awaited<ReturnType<typeof getCurriculumCourseSections>>[number];
 
+const progressSlotSelect = {
+    id: true,
+    subject: true,
+    number: true,
+    title: true,
+    credits: true,
+} as const;
+
+export type ProgressSlotCourse = {
+    id: string;
+    subject: string;
+    number: string;
+    title: string;
+    credits: number;
+};
+
+const openRequirementSlots = new Set<RequirementSlot>([
+    RequirementSlot.GEN_ED_POOL,
+    RequirementSlot.RELATED_POOL,
+    RequirementSlot.TECHNICAL_ELECTIVE,
+    RequirementSlot.FREE_ELECTIVE,
+]);
+
+/** Courses a student can claim for each open requirement group on the progress checklist. */
+export async function getProgressSlotCourses() {
+    const sections = await getCurriculumCourseSections();
+    const requiredIds = new Set(
+        sections
+            .filter((section) =>
+                section.group.slot === RequirementSlot.PROGRAM_CORE
+                || section.group.slot === RequirementSlot.SUPPORTING_REQUIRED,
+            )
+            .flatMap((section) => section.courses.map((course) => course.id)),
+    );
+
+    const hasFreeElective = sections.some((section) => section.group.slot === RequirementSlot.FREE_ELECTIVE);
+    const freeCourses = hasFreeElective
+        ? (await prisma.course.findMany({ select: progressSlotSelect }))
+            .filter((course) => !requiredIds.has(course.id))
+            .sort(compareCourses)
+        : [];
+
+    const coursesByGroup: Record<string, ProgressSlotCourse[]> = {};
+    for (const section of sections) {
+        if (!openRequirementSlots.has(section.group.slot)) {
+            continue;
+        }
+
+        if (section.group.slot === RequirementSlot.FREE_ELECTIVE) {
+            coursesByGroup[section.group.id] = applyMinimumNumber(freeCourses, section.group.minNumber);
+            continue;
+        }
+
+        const courses = section.group.slot === RequirementSlot.GEN_ED_POOL
+            ? section.courses.filter((course) => !requiredIds.has(course.id))
+            : section.courses;
+
+        coursesByGroup[section.group.id] = courses.map((course) => ({
+            id: course.id,
+            subject: course.subject,
+            number: course.number,
+            title: course.title,
+            credits: course.credits,
+        }));
+    }
+
+    return coursesByGroup;
+}

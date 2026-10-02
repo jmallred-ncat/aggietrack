@@ -123,11 +123,13 @@ model RecommendedTermCourse {
   term               RecommendedTerm   @relation(fields: [termId], references: [id], onDelete: Cascade)
   /// Set for a named course. Null when the guide only names a requirement group.
   courseId           String?
-  course             Course?           @relation(fields: [courseId], references: [id])
+  course             Course?           @relation(fields: [courseId], references: [id], onDelete: Restrict)
   /// Set for an undecided slot (gen-ed, elective). Null when courseId is set.
   requirementGroupId String?
   requirementGroup   RequirementGroup? @relation(fields: [requirementGroupId], references: [id], onDelete: Cascade)
   sortOrder          Int               @default(0)
+
+  transcriptEntries TranscriptEntry[]
 
   @@unique([termId, courseId])
   @@index([requirementGroupId])
