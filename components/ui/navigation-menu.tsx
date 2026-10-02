@@ -1,7 +1,7 @@
-import { NavigationMenu as NavigationMenuPrimitive } from "@base-ui/react/navigation-menu"
-import { cva } from "class-variance-authority"
-import { cn } from "cn"
-import { CaretDownIcon } from "@phosphor-icons/react"
+import { NavigationMenu as NavigationMenuPrimitive } from "@base-ui/react/navigation-menu";
+import { CaretDownIcon } from "@phosphor-icons/react";
+import { cva } from "class-variance-authority";
+import { cn } from "cn";
 
 function NavigationMenu({
   align = "start",
@@ -160,8 +160,7 @@ export {
   NavigationMenuIndicator,
   NavigationMenuItem,
   NavigationMenuLink,
-  NavigationMenuList,
-  NavigationMenuTrigger,
-  navigationMenuTriggerStyle,
-  NavigationMenuPositioner,
-}
+  NavigationMenuList, NavigationMenuPositioner, NavigationMenuTrigger,
+  navigationMenuTriggerStyle
+};
+
