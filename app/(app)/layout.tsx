@@ -1,7 +1,9 @@
 import { Separator } from "@/components/ui/separator";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { sidebarStateKey } from "@/lib/sidebar-state";
 import { getSessionUser, getStudentProfile } from "@/lib/student";
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import DashboardBreadcrumbs from "./dashboard-breadcrumbs";
 import DashboardSidebar from "./dashboard-sidebar";
@@ -15,8 +17,10 @@ export default async function DashboardLayout({ children }: { children: React.Re
         return redirect("/onboarding");
     }
 
+    const sidebarState = (await cookies()).get(sidebarStateKey)?.value
+
     return (
-        <SidebarProvider defaultOpen={false} className="h-svh min-h-0 overflow-hidden">
+        <SidebarProvider defaultOpen={sidebarState === "true"} className="h-svh min-h-0 overflow-hidden">
             <DashboardSidebar user={user} profile={profile} />
             <SidebarInset className="min-h-0 min-w-0 overflow-hidden">
                 <TooltipProvider>
