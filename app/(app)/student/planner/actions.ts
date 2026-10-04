@@ -1,6 +1,6 @@
 "use server";
 
-import { courseIdsSatisfiedBefore, getPlanningTerms } from "@/lib/planned-term";
+import { academicTermLabel, courseIdsSatisfiedBefore, courseOfferedInSeason, getPlanningTerms, notOfferedInTermMessage } from "@/lib/planned-term";
 import { coursePrerequisitesSatisfied } from "@/lib/prerequisites";
 import { prisma } from "@/lib/prisma";
 import { requireStudentProfile } from "@/lib/student";
@@ -63,6 +63,7 @@ export async function addPlannedCourse(termId: string, courseId: string, compani
             id: true,
             subject: true,
             number: true,
+            offeredIn: true,
             prerequisiteGroups: {
                 select: {
                     isConcurrent: true,
@@ -72,11 +73,18 @@ export async function addPlannedCourse(termId: string, courseId: string, compani
         },
     });
     const byId = new Map(courses.map((item) => [item.id, item]));
+    const termLabel = academicTermLabel(term);
     const satisfied = await courseIdsSatisfiedBefore(profile.id, term.startsOn);
     for (const id of [courseId, ...extras]) {
         const item = byId.get(id);
         if (!item) {
             return { success: false as const, error: "That course could not be added." };
+        }
+        if (!courseOfferedInSeason(item.offeredIn, term.season)) {
+            return {
+                success: false as const,
+                error: notOfferedInTermMessage(`${item.subject} ${item.number}`, termLabel, item.offeredIn),
+            };
         }
         const prerequisitesMet = coursePrerequisitesSatisfied(
             item.prerequisiteGroups.map((group) => ({

@@ -22,6 +22,7 @@ const courseWithRequirements = {
                                 subject: true,
                                 number: true,
                                 title: true,
+                                offeredIn: true,
                             },
                         },
                     },

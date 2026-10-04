@@ -7,20 +7,22 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { toast } from "@/components/ui/toast";
+import { courseOfferedInSeason, notOfferedInTermMessage } from "@/lib/academic-term";
 import type { CurriculumCourseSection } from "@/lib/catalog";
-import { GenEdTag, RequirementSlot, type Course } from "@/lib/generated/prisma/browser";
+import { GenEdTag, RequirementSlot, type Course, type TermSeason } from "@/lib/generated/prisma/browser";
 import { coursePrerequisitesSatisfied } from "@/lib/prerequisites";
 import type { StudentProfileWithCatalog } from "@/lib/student";
 import { cn } from "@/lib/utils";
 import { FlaskIcon, LecternIcon, MagnifyingGlassIcon } from "@phosphor-icons/react";
 import { useDebounce } from "@uidotdev/usehooks";
-import * as pluralize from "pluralize";
+import pluralize from "pluralize";
 import { memo, useMemo, useState, useTransition } from "react";
 import { addPlannedCourse } from "../planner/actions";
 
 type PlanningTerm = {
     id: string;
     label: string;
+    season: TermSeason;
     locked: boolean;
     startsOn: string;
 };
@@ -237,6 +239,7 @@ type CompanionCourse = {
     id: string;
     code: string;
     title: string;
+    offeredIn: TermSeason[];
 };
 
 function corequisiteCourses(course: CurriculumCourse) {
@@ -252,6 +255,7 @@ function corequisiteCourses(course: CurriculumCourse) {
                 id: option.requires.id,
                 code: `${option.requires.subject} ${option.requires.number}`,
                 title: option.requires.title,
+                offeredIn: option.requires.offeredIn,
             });
         }
     }
@@ -428,17 +432,37 @@ function AddToPlannerButton({
     const [added, setAdded] = useState<PlanPlacement | null>(null);
     const [confirmOpen, setConfirmOpen] = useState(false);
     const [includeCompanions, setIncludeCompanions] = useState(true);
+    const [dialogError, setDialogError] = useState<string | null>(null);
     const current = added ?? placement;
     const label = `${course.subject} ${course.number}`;
     const companionList = joinCourses(companions.map((item) => item.code));
     const completedList = joinCourses(completedCorequisites.map((item) => item.code));
     const triggerLabel = addWithOverride ? "Add with override" : "Add to Plan";
 
+    function offeringMessage(term: PlanningTerm, companionIds: string[]) {
+        if (!courseOfferedInSeason(course.offeredIn, term.season)) {
+            return notOfferedInTermMessage(label, term.label, course.offeredIn);
+        }
+
+        const blockedCompanion = companions.find((companion) =>
+            companionIds.includes(companion.id) && !courseOfferedInSeason(companion.offeredIn, term.season),
+        );
+        return blockedCompanion
+            ? notOfferedInTermMessage(blockedCompanion.code, term.label, blockedCompanion.offeredIn)
+            : null;
+    }
+
     function add(term: PlanningTerm, companionIds: string[]) {
+        const blocked = offeringMessage(term, companionIds);
+        if (blocked) {
+            setDialogError(blocked);
+            return;
+        }
+
         startTransition(async () => {
             const result = await addPlannedCourse(term.id, course.id, companionIds);
             if (!result.success) {
-                toast.add({ title: result.error ?? "That course could not be added." });
+                setDialogError(result.error ?? "That course could not be added.");
                 return;
             }
             const addedCodes = [
@@ -477,6 +501,8 @@ function AddToPlannerButton({
 
     const onlyTerm = terms.length === 1 ? terms[0] : null;
     const companionIds = companions.map((item) => item.id);
+    const onlyTermBlocked = onlyTerm ? offeringMessage(onlyTerm, companionIds) : null;
+    const onlyCourseBlocked = onlyTerm ? offeringMessage(onlyTerm, []) : null;
 
     return (
         <Dialog
@@ -485,6 +511,7 @@ function AddToPlannerButton({
                 setConfirmOpen(open);
                 if (open) {
                     setIncludeCompanions(true);
+                    setDialogError(null);
                 }
             }}
         >
@@ -507,16 +534,24 @@ function AddToPlannerButton({
                                 ? `Add ${label} to ${onlyTerm.label}?`
                                 : `Add ${label} to your plan?`}
                     </DialogTitle>
-                    <DialogDescription>
-                        {addWithOverride
-                            ? `${completedList} ${completedCorequisites.length === 1 ? "is" : "are"} already completed. Adding ${label} without ${completedCorequisites.length === 1 ? "that corequisite" : "those corequisites"} uses an override. You can remove it before submitting the plan for review.`
-                            : companions.length > 0
-                                ? `${label} is taken with ${companionList}. Add ${companions.length === 1 ? "both courses" : "all of these courses"} to the same plan, or add ${label} on its own. You can remove them before submitting the plan for review.`
-                                : onlyTerm
-                                    ? `${course.title} will be added to your ${onlyTerm.label} plan. You can remove it before submitting the plan for review.`
-                                    : "Choose the term this course should join. You can remove it before submitting the plan for review."}
+                    <DialogDescription role={onlyCourseBlocked ? "alert" : undefined} className={onlyCourseBlocked ? "text-foreground" : undefined}>
+                        {onlyCourseBlocked
+                            ? onlyCourseBlocked
+                            : addWithOverride
+                                ? `${completedList} ${completedCorequisites.length === 1 ? "is" : "are"} already completed. Adding ${label} without ${completedCorequisites.length === 1 ? "that corequisite" : "those corequisites"} uses an override. You can remove it before submitting the plan for review.`
+                                : companions.length > 0
+                                    ? `${label} is taken with ${companionList}. Add ${companions.length === 1 ? "both courses" : "all of these courses"} to the same plan, or add ${label} on its own. You can remove them before submitting the plan for review.`
+                                    : onlyTerm
+                                        ? `${course.title} will be added to your ${onlyTerm.label} plan. You can remove it before submitting the plan for review.`
+                                        : "Choose the term this course should join. You can remove it before submitting the plan for review."}
                     </DialogDescription>
                 </DialogHeader>
+                {onlyTerm && !onlyCourseBlocked && onlyTermBlocked && (
+                    <p role="alert" className="text-sm text-foreground">{onlyTermBlocked}</p>
+                )}
+                {dialogError && dialogError !== onlyCourseBlocked && dialogError !== onlyTermBlocked && (
+                    <p role="alert" className="text-sm text-foreground">{dialogError}</p>
+                )}
                 {onlyTerm ? (
                     <DialogFooter className="min-w-0 sm:justify-between">
                         <Button type="button" variant="destructive" size="sm" disabled={pending} onClick={() => setConfirmOpen(false)}>
@@ -524,14 +559,14 @@ function AddToPlannerButton({
                         </Button>
                         <ButtonGroup>
                             {companions.length > 0 && (
-                                <Button type="button" variant="outline" size="sm" disabled={pending} onClick={() => add(onlyTerm, [])}>
+                                <Button type="button" variant="outline" size="sm" disabled={pending || Boolean(onlyCourseBlocked)} onClick={() => add(onlyTerm, [])}>
                                     Add {label} only
                                 </Button>
                             )}
                             <Button
                                 type="button"
                                 size="sm"
-                                disabled={pending}
+                                disabled={pending || Boolean(onlyTermBlocked)}
                                 onClick={() => add(onlyTerm, companions.length > 0 ? companionIds : [])}
                             >
                                 {addWithOverride
@@ -557,17 +592,26 @@ function AddToPlannerButton({
                                 <span>Also add {companionList}</span>
                             </label>
                         )}
-                        {terms.map((term) => (
-                            <Button
-                                key={term.id}
-                                type="button"
-                                size="sm"
-                                disabled={pending}
-                                onClick={() => add(term, includeCompanions ? companionIds : [])}
-                            >
-                                {addWithOverride ? `${term.label} with override` : term.label}
-                            </Button>
+                        {[...new Set(terms.flatMap((term) => {
+                            const message = offeringMessage(term, includeCompanions ? companionIds : []);
+                            return message ? [message] : [];
+                        }))].map((message) => (
+                            <p key={message} role="alert" className="text-sm text-foreground">{message}</p>
                         ))}
+                        {terms.map((term) => {
+                            const blocked = offeringMessage(term, includeCompanions ? companionIds : []);
+                            return (
+                                <Button
+                                    key={term.id}
+                                    type="button"
+                                    size="sm"
+                                    disabled={pending || Boolean(blocked)}
+                                    onClick={() => add(term, includeCompanions ? companionIds : [])}
+                                >
+                                    {addWithOverride ? `${term.label} with override` : term.label}
+                                </Button>
+                            );
+                        })}
                         <Button type="button" variant="destructive" size="sm" disabled={pending} onClick={() => setConfirmOpen(false)}>
                             Cancel
                         </Button>
@@ -622,6 +666,10 @@ function RequirementGroups({
 }
 
 function convertCourseOfferedIn(offeredIn: string[], condensed = false) {
+    if (offeredIn.length === 0) {
+        return "Offering not specified";
+    }
+
     const sessions = offeredIn.map(
         (season) => season.charAt(0) + season.slice(1).toLowerCase(),
     );

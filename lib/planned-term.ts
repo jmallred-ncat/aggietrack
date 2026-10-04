@@ -1,6 +1,9 @@
+import { academicTermLabel } from "./academic-term";
 import type { TermSeason } from "./generated/prisma/client";
 import { prisma } from "./prisma";
 import { requireStudentProfile } from "./student";
+
+export { academicTermLabel, courseOfferedInSeason, notOfferedInTermMessage, offeredSeasonsLabel } from "./academic-term";
 
 /** Completed and in-progress transcript courses, plus courses planned for an earlier term. */
 export async function courseIdsSatisfiedBefore(studentId: string, termStartsOn: Date) {
@@ -28,18 +31,6 @@ export async function courseIdsSatisfiedBefore(studentId: string, termStartsOn: 
         ...entries.flatMap((entry) => entry.courseId ? [entry.courseId] : []),
         ...planned.map((row) => row.courseId),
     ]);
-}
-
-const seasonLabels: Record<TermSeason, string> = {
-    FALL: "Fall",
-    SPRING: "Spring",
-    SUMMER: "Summer",
-    SUMMER_I: "Summer I",
-    SUMMER_II: "Summer II",
-};
-
-export function academicTermLabel(term: { season: TermSeason; year: number }) {
-    return `${seasonLabels[term.season]} ${term.year}`;
 }
 
 const courseSelect = {
@@ -135,6 +126,7 @@ export async function getPlannerAddContext() {
         terms: terms.map((term) => ({
             id: term.id,
             label: academicTermLabel(term),
+            season: term.season,
             locked: lockedTermIds.has(term.id),
             startsOn: term.startsOn.toISOString(),
         })),
