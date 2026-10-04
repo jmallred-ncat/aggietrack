@@ -238,14 +238,15 @@ export async function replaceCurriculum(
       });
     }
 
-    for (const attribute of curriculum.attributes ?? []) {
-      await tx.courseAttribute.create({
-        data: {
+    const attributes = curriculum.attributes ?? [];
+    if (attributes.length > 0) {
+      await tx.courseAttribute.createMany({
+        data: attributes.map((attribute) => ({
           catalogYearId,
           courseId: resolveCourseId(courseIds, attribute.course),
           tag: attribute.tag,
-        },
+        })),
       });
     }
-  });
+  }, { timeout: 60_000 });
 }
