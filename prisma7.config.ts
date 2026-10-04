@@ -16,6 +16,11 @@ function getMigrateUrl() {
     try {
         const url = new URL(raw);
         url.searchParams.delete("channel_binding");
+        // Neon answers immediately, then may spend longer than Prisma's 5s default waking a suspended compute.
+        const timeout = Number(url.searchParams.get("connect_timeout"));
+        if (!Number.isFinite(timeout) || timeout < 30) {
+            url.searchParams.set("connect_timeout", "30");
+        }
         return url.toString();
     } catch {
         return raw;
