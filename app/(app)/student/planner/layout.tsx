@@ -1,9 +1,14 @@
 import { Badge } from "@/components/ui/badge";
+import { academicTermLabel, getPlanningTerms } from "@/lib/planned-term";
 import { requireStudentProfile } from "@/lib/student";
+import { Suspense } from "react";
 import PlannerNavigation from "./PlannerNavigation";
 
 export default async function PlannerLayout({ children }: { children: React.ReactNode }) {
-    const profile = await requireStudentProfile();
+    const [profile, terms] = await Promise.all([
+        requireStudentProfile(),
+        getPlanningTerms(),
+    ]);
     const program = profile.catalogYear.program;
     return <div>
         <section>
@@ -15,7 +20,12 @@ export default async function PlannerLayout({ children }: { children: React.Reac
                     Your personalized course planner for your degree program. Add courses to your planner to track your progress and ensure you meet all degree requirements.
                 </p>
 
-                <PlannerNavigation />
+                <Suspense>
+                    <PlannerNavigation terms={terms.map((term) => ({
+                        id: term.id,
+                        label: academicTermLabel(term),
+                    }))} />
+                </Suspense>
             </header>
         </section>
 

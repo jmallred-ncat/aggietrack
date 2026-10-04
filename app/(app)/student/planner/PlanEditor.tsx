@@ -66,8 +66,8 @@ export default function PlanEditor({
     return (
         <section>
             <header className="flex flex-wrap items-center justify-between gap-3">
-                <h3 className="text-lg font-bold not-typeset text-balance">{termLabel}</h3>
-                <Badge variant={status === "APPROVED" ? "default" : "secondary"}>
+                <h2 className="text-2xl font-bold not-typeset text-balance">{termLabel}</h2>
+                <Badge className="not-typeset" variant={status === "APPROVED" ? "default" : "secondary"}>
                     {status === "DRAFT" ? "Draft" : status === "SUBMITTED" ? "Submitted" : "Approved"}
                 </Badge>
             </header>
