@@ -1,7 +1,6 @@
-import { academicTermLabel, getCatalogCourses, getPlanningTerms, getStudentPlannedTerm } from "@/lib/planned-term";
+import { academicTermLabel, getPlannableCourses, getPlanningTerms, getStudentPlannedTerm } from "@/lib/planned-term";
 import { prisma } from "@/lib/prisma";
 import { requireStudentProfile } from "@/lib/student";
-import { getTranscript } from "@/lib/transcript";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
 import PlanEditor from "./PlanEditor";
@@ -13,10 +12,8 @@ export default async function PlannerPage({
 }) {
     const params = await searchParams;
     const profile = await requireStudentProfile();
-    const [terms, transcript, courses, advisor] = await Promise.all([
+    const [terms, advisor] = await Promise.all([
         getPlanningTerms(),
-        getTranscript(),
-        getCatalogCourses(),
         profile.advisorId
             ? prisma.user.findUnique({
                 where: { id: profile.advisorId },
@@ -25,12 +22,12 @@ export default async function PlannerPage({
             : null,
     ]);
     const selected = terms.find((term) => term.id === params.term) ?? terms[0] ?? null;
-    const plan = selected ? await getStudentPlannedTerm(selected.id) : null;
-    const blocked = new Set(
-        transcript
-            .filter((entry) => entry.courseId && (entry.status === "IN_PROGRESS" || entry.status === "COMPLETED"))
-            .map((entry) => entry.courseId as string),
-    );
+    const [plan, courses] = selected
+        ? await Promise.all([
+            getStudentPlannedTerm(selected.id),
+            getPlannableCourses(selected),
+        ])
+        : [null, []];
 
     return (
         <div>
@@ -61,7 +58,7 @@ export default async function PlannerPage({
                         termId={selected.id}
                         termLabel={academicTermLabel(selected)}
                         advisorName={advisor ? `${advisor.firstName} ${advisor.lastName}` : null}
-                        courses={courses.filter((course) => !blocked.has(course.id))}
+                        courses={courses}
                         plan={plan ? {
                             id: plan.id,
                             status: plan.status,

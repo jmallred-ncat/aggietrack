@@ -1,5 +1,6 @@
 import { academicTermLabel } from "./academic-term";
 import type { TermSeason } from "./generated/prisma/client";
+import { selectPlannableCourses } from "./plannable-courses";
 import { prisma } from "./prisma";
 import { requireStudentProfile } from "./student";
 
@@ -174,4 +175,48 @@ export async function getCatalogCourses() {
         select: courseSelect,
         orderBy: [{ subject: "asc" }, { number: "asc" }],
     });
+}
+
+export async function getPlannableCourses(term: { id: string; season: TermSeason; startsOn: Date }) {
+    const profile = await requireStudentProfile();
+    const [courses, satisfied, planned] = await Promise.all([
+        prisma.course.findMany({
+            select: {
+                ...courseSelect,
+                offeredIn: true,
+                prerequisiteGroups: {
+                    select: {
+                        isConcurrent: true,
+                        options: { select: { requiresId: true } },
+                    },
+                },
+            },
+            orderBy: [{ subject: "asc" }, { number: "asc" }],
+        }),
+        courseIdsSatisfiedBefore(profile.id, term.startsOn),
+        prisma.plannedCourse.findMany({
+            where: { plannedTerm: { studentId: profile.id } },
+            select: { courseId: true, plannedTerm: { select: { termId: true } } },
+        }),
+    ]);
+    const onThisPlan = new Set(
+        planned.filter((row) => row.plannedTerm.termId === term.id).map((row) => row.courseId),
+    );
+    const onAnotherPlan = new Set(
+        planned.filter((row) => row.plannedTerm.termId !== term.id).map((row) => row.courseId),
+    );
+
+    return selectPlannableCourses(
+        courses.map((course) => ({
+            ...course,
+            prerequisiteGroups: course.prerequisiteGroups.map((group) => ({
+                isConcurrent: group.isConcurrent,
+                optionIds: group.options.map((option) => option.requiresId),
+            })),
+        })),
+        term.season,
+        satisfied,
+        onThisPlan,
+        onAnotherPlan,
+    ).map(({ id, subject, number, title, credits }) => ({ id, subject, number, title, credits }));
 }
