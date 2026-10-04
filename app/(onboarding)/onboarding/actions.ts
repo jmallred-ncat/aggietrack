@@ -52,7 +52,7 @@ export async function createStudentProfileAction(input: unknown) {
         throw error;
     }
 
-    redirect("/account/progress");
+    redirect("/student/progress");
 }
 
 export async function searchProgramsAction(query: string) {
