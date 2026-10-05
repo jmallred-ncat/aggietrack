@@ -11,7 +11,10 @@ import { z } from "zod";
 
 const statusSchema = z.enum(progressStatuses).nullable();
 
+const standingSchema = z.enum(["FRESHMAN", "SOPHOMORE", "JUNIOR", "SENIOR"]).nullable();
+
 const payloadSchema = z.object({
+    standing: standingSchema,
     courses: z.array(z.object({
         courseId: z.string().min(1),
         status: statusSchema,
@@ -38,7 +41,7 @@ export async function saveTranscriptProgress(input: unknown) {
         return { success: false as const, error: "Those progress choices could not be saved." };
     }
 
-    const { courses, slots, confirmStart } = parsed.data;
+    const { courses, slots, confirmStart, standing } = parsed.data;
     const marked = courses.some((entry) => entry.status) || slots.some((entry) => entry.status);
     if (confirmStart && !marked) {
         return { success: false as const, error: "Mark the courses you have completed, or say you have no prior coursework." };
@@ -210,12 +213,13 @@ export async function saveTranscriptProgress(input: unknown) {
             }
         }
 
-        if (startConfirmed && !profile.startConfirmedAt) {
-            await tx.studentProfile.update({
-                where: { id: profile.id },
-                data: { startConfirmedAt: new Date() },
-            });
-        }
+        await tx.studentProfile.update({
+            where: { id: profile.id },
+            data: {
+                standing,
+                ...(startConfirmed && !profile.startConfirmedAt ? { startConfirmedAt: new Date() } : {}),
+            },
+        });
     });
 
     if (confirmStart && !startConfirmed) {
@@ -228,8 +232,12 @@ export async function saveTranscriptProgress(input: unknown) {
     return { success: true as const, startConfirmed };
 }
 
-export async function confirmNoPriorCoursework() {
+export async function confirmNoPriorCoursework(input: unknown) {
     const profile = await requireStudentProfile();
+    const parsed = z.object({ standing: standingSchema }).safeParse(input);
+    if (!parsed.success) {
+        return { success: false as const, error: "That student status could not be saved." };
+    }
     const recorded = await prisma.transcriptEntry.count({
         where: { studentId: profile.id },
     });
@@ -237,12 +245,13 @@ export async function confirmNoPriorCoursework() {
         return { success: false as const, error: "Recorded courses are already saved. Clear them before saying you have no prior coursework." };
     }
 
-    if (!profile.startConfirmedAt) {
-        await prisma.studentProfile.update({
-            where: { id: profile.id },
-            data: { startConfirmedAt: new Date() },
-        });
-    }
+    await prisma.studentProfile.update({
+        where: { id: profile.id },
+        data: {
+            standing: parsed.data.standing,
+            ...(!profile.startConfirmedAt ? { startConfirmedAt: new Date() } : {}),
+        },
+    });
 
     revalidatePath("/student/progress");
     revalidatePath("/student", "layout");

@@ -25,6 +25,15 @@ const courseStatuses = [
 
 const statusSchema = z.enum(["complete", "transfer", "active", ""]);
 
+const studentStandings = [
+    { value: "FRESHMAN", label: "Freshman" },
+    { value: "SOPHOMORE", label: "Sophomore" },
+    { value: "JUNIOR", label: "Junior" },
+    { value: "SENIOR", label: "Senior" },
+] as const;
+
+const standingSchema = z.enum(["FRESHMAN", "SOPHOMORE", "JUNIOR", "SENIOR", ""]);
+
 const slotSchema = z.object({
     courseId: z.string(),
     subject: z.string(),
@@ -35,6 +44,7 @@ const slotSchema = z.object({
 });
 
 const formSchema = z.object({
+    standing: standingSchema,
     courses: z.record(z.string(), statusSchema),
     slots: z.record(z.string(), slotSchema),
 }).superRefine((data, ctx) => {
@@ -577,6 +587,7 @@ function SlotField({
 
 function progressPayload(data: ProgressFormValues, confirmStart = false) {
     return {
+        standing: data.standing === "" ? null : data.standing,
         courses: Object.entries(data.courses).map(([courseId, status]) => ({
             courseId,
             status: status === "" ? null : status,
@@ -613,6 +624,7 @@ export default function ProgressForm({
     slotCourses,
     reservedCourseCodes,
     startConfirmed,
+    standing,
 }: {
     years: ProgressYear[];
     defaultCourses: ProgressFormValues["courses"];
@@ -620,11 +632,12 @@ export default function ProgressForm({
     slotCourses: Record<string, ProgressSlotCourse[]>;
     reservedCourseCodes: string[];
     startConfirmed: boolean;
+    standing: ProgressFormValues["standing"];
 }) {
     const router = useRouter();
     const form = useForm<ProgressFormValues>({
         resolver: zodResolver(formSchema),
-        defaultValues: { courses: defaultCourses, slots: defaultSlots },
+        defaultValues: { standing, courses: defaultCourses, slots: defaultSlots },
     });
     const watched = useWatch({ control: form.control });
     const watchedSlots = useWatch({ control: form.control, name: "slots" });
@@ -679,7 +692,9 @@ export default function ProgressForm({
         setSaveState("saving");
         let result: Awaited<ReturnType<typeof confirmNoPriorCoursework>>;
         try {
-            result = await confirmNoPriorCoursework();
+            result = await confirmNoPriorCoursework({
+                standing: progressPayload(form.getValues()).standing,
+            });
         } catch {
             setSaveState("error");
             setSaveError("The save did not finish.");
@@ -723,6 +738,45 @@ export default function ProgressForm({
             onSubmit={(event) => event.preventDefault()}
         >
             <section className="mt-6 space-y-8 pb-6">
+                <fieldset className="not-typeset space-y-2">
+                    <legend className="text-sm font-medium">Student status</legend>
+                    <p className="max-w-prose text-sm text-balance text-muted-foreground">
+                        Some courses require a class status. CST 231, for example, requires sophomore status. Choose the status that applies to you. It saves with the rest of this page.
+                    </p>
+                    <Controller
+                        control={form.control}
+                        name="standing"
+                        render={({ field }) => (
+                            <ToggleInputGroup
+                                value={field.value}
+                                onValueChange={(next) => {
+                                    if (
+                                        next === ""
+                                        || next === "FRESHMAN"
+                                        || next === "SOPHOMORE"
+                                        || next === "JUNIOR"
+                                        || next === "SENIOR"
+                                    ) {
+                                        field.onChange(next);
+                                    }
+                                }}
+                                onBlur={field.onBlur}
+                                variant="outline"
+                                className="flex flex-wrap"
+                            >
+                                {studentStandings.map((status) => (
+                                    <ToggleInput
+                                        key={status.value}
+                                        value={status.value}
+                                        className="aria-pressed:border-transparent aria-pressed:bg-primary! aria-pressed:text-primary-foreground! aria-pressed:hover:bg-primary/80! aria-pressed:hover:text-primary-foreground! data-[state=on]:border-transparent data-[state=on]:bg-primary! data-[state=on]:text-primary-foreground!"
+                                    >
+                                        {status.label}
+                                    </ToggleInput>
+                                ))}
+                            </ToggleInputGroup>
+                        )}
+                    />
+                </fieldset>
                 {years.map((year) => (
                     <div key={year.id}>
                         <h2 className="px-4 text-lg font-semibold">{year.label}</h2>

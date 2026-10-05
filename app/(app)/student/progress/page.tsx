@@ -169,6 +169,7 @@ export default async function ProgressPage() {
                 slotCourses={coursesByGroup}
                 reservedCourseCodes={reservedCourseCodes}
                 startConfirmed={hasConfirmedStart(profile)}
+                standing={profile.standing ?? ""}
             />
         </div>
     );

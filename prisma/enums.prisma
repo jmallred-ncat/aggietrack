@@ -57,6 +57,13 @@ enum PlannedTermStatus {
   APPROVED
 }
 
+enum StudentStanding {
+  FRESHMAN
+  SOPHOMORE
+  JUNIOR
+  SENIOR
+}
+
 enum RequirementSlot {
   PROGRAM_CORE
   SUPPORTING_REQUIRED

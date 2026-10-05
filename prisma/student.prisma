@@ -21,6 +21,9 @@ model StudentProfile {
   /// Set when prior coursework is recorded, or the student says they have none.
   startConfirmedAt DateTime?
 
+  /// Class status the catalog uses, such as the sophomore status CST 231 requires.
+  standing StudentStanding?
+
   transcript   TranscriptEntry[]
   plannedTerms PlannedTerm[]
   appointments AdvisingAppointment[]
