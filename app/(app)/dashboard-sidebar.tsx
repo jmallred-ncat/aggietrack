@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/sidebar";
 import type { User } from "@/lib/generated/prisma/client";
 import { formatProgramName } from "@/lib/program";
-import type { StudentProfileWithCatalog } from "@/lib/student";
+import { hasConfirmedStart, type StudentProfileWithCatalog } from "@/lib/student";
 import { BackpackIcon, BooksIcon, CalendarIcon, ChatsTeardropIcon, CheckSquareIcon, ClipboardTextIcon, PathIcon, UsersThreeIcon } from "@phosphor-icons/react/dist/ssr";
 import Link from "next/link";
 import BookAdvisingButton from "./book-advising-button";
@@ -37,7 +37,12 @@ const navigationByRole = {
 }
 
 export default async function DashboardSidebar({ user, profile }: { user: User, profile: StudentProfileWithCatalog | null }) {
-    const navigation = navigationByRole[user.role] ?? navigationByRole.STUDENT;
+    const navigation = (navigationByRole[user.role] ?? navigationByRole.STUDENT).filter((item) => {
+        if (user.role !== "STUDENT" || hasConfirmedStart(profile)) {
+            return true;
+        }
+        return item.href === "/student/progress";
+    });
     const subtitle = profile ? formatProgramName(profile.catalogYear.program) : (user.role === "ADVISOR" ? "Advisor" : user.role === "ADMIN" ? "Admin" : null);
     return <Sidebar variant="inset">
         <SidebarHeader>
@@ -62,7 +67,7 @@ export default async function DashboardSidebar({ user, profile }: { user: User, 
                         </SidebarMenuItem>
                     ))}
 
-                    {user.role === "STUDENT" && (
+                    {user.role === "STUDENT" && hasConfirmedStart(profile) && (
                         <SidebarMenu className="mt-auto">
                             <BookAdvisingButton />
                         </SidebarMenu>

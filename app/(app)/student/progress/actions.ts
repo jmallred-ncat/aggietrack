@@ -25,6 +25,7 @@ const payloadSchema = z.object({
         credits: z.number().int().min(1).max(6).nullable(),
         status: statusSchema,
     })),
+    confirmStart: z.boolean().optional(),
 });
 
 type SlotInput = z.infer<typeof payloadSchema>["slots"][number];
@@ -37,7 +38,11 @@ export async function saveTranscriptProgress(input: unknown) {
         return { success: false as const, error: "Those progress choices could not be saved." };
     }
 
-    const { courses, slots } = parsed.data;
+    const { courses, slots, confirmStart } = parsed.data;
+    const marked = courses.some((entry) => entry.status) || slots.some((entry) => entry.status);
+    if (confirmStart && !marked) {
+        return { success: false as const, error: "Mark the courses you have completed, or say you have no prior coursework." };
+    }
     const courseIds = courses.map((entry) => entry.courseId);
     const slotIds = slots.map((entry) => entry.recommendedTermCourseId);
     const [allowed, slotRows, slotCourses] = await Promise.all([
@@ -137,6 +142,7 @@ export async function saveTranscriptProgress(input: unknown) {
         });
     }
 
+    let startConfirmed = profile.startConfirmedAt != null;
     await prisma.$transaction(async (tx) => {
         for (const entry of courses) {
             const credits = creditsByCourse.get(entry.courseId);
@@ -194,9 +200,53 @@ export async function saveTranscriptProgress(input: unknown) {
                 credits: slot.credits,
             });
         }
+
+        if (confirmStart && !startConfirmed) {
+            const recorded = await tx.transcriptEntry.count({
+                where: { studentId: profile.id },
+            });
+            if (recorded > 0) {
+                startConfirmed = true;
+            }
+        }
+
+        if (startConfirmed && !profile.startConfirmedAt) {
+            await tx.studentProfile.update({
+                where: { id: profile.id },
+                data: { startConfirmedAt: new Date() },
+            });
+        }
     });
 
+    if (confirmStart && !startConfirmed) {
+        return { success: false as const, error: "Mark the courses you have completed, or say you have no prior coursework." };
+    }
+
     revalidatePath("/student/progress");
+    revalidatePath("/student", "layout");
+    revalidatePath("/student");
+    return { success: true as const, startConfirmed };
+}
+
+export async function confirmNoPriorCoursework() {
+    const profile = await requireStudentProfile();
+    const recorded = await prisma.transcriptEntry.count({
+        where: { studentId: profile.id },
+    });
+    if (recorded > 0) {
+        return { success: false as const, error: "Recorded courses are already saved. Clear them before saying you have no prior coursework." };
+    }
+
+    if (!profile.startConfirmedAt) {
+        await prisma.studentProfile.update({
+            where: { id: profile.id },
+            data: { startConfirmedAt: new Date() },
+        });
+    }
+
+    revalidatePath("/student/progress");
+    revalidatePath("/student", "layout");
+    revalidatePath("/student");
     return { success: true as const };
 }
 

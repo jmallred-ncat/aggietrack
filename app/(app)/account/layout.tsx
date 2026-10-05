@@ -1,4 +1,5 @@
-import { getSessionUser } from "@/lib/student";
+import { getSessionUser, getStudentProfile, hasConfirmedStart } from "@/lib/student";
+import { redirect } from "next/navigation";
 import AccountNavigation from "./AccountNavigation";
 import { signOut } from "./sign-out";
 
@@ -8,6 +9,13 @@ export default async function ProfileLayout({
     children: React.ReactNode;
 }) {
     const user = await getSessionUser();
+
+    if (user.role === "STUDENT") {
+        const profile = await getStudentProfile();
+        if (!hasConfirmedStart(profile)) {
+            redirect("/student/progress");
+        }
+    }
 
     return (
         <div>

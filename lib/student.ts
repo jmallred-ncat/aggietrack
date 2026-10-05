@@ -43,6 +43,10 @@ export async function getStudentProfile() {
     return profile;
 }
 
+export function hasConfirmedStart(profile: { startConfirmedAt: Date | null } | null) {
+    return profile?.startConfirmedAt != null;
+}
+
 export async function requireStudentProfile() {
     const profile = await getStudentProfile();
     if (!profile) {

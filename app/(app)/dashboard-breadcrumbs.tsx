@@ -24,7 +24,7 @@ const labels: Record<string, string> = {
 }
 
 export default function DashboardBreadcrumbs() {
-    const segments = useSelectedLayoutSegments();
+    const segments = useSelectedLayoutSegments().filter((segment) => !segment.startsWith("("));
 
     return (
         <Breadcrumb>

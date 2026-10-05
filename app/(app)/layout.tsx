@@ -33,7 +33,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
                             </div>
                         </header>
                         <div className="min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden px-4">
-                            <div className="container mx-auto">
+                            <div className="container mx-auto flex min-h-full flex-col">
                                 {children}
                             </div>
                         </div>

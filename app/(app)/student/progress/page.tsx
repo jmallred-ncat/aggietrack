@@ -1,5 +1,6 @@
 import { getProgressSlotCourses, type ProgressSlotCourse } from "@/lib/catalog";
 import { getCurriculumRecommendations, planPosition, requirementGroupTitle } from "@/lib/planner";
+import { hasConfirmedStart, requireStudentProfile } from "@/lib/student";
 import { getTranscript, progressStatusFromEntry, type ProgressStatus } from "@/lib/transcript";
 import { ArrowsLeftRightIcon, CheckCircleIcon, ClockIcon } from "@phosphor-icons/react/dist/ssr";
 import ProgressForm, { type ProgressTerm, type ProgressYear } from "./ProgressForm";
@@ -38,7 +39,8 @@ function StatusLegend() {
 }
 
 export default async function ProgressPage() {
-    const [transcript, curriculum, slotCourses] = await Promise.all([
+    const [profile, transcript, curriculum, slotCourses] = await Promise.all([
+        requireStudentProfile(),
         getTranscript(),
         getCurriculumRecommendations(),
         getProgressSlotCourses(),
@@ -154,10 +156,10 @@ export default async function ProgressPage() {
     }
 
     return (
-        <div>
+        <div className="flex min-h-full flex-1 flex-col">
             <header>
                 <h1>Your Degree Progress</h1>
-                <p className="text-sm text-muted-foreground max-w-prose w-full text-balance">Help us understand your academic journey so far. Use your transcript, Degree Works, and other academic records to help us understand your progress.</p>
+                <p className="text-sm text-muted-foreground max-w-prose w-full text-balance">AggieTrack needs the courses you have already completed before you can continue. Mark those courses below, or say you have no prior coursework.</p>
                 <StatusLegend />
             </header>
             <ProgressForm
@@ -166,6 +168,7 @@ export default async function ProgressPage() {
                 defaultSlots={defaultSlots}
                 slotCourses={coursesByGroup}
                 reservedCourseCodes={reservedCourseCodes}
+                startConfirmed={hasConfirmedStart(profile)}
             />
         </div>
     );

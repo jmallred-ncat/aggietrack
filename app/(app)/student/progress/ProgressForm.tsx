@@ -5,17 +5,17 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { toast } from "@/components/ui/toast";
 import { ToggleInput, ToggleInputGroup } from "@/components/ui/toggle-input";
 import type { ProgressSlotCourse } from "@/lib/catalog";
 import { courseCodeLabel, parseCourseCode } from "@/lib/course-code";
-import { zodResolver } from "@hookform/resolvers/zod";
 import { Combobox } from "@base-ui/react/combobox";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { ArrowsLeftRightIcon, CaretDownIcon, CheckCircleIcon, CircleIcon, ClockIcon, XIcon } from "@phosphor-icons/react";
+import { useRouter } from "next/navigation";
 import { useId, useRef, useState, type ReactNode } from "react";
 import { Controller, useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
-import { saveTranscriptProgress } from "./actions";
+import { confirmNoPriorCoursework, saveTranscriptProgress } from "./actions";
 
 const courseStatuses = [
     { value: "complete", label: "Complete", icon: CheckCircleIcon },
@@ -575,60 +575,153 @@ function SlotField({
     );
 }
 
+function progressPayload(data: ProgressFormValues, confirmStart = false) {
+    return {
+        courses: Object.entries(data.courses).map(([courseId, status]) => ({
+            courseId,
+            status: status === "" ? null : status,
+        })),
+        slots: Object.entries(data.slots).map(([recommendedTermCourseId, slot]) => ({
+            recommendedTermCourseId,
+            courseId: slot.courseId || null,
+            subject: slot.courseId ? null : slot.subject || null,
+            number: slot.courseId ? null : slot.number || null,
+            title: slot.courseId ? null : slot.title.trim() || null,
+            credits: slot.courseId || !slot.credits ? null : Number(slot.credits),
+            status: slot.status === "" ? null : slot.status,
+        })),
+        confirmStart,
+    };
+}
+
+function formRecordsCoursework(data: {
+    courses?: Partial<Record<string, string | undefined>>;
+    slots?: Partial<Record<string, Partial<SlotValue> | undefined>>;
+}) {
+    if (Object.values(data.courses ?? {}).some((status) => status)) {
+        return true;
+    }
+    return Object.values(data.slots ?? {}).some((slot) => Boolean(
+        slot?.status || slot?.courseId || slot?.subject || slot?.number || slot?.title,
+    ));
+}
+
 export default function ProgressForm({
     years,
     defaultCourses,
     defaultSlots,
     slotCourses,
     reservedCourseCodes,
+    startConfirmed,
 }: {
     years: ProgressYear[];
     defaultCourses: ProgressFormValues["courses"];
     defaultSlots: ProgressFormValues["slots"];
     slotCourses: Record<string, ProgressSlotCourse[]>;
     reservedCourseCodes: string[];
+    startConfirmed: boolean;
 }) {
+    const router = useRouter();
     const form = useForm<ProgressFormValues>({
         resolver: zodResolver(formSchema),
         defaultValues: { courses: defaultCourses, slots: defaultSlots },
     });
+    const watched = useWatch({ control: form.control });
     const watchedSlots = useWatch({ control: form.control, name: "slots" });
+    const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "error">(
+        startConfirmed ? "saved" : "idle",
+    );
+    const [saveError, setSaveError] = useState<string | null>(null);
+    const [startKnown, setStartKnown] = useState(startConfirmed);
+    const { isDirty } = form.formState;
+    const recordsCoursework = formRecordsCoursework(watched);
+    const formIsValid = formSchema.safeParse(watched).success;
 
-    async function onSubmit(data: ProgressFormValues) {
-        const result = await saveTranscriptProgress({
-            courses: Object.entries(data.courses).map(([courseId, status]) => ({
-                courseId,
-                status: status === "" ? null : status,
-            })),
-            slots: Object.entries(data.slots).map(([recommendedTermCourseId, slot]) => ({
-                recommendedTermCourseId,
-                courseId: slot.courseId || null,
-                subject: slot.courseId ? null : slot.subject || null,
-                number: slot.courseId ? null : slot.number || null,
-                title: slot.courseId ? null : slot.title.trim() || null,
-                credits: slot.courseId || !slot.credits ? null : Number(slot.credits),
-                status: slot.status === "" ? null : slot.status,
-            })),
-        });
-
-        if (!result.success) {
-            toast.add({ title: result.error });
+    async function persist(confirmStart: boolean) {
+        const parsed = formSchema.safeParse(form.getValues());
+        if (!parsed.success) {
+            setSaveState("error");
+            setSaveError("Finish the course you started before you confirm.");
+            return;
+        }
+        if (confirmStart && !formRecordsCoursework(parsed.data)) {
+            setSaveState("error");
+            setSaveError("Mark the courses you have completed, or say you have no prior coursework.");
             return;
         }
 
-        form.reset(data);
-        toast.add({
-            title: "Progress saved",
-            description: "Your transcript now includes the courses you marked.",
-        });
+        setSaveState("saving");
+        let result: Awaited<ReturnType<typeof saveTranscriptProgress>>;
+        try {
+            result = await saveTranscriptProgress(progressPayload(parsed.data, confirmStart));
+        } catch {
+            setSaveState("error");
+            setSaveError("The save did not finish.");
+            return;
+        }
+        if (!result.success) {
+            setSaveState("error");
+            setSaveError(result.error);
+            return;
+        }
+
+        form.reset(parsed.data);
+        setSaveError(null);
+        setSaveState("saved");
+        if (result.startConfirmed && !startKnown) {
+            setStartKnown(true);
+            router.push("/student");
+            return;
+        }
     }
 
-    const { isSubmitting, isDirty } = form.formState;
+    async function onNoPriorCoursework() {
+        setSaveState("saving");
+        let result: Awaited<ReturnType<typeof confirmNoPriorCoursework>>;
+        try {
+            result = await confirmNoPriorCoursework();
+        } catch {
+            setSaveState("error");
+            setSaveError("The save did not finish.");
+            return;
+        }
+        if (!result.success) {
+            setSaveState("error");
+            setSaveError(result.error);
+            return;
+        }
+
+        setSaveError(null);
+        setSaveState("saved");
+        if (!startKnown) {
+            setStartKnown(true);
+            router.push("/student");
+            return;
+        }
+        router.refresh();
+    }
+
+    const showNoPrior = !startKnown && !recordsCoursework && saveState !== "saving";
+    const showConfirm = !startKnown && recordsCoursework && saveState !== "saving";
+    const saveMessage = saveState === "saving"
+        ? "Saving"
+        : saveState === "error"
+            ? `Not saved. ${saveError ?? "Those changes were not saved."}`
+            : !startKnown && recordsCoursework && !formIsValid
+                ? "Finish the course you started before you confirm."
+                : !startKnown && recordsCoursework
+                    ? "Confirm these courses to continue."
+                    : !startKnown
+                        ? "Mark the courses you have completed, or say you have none."
+                        : isDirty
+                            ? "Save these changes when you are ready."
+                            : "Saved";
 
     return (
-        <form onSubmit={form.handleSubmit(onSubmit, () => {
-            toast.add({ title: "Enter a title, credit hours, and a status for each course you add." });
-        })}>
+        <form
+            className="flex flex-1 flex-col"
+            onSubmit={(event) => event.preventDefault()}
+        >
             <section className="mt-6 space-y-8 pb-6">
                 {years.map((year) => (
                     <div key={year.id}>
@@ -639,54 +732,54 @@ export default function ProgressForm({
                                     <h3 className="rounded-lg bg-muted px-4 py-2 text-sm font-medium">{term.label}</h3>
                                     <div className="space-y-4 px-4 pt-3">
                                         {term.rows.map((row) => (
-                                <div key={row.id} className="flex flex-col gap-2 not-typeset sm:flex-row sm:items-center sm:justify-between">
-                                    <p className="flex min-w-0 items-center gap-2 overflow-hidden text-sm font-medium">
-                                        {row.kind === "course" ? (
-                                            <>
-                                                <Badge className="font-mono">{row.subject} {row.number}</Badge>
-                                                <span className="min-w-0 truncate">{row.title}</span>
-                                            </>
-                                        ) : (
-                                            <>
-                                                {row.badge && <Badge variant="outline" className="font-mono">{row.badge}</Badge>}
-                                                <span className="min-w-0 truncate">{row.title}</span>
-                                            </>
-                                        )}
-                                    </p>
-                                    {row.kind === "course" ? (
-                                        <Controller
-                                            control={form.control}
-                                            name={`courses.${row.courseId}`}
-                                            render={({ field }) => (
-                                                <CourseStatusField
-                                                    value={field.value ?? ""}
-                                                    onChange={field.onChange}
-                                                    onBlur={field.onBlur}
-                                                />
-                                            )}
-                                        />
-                                    ) : (
-                                        <Controller
-                                            control={form.control}
-                                            name={`slots.${row.id}`}
-                                            render={({ field }) => (
-                                                <SlotField
-                                                    courses={slotCourses[row.groupId] ?? []}
-                                                    label={row.title}
-                                                    value={field.value ?? emptySlotValue}
-                                                    excludedIds={claimedCourseIds(watchedSlots, row.id)}
-                                                    excludedCodes={claimedCourseCodes(watchedSlots, row.id, slotCourses)}
-                                                    reservedCodes={new Set(reservedCourseCodes)}
-                                                    allowUnlisted={row.allowUnlisted}
-                                                    minNumber={row.minNumber}
-                                                    statusError={form.formState.errors.slots?.[row.id]?.status?.message}
-                                                    onChange={field.onChange}
-                                                    onBlur={field.onBlur}
-                                                />
-                                            )}
-                                        />
-                                    )}
-                                </div>
+                                            <div key={row.id} className="flex flex-col gap-2 not-typeset sm:flex-row sm:items-center sm:justify-between">
+                                                <p className="flex min-w-0 items-center gap-2 overflow-hidden text-sm font-medium">
+                                                    {row.kind === "course" ? (
+                                                        <>
+                                                            <Badge className="font-mono">{row.subject} {row.number}</Badge>
+                                                            <span className="min-w-0 truncate">{row.title}</span>
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            {row.badge && <Badge variant="outline" className="font-mono">{row.badge}</Badge>}
+                                                            <span className="min-w-0 truncate">{row.title}</span>
+                                                        </>
+                                                    )}
+                                                </p>
+                                                {row.kind === "course" ? (
+                                                    <Controller
+                                                        control={form.control}
+                                                        name={`courses.${row.courseId}`}
+                                                        render={({ field }) => (
+                                                            <CourseStatusField
+                                                                value={field.value ?? ""}
+                                                                onChange={field.onChange}
+                                                                onBlur={field.onBlur}
+                                                            />
+                                                        )}
+                                                    />
+                                                ) : (
+                                                    <Controller
+                                                        control={form.control}
+                                                        name={`slots.${row.id}`}
+                                                        render={({ field }) => (
+                                                            <SlotField
+                                                                courses={slotCourses[row.groupId] ?? []}
+                                                                label={row.title}
+                                                                value={field.value ?? emptySlotValue}
+                                                                excludedIds={claimedCourseIds(watchedSlots, row.id)}
+                                                                excludedCodes={claimedCourseCodes(watchedSlots, row.id, slotCourses)}
+                                                                reservedCodes={new Set(reservedCourseCodes)}
+                                                                allowUnlisted={row.allowUnlisted}
+                                                                minNumber={row.minNumber}
+                                                                statusError={form.formState.errors.slots?.[row.id]?.status?.message}
+                                                                onChange={field.onChange}
+                                                                onBlur={field.onBlur}
+                                                            />
+                                                        )}
+                                                    />
+                                                )}
+                                            </div>
                                         ))}
                                     </div>
                                 </div>
@@ -695,10 +788,27 @@ export default function ProgressForm({
                     </div>
                 ))}
             </section>
-            <div className="flex justify-end pb-6">
-                <Button type="submit" disabled={!isDirty || isSubmitting}>
-                    {isSubmitting ? "Saving" : "Save progress"}
-                </Button>
+            <div className="sticky bottom-0 z-10 mt-auto flex items-center justify-between gap-4 border-t bg-background py-3">
+                <p className={saveState === "error" ? "text-sm text-destructive not-typeset" : "text-sm text-muted-foreground not-typeset"}>
+                    {saveMessage}
+                </p>
+                <div className="flex shrink-0 items-center gap-2">
+                    {showNoPrior ? (
+                        <Button type="button" variant="outline" onClick={() => void onNoPriorCoursework()}>
+                            I have no prior coursework
+                        </Button>
+                    ) : null}
+                    {showConfirm ? (
+                        <Button type="button" onClick={() => void persist(true)} disabled={!formIsValid}>
+                            Confirm
+                        </Button>
+                    ) : null}
+                    {startKnown && isDirty ? (
+                        <Button type="button" onClick={() => void persist(false)} disabled={saveState === "saving" || !formIsValid}>
+                            Save progress
+                        </Button>
+                    ) : null}
+                </div>
             </div>
         </form>
     );

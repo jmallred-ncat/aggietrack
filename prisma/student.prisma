@@ -14,6 +14,9 @@ model StudentProfile {
   expectedGradTermId String?
   expectedGradTerm   AcademicTerm? @relation(fields: [expectedGradTermId], references: [id])
 
+  /// Set when prior coursework is recorded, or the student says they have none.
+  startConfirmedAt DateTime?
+
   transcript   TranscriptEntry[]
   plannedTerms PlannedTerm[]
   appointments AdvisingAppointment[]
