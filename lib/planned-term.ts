@@ -1,5 +1,6 @@
-import { academicTermLabel } from "./academic-term";
-import type { TermSeason } from "./generated/prisma/client";
+import { cache } from "react";
+import { academicTermLabel, semesterInSession } from "./academic-term";
+import type { AcademicTerm, TermSeason } from "./generated/prisma/client";
 import { selectPlannableCourses } from "./plannable-courses";
 import { prisma } from "./prisma";
 import { requireStudentProfile } from "./student";
@@ -143,13 +144,74 @@ export async function getPlannerAddContext() {
     };
 }
 
-export async function getPlanningTerms(now = new Date()) {
+function upcomingPlanningTerms(terms: AcademicTerm[], now: Date) {
+    const open = new Set(planningTargets(terms, now).map((target) => `${target.season}:${target.year}`));
+    return terms.filter((term) => open.has(`${term.season}:${term.year}`) && term.startsOn > now);
+}
+
+export function planningTermsLabel(terms: { season: TermSeason; year: number }[]) {
+    return new Intl.ListFormat("en", { style: "long", type: "conjunction" }).format(
+        terms.map((term) => academicTermLabel(term)),
+    );
+}
+
+export type PlannerWindow = {
+    ask: { termId: string; termLabel: string; nextLabel: string } | null;
+    terms: AcademicTerm[];
+    declined: { termId: string; termLabel: string } | null;
+};
+
+/** Current semester when the student is taking courses. Otherwise the next term, or the next group when that includes summer. */
+export const getPlannerWindow = cache(async (): Promise<PlannerWindow> => {
+    const now = new Date();
+    const profile = await requireStudentProfile();
     const terms = await prisma.academicTerm.findMany({
         orderBy: { startsOn: "asc" },
     });
-    const open = new Set(planningTargets(terms, now).map((target) => `${target.season}:${target.year}`));
+    const upcoming = upcomingPlanningTerms(terms, now);
+    const semester = semesterInSession(terms, now);
+    if (!semester) {
+        return { ask: null, terms: upcoming, declined: null };
+    }
 
-    return terms.filter((term) => open.has(`${term.season}:${term.year}`) && term.startsOn > now);
+    const currentPlan = await prisma.plannedTerm.findUnique({
+        where: {
+            studentId_termId: {
+                studentId: profile.id,
+                termId: semester.id,
+            },
+        },
+        select: { id: true },
+    });
+    const declined = profile.notTakingTermId === semester.id;
+    if (currentPlan) {
+        return {
+            ask: null,
+            terms: [semester, ...upcoming.filter((term) => term.id !== semester.id)],
+            declined: null,
+        };
+    }
+    if (declined) {
+        return {
+            ask: null,
+            terms: upcoming,
+            declined: { termId: semester.id, termLabel: academicTermLabel(semester) },
+        };
+    }
+
+    return {
+        ask: {
+            termId: semester.id,
+            termLabel: academicTermLabel(semester),
+            nextLabel: planningTermsLabel(upcoming),
+        },
+        terms: [],
+        declined: null,
+    };
+});
+
+export async function getPlanningTerms() {
+    return (await getPlannerWindow()).terms;
 }
 
 export async function getStudentPlannedTerm(termId: string) {

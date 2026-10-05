@@ -1,6 +1,7 @@
-import { academicTermLabel, getPlannableCourses, getPlanningTerms, getStudentPlannedTerm } from "@/lib/planned-term";
+import { academicTermLabel, getPlannerWindow, getPlannableCourses, getStudentPlannedTerm } from "@/lib/planned-term";
 import { prisma } from "@/lib/prisma";
 import { requireStudentProfile } from "@/lib/student";
+import CurrentSemesterPrompt, { PlanCurrentSemesterButton } from "./CurrentSemesterPrompt";
 import PlanEditor from "./PlanEditor";
 
 export default async function PlannerPage({
@@ -10,15 +11,23 @@ export default async function PlannerPage({
 }) {
     const params = await searchParams;
     const profile = await requireStudentProfile();
-    const [terms, advisor] = await Promise.all([
-        getPlanningTerms(),
-        profile.advisorId
-            ? prisma.user.findUnique({
-                where: { id: profile.advisorId },
-                select: { firstName: true, lastName: true },
-            })
-            : null,
-    ]);
+    const planner = await getPlannerWindow();
+    if (planner.ask) {
+        return (
+            <CurrentSemesterPrompt
+                termId={planner.ask.termId}
+                termLabel={planner.ask.termLabel}
+                nextLabel={planner.ask.nextLabel}
+            />
+        );
+    }
+    const advisor = profile.advisorId
+        ? await prisma.user.findUnique({
+            where: { id: profile.advisorId },
+            select: { firstName: true, lastName: true },
+        })
+        : null;
+    const terms = planner.terms;
     const selected = terms.find((term) => term.id === params.term) ?? terms[0] ?? null;
     const [plan, courses] = selected
         ? await Promise.all([
@@ -29,6 +38,13 @@ export default async function PlannerPage({
 
     return (
         <div>
+            {planner.declined ? (
+                <p className="mb-4 max-w-prose text-sm text-balance text-muted-foreground">
+                    You are planning the next term.{" "}
+                    <PlanCurrentSemesterButton termId={planner.declined.termId} termLabel={planner.declined.termLabel} />
+                    {" "}if you are taking courses this semester.
+                </p>
+            ) : null}
             {terms.length > 0 && selected ? (
                 <PlanEditor
                     termId={selected.id}

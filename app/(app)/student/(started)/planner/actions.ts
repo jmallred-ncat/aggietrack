@@ -1,5 +1,6 @@
 "use server";
 
+import { semesterInSession } from "@/lib/academic-term";
 import { academicTermLabel, courseIdsSatisfiedBefore, courseOfferedInSeason, getPlanningTerms, notOfferedInTermMessage } from "@/lib/planned-term";
 import { coursePrerequisitesSatisfied } from "@/lib/prerequisites";
 import { prisma } from "@/lib/prisma";
@@ -14,6 +15,50 @@ function refreshPlans() {
     revalidatePath("/student/courses");
     revalidatePath("/student/progress");
     revalidatePath("/advisor/plans");
+}
+
+async function semesterInSessionNow() {
+    const terms = await prisma.academicTerm.findMany();
+    return semesterInSession(terms);
+}
+
+export async function planCurrentSemester(termId: string) {
+    const profile = await requireStudentProfile();
+    const semester = await semesterInSessionNow();
+    if (!idSchema.safeParse(termId).success || !semester || semester.id !== termId) {
+        return { success: false as const, error: "That semester is not in session." };
+    }
+
+    await prisma.$transaction([
+        prisma.plannedTerm.upsert({
+            where: { studentId_termId: { studentId: profile.id, termId } },
+            create: { studentId: profile.id, termId, status: "DRAFT" },
+            update: {},
+        }),
+        prisma.studentProfile.update({
+            where: { id: profile.id },
+            data: { notTakingTermId: null },
+        }),
+    ]);
+    refreshPlans();
+    revalidatePath("/student");
+    return { success: true as const };
+}
+
+export async function declineCurrentSemester(termId: string) {
+    const profile = await requireStudentProfile();
+    const semester = await semesterInSessionNow();
+    if (!idSchema.safeParse(termId).success || !semester || semester.id !== termId) {
+        return { success: false as const, error: "That semester is not in session." };
+    }
+
+    await prisma.studentProfile.update({
+        where: { id: profile.id },
+        data: { notTakingTermId: termId },
+    });
+    refreshPlans();
+    revalidatePath("/student");
+    return { success: true as const };
 }
 
 async function planningTerm(termId: string) {

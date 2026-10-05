@@ -12,7 +12,11 @@ model StudentProfile {
   advisor   User?   @relation("AdvisorToStudents", fields: [advisorId], references: [id])
 
   expectedGradTermId String?
-  expectedGradTerm   AcademicTerm? @relation(fields: [expectedGradTermId], references: [id])
+  expectedGradTerm   AcademicTerm? @relation("ExpectedGraduation", fields: [expectedGradTermId], references: [id])
+
+  /// The semester in session the student said they are not taking courses in.
+  notTakingTermId String?
+  notTakingTerm   AcademicTerm? @relation("NotTakingTerm", fields: [notTakingTermId], references: [id], onDelete: SetNull)
 
   /// Set when prior coursework is recorded, or the student says they have none.
   startConfirmedAt DateTime?
