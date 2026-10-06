@@ -127,6 +127,12 @@ model RecommendedTermCourse {
   /// Set for an undecided slot (gen-ed, elective). Null when courseId is set.
   requirementGroupId String?
   requirementGroup   RequirementGroup? @relation(fields: [requirementGroupId], references: [id], onDelete: Cascade)
+  /// Handbook credit load when this slot does not take an even share of the group.
+  credits            Int?
+  /// Handbook label when this slot is more specific than the group name.
+  label              String?
+  /// This slot must be a course that carries the scientific-reasoning lab tag.
+  requiresLab        Boolean           @default(false)
   sortOrder          Int               @default(0)
 
   transcriptEntries TranscriptEntry[]

@@ -1,4 +1,5 @@
 import {
+    GenEdTag,
     Prisma,
     RequirementSlot,
     type Course,
@@ -235,15 +236,8 @@ export async function getCurriculumCourseSections() {
                 if (!group.genEdCategory) {
                     throw new Error(`${group.name} does not define a gen-ed category`);
                 }
-                let tagged = (coursesByTag.get(group.genEdCategory) ?? [])
+                const tagged = (coursesByTag.get(group.genEdCategory) ?? [])
                     .map((attribute) => attribute.course);
-                if (group.requiredGenEdTag) {
-                    const requiredIds = new Set(
-                        (coursesByTag.get(group.requiredGenEdTag) ?? [])
-                            .map((attribute) => attribute.course.id),
-                    );
-                    tagged = tagged.filter((course) => requiredIds.has(course.id));
-                }
                 courses = applyMinimumNumber(
                     [...new Map(tagged.map((course) => [course.id, course])).values()],
                     group.minNumber,
@@ -304,6 +298,7 @@ export type ProgressSlotCourse = {
     number: string;
     title: string;
     credits: number;
+    lab: boolean;
 };
 
 const openRequirementSlots = new Set<RequirementSlot>([
@@ -315,7 +310,19 @@ const openRequirementSlots = new Set<RequirementSlot>([
 
 /** Courses a student can claim for each open requirement group on the progress checklist. */
 export async function getProgressSlotCourses() {
-    const sections = await getCurriculumCourseSections();
+    const [profile, sections] = await Promise.all([
+        requireStudentProfile(),
+        getCurriculumCourseSections(),
+    ]);
+    const labCourseIds = new Set(
+        (await prisma.courseAttribute.findMany({
+            where: {
+                catalogYearId: profile.catalogYearId,
+                tag: GenEdTag.SCIENTIFIC_REASONING_LAB,
+            },
+            select: { courseId: true },
+        })).map((row) => row.courseId),
+    );
     const requiredIds = new Set(
         sections
             .filter((section) =>
@@ -339,7 +346,8 @@ export async function getProgressSlotCourses() {
         }
 
         if (section.group.slot === RequirementSlot.FREE_ELECTIVE) {
-            coursesByGroup[section.group.id] = applyMinimumNumber(freeCourses, section.group.minNumber);
+            coursesByGroup[section.group.id] = applyMinimumNumber(freeCourses, section.group.minNumber)
+                .map((course) => ({ ...course, lab: false }));
             continue;
         }
 
@@ -353,6 +361,7 @@ export async function getProgressSlotCourses() {
             number: course.number,
             title: course.title,
             credits: course.credits,
+            lab: labCourseIds.has(course.id),
         }));
     }
 

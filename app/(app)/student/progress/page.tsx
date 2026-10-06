@@ -1,5 +1,5 @@
 import { getProgressSlotCourses, type ProgressSlotCourse } from "@/lib/catalog";
-import { getCurriculumRecommendations, planPosition, requirementGroupTitle } from "@/lib/planner";
+import { getCurriculumRecommendations, planPosition, requirementGroupTitle, requirementSlotBadge } from "@/lib/planner";
 import { hasConfirmedStart, requireStudentProfile } from "@/lib/student";
 import { getTranscript, progressStatusFromEntry, type ProgressStatus } from "@/lib/transcript";
 import { ArrowsLeftRightIcon, CheckCircleIcon } from "@phosphor-icons/react/dist/ssr";
@@ -68,11 +68,12 @@ export default async function ProgressPage() {
                             id: course.id,
                             kind: "slot" as const,
                             groupId: course.requirementGroup!.id,
-                            badge: course.requirementGroup?.subject
-                                ? `${course.requirementGroup.subject} ${course.requirementGroup.minNumber}+`
+                            badge: course.requirementGroup
+                                ? requirementSlotBadge(course.requirementGroup)
                                 : null,
-                            title: requirementGroupTitle(course.requirementGroup!),
+                            title: course.label ?? requirementGroupTitle(course.requirementGroup!),
                             allowUnlisted: course.requirementGroup?.slot === "FREE_ELECTIVE",
+                            requiresLab: course.requiresLab,
                             minNumber: course.requirementGroup?.minNumber ?? 100,
                         }),
             };
@@ -160,7 +161,7 @@ export default async function ProgressPage() {
         if (!entry?.course) {
             continue;
         }
-        coursesByGroup[row.groupId] = [...options, entry.course];
+        coursesByGroup[row.groupId] = [...options, { ...entry.course, lab: row.requiresLab }];
     }
 
     return (

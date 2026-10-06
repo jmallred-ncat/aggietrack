@@ -19,11 +19,18 @@ export type RequirementSeed = {
   courses?: CourseRef[];
 };
 
+export type PlaceholderSeed = {
+  group: string;
+  credits?: number;
+  label?: string;
+  requiresLab?: boolean;
+};
+
 export type RecommendedTermSeed = {
   sequence: number;
   courses: CourseRef[];
   /** Requirement group names for slots the guide has not assigned to a course. */
-  placeholders?: string[];
+  placeholders?: Array<string | PlaceholderSeed>;
 };
 
 export type AttributeSeed = {
@@ -217,7 +224,9 @@ export async function replaceCurriculum(
     }
 
     for (const term of curriculum.recommended) {
-      const placeholders = term.placeholders ?? [];
+      const placeholders = (term.placeholders ?? []).map((placeholder) =>
+        typeof placeholder === "string" ? { group: placeholder } : placeholder,
+      );
       await tx.recommendedTerm.create({
         data: {
           catalogYearId,
@@ -228,9 +237,12 @@ export async function replaceCurriculum(
                 sortOrder: index,
                 courseId: resolveCourseId(courseIds, course),
               })),
-              ...placeholders.map((name, index) => ({
+              ...placeholders.map((placeholder, index) => ({
                 sortOrder: term.courses.length + index,
-                requirementGroupId: resolveGroupId(groupIds, name),
+                requirementGroupId: resolveGroupId(groupIds, placeholder.group),
+                credits: placeholder.credits,
+                label: placeholder.label,
+                requiresLab: placeholder.requiresLab ?? false,
               })),
             ],
           },

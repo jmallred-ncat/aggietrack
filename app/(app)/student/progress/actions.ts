@@ -67,6 +67,7 @@ export async function saveTranscriptProgress(input: unknown) {
             },
             select: {
                 id: true,
+                requiresLab: true,
                 requirementGroupId: true,
                 requirementGroup: {
                     select: { slot: true, minNumber: true },
@@ -113,7 +114,9 @@ export async function saveTranscriptProgress(input: unknown) {
             return { success: false as const, error: "A course on this plan could not be updated." };
         }
 
-        const resolved = await resolveSlotCourse(slot, row.requirementGroup, slotCourses[row.requirementGroupId!] ?? []);
+        const eligible = (slotCourses[row.requirementGroupId!] ?? [])
+            .filter((course) => !row.requiresLab || course.lab);
+        const resolved = await resolveSlotCourse(slot, row.requirementGroup, eligible);
         if (!resolved.ok) {
             return { success: false as const, error: resolved.error };
         }

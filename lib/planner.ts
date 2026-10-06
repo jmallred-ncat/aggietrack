@@ -44,6 +44,24 @@ export function requirementSlotTitle(name: string) {
     return name.replaceAll("Electives", "Elective");
 }
 
+/** Subject rule shown beside an open elective, such as CST or CST 200+. */
+export function requirementSlotBadge(group: {
+    slot: string;
+    subject: string | null;
+    minNumber: number | null;
+}) {
+    if (!group.subject) {
+        return null;
+    }
+    if (group.slot !== "TECHNICAL_ELECTIVE" && group.slot !== "RELATED_POOL") {
+        return null;
+    }
+    if (group.minNumber != null) {
+        return `${group.subject} ${group.minNumber}+`;
+    }
+    return group.subject;
+}
+
 const yearNames = ["First", "Second", "Third", "Fourth"] as const;
 
 /** Place of a handbook sequence in the degree. Sequence 1 is First Year, Fall. */

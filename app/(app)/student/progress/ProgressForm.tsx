@@ -101,6 +101,7 @@ export type ProgressTerm = {
             badge: string | null;
             title: string;
             allowUnlisted: boolean;
+            requiresLab: boolean;
             minNumber: number;
         }
     >;
@@ -266,6 +267,7 @@ function unlistedCourse(value: SlotValue): ProgressSlotCourse | null {
         number: value.number,
         title: value.title.trim(),
         credits: Number.isInteger(credits) ? credits : 0,
+        lab: false,
     };
 }
 
@@ -424,6 +426,7 @@ function FreeElectivePicker({
             number: parsed.number,
             title: "Add this course",
             credits: 0,
+            lab: false,
         }
         : null;
     const options = [
@@ -830,7 +833,7 @@ export default function ProgressForm({
                                                         name={`slots.${row.id}`}
                                                         render={({ field }) => (
                                                             <SlotField
-                                                                courses={slotCourses[row.groupId] ?? []}
+                                                                courses={(slotCourses[row.groupId] ?? []).filter((course) => !row.requiresLab || course.lab)}
                                                                 label={row.title}
                                                                 value={field.value ?? emptySlotValue}
                                                                 excludedIds={claimedCourseIds(watchedSlots, row.id)}

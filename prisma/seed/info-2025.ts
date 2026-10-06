@@ -6,7 +6,6 @@ import {
 import { type CourseRef } from "./courses";
 import { genEdRequirement, type CurriculumSeed } from "./curriculum";
 import { gecAttributes } from "./gec";
-import { mgmtElectives } from "./mgmt";
 
 const cst = (number: string): CourseRef => ({ subject: "CST", number });
 const engl = (number: string): CourseRef => ({ subject: "ENGL", number });
@@ -90,7 +89,7 @@ export const info2025: CurriculumSeed = {
       slot: RequirementSlot.RELATED_POOL,
       minCredits: 6,
       sortOrder: 70,
-      courses: mgmtElectives,
+      subject: "MGMT",
     },
     genEdRequirement({
       category: GenEdTag.GLOBAL_AWARENESS,
@@ -104,13 +103,13 @@ export const info2025: CurriculumSeed = {
     }),
     genEdRequirement({
       category: GenEdTag.SOCIAL_BEHAVIORAL,
-      minCredits: 6,
+      minCredits: 3,
       sortOrder: 100,
     }),
     genEdRequirement({
       category: GenEdTag.SCIENTIFIC_REASONING,
       requiredTag: GenEdTag.SCIENTIFIC_REASONING_LAB,
-      minCredits: 4,
+      minCredits: 7,
       sortOrder: 110,
     }),
     {
@@ -119,7 +118,6 @@ export const info2025: CurriculumSeed = {
       minCredits: 12,
       sortOrder: 120,
       subject: "CST",
-      minNumber: 200,
     },
     {
       name: "Free Electives",
@@ -129,13 +127,12 @@ export const info2025: CurriculumSeed = {
       minNumber: 100,
     },
   ],
-  // Named courses are the handbook sequence. Placeholders are the open groups
-  // (34 gen-ed/elective credits plus 6 management-elective credits) set on the
-  // lighter terms so each semester lands near 15 credits.
+  // Eight-semester sequence from the Information Technology curriculum guide.
   recommended: [
     {
       sequence: 1,
       courses: [cst("120"), cst("130"), engl("100"), frst("101"), math("110")],
+      placeholders: ["Global Awareness"],
     },
     {
       sequence: 2,
@@ -144,35 +141,46 @@ export const info2025: CurriculumSeed = {
     {
       sequence: 3,
       courses: [cst("231"), cst("240"), mgmt("110")],
-      placeholders: ["Social/Behavioral Sciences", "Global Awareness"],
+      placeholders: [
+        "Social/Behavioral Sciences",
+        {
+          group: "Scientific Reasoning",
+          credits: 4,
+          label: "Scientific Reasoning with Lab",
+          requiresLab: true,
+        },
+      ],
     },
     {
       sequence: 4,
       courses: [cst("225"), cst("235"), cst("285"), spch("250")],
-      placeholders: ["African American Studies", "Free Electives"],
+      placeholders: [
+        { group: "Scientific Reasoning", credits: 3 },
+        "African American Studies",
+      ],
     },
     {
       sequence: 5,
       courses: [cst("325"), cst("329"), cst("339"), math("224")],
-      placeholders: ["Social/Behavioral Sciences", "Technical Electives"],
+      placeholders: ["Technical Electives"],
     },
     {
       sequence: 6,
       courses: [cst("300"), cst("315"), cst("317"), cst("430")],
-      placeholders: ["Management Electives"],
+      placeholders: ["Technical Electives"],
     },
     {
       sequence: 7,
       courses: [cst("460"), cst("496"), cst("498")],
-      placeholders: ["Scientific Reasoning", "Technical Electives"],
+      placeholders: ["Management Electives", "Free Electives"],
     },
     {
       sequence: 8,
       courses: [cst("499")],
       placeholders: [
-        "Technical Electives",
-        "Technical Electives",
         "Management Electives",
+        "Technical Electives",
+        "Technical Electives",
         "Free Electives",
       ],
     },
