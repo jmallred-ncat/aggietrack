@@ -3,6 +3,7 @@ import { academicTermLabel, getPlanningTerms } from "@/lib/planned-term";
 import { requireStudentProfile } from "@/lib/student";
 import { Suspense } from "react";
 import PlannerNavigation from "./PlannerNavigation";
+import ProgramOutlineHandbook from "./ProgramOutlineHandbook";
 
 export default async function PlannerLayout({ children }: { children: React.ReactNode }) {
     const [profile, terms] = await Promise.all([
@@ -24,7 +25,9 @@ export default async function PlannerLayout({ children }: { children: React.Reac
                     <PlannerNavigation terms={terms.map((term) => ({
                         id: term.id,
                         label: academicTermLabel(term),
-                    }))} />
+                    }))}>
+                        <ProgramOutlineHandbook />
+                    </PlannerNavigation>
                 </Suspense>
             </header>
         </section>

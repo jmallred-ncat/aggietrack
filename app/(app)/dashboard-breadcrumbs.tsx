@@ -20,7 +20,6 @@ const labels: Record<string, string> = {
     security: "Security",
     notifications: "Notifications",
     account: "Account",
-    outline: "Program Outline",
 }
 
 export default function DashboardBreadcrumbs() {
