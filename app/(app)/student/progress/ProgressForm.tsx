@@ -10,7 +10,7 @@ import type { ProgressSlotCourse } from "@/lib/catalog";
 import { courseCodeLabel, parseCourseCode } from "@/lib/course-code";
 import { Combobox } from "@base-ui/react/combobox";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ArrowsLeftRightIcon, CaretDownIcon, CheckCircleIcon, CircleIcon, ClockIcon, XIcon } from "@phosphor-icons/react";
+import { ArrowsLeftRightIcon, CaretDownIcon, CheckCircleIcon, XIcon } from "@phosphor-icons/react";
 import { useRouter } from "next/navigation";
 import { useId, useRef, useState, type ReactNode } from "react";
 import { Controller, useForm, useWatch } from "react-hook-form";
@@ -20,10 +20,9 @@ import { confirmNoPriorCoursework, saveTranscriptProgress } from "./actions";
 const courseStatuses = [
     { value: "complete", label: "Complete", icon: CheckCircleIcon },
     { value: "transfer", label: "Transfer", icon: ArrowsLeftRightIcon },
-    { value: "active", label: "Active", icon: ClockIcon },
 ] as const;
 
-const statusSchema = z.enum(["complete", "transfer", "active", ""]);
+const statusSchema = z.enum(["complete", "transfer", ""]);
 
 const studentStandings = [
     { value: "FRESHMAN", label: "Freshman" },
@@ -54,7 +53,7 @@ const formSchema = z.object({
             ctx.addIssue({
                 code: "custom",
                 path: ["slots", id, "status"],
-                message: "Choose complete, transfer, or active for this course.",
+                message: "Choose complete or transfer for this course.",
             });
         }
         if (!entered) {
@@ -113,18 +112,14 @@ export type ProgressYear = {
     terms: ProgressTerm[];
 };
 
-function StatusIcon({ value, icon: Icon }: { value: string; icon: typeof CheckCircleIcon }) {
-    if (value === "transfer") {
+function StatusIcon({ icon: Icon }: { icon: typeof CheckCircleIcon }) {
+    if (Icon === ArrowsLeftRightIcon) {
         return <Icon weight="bold" />;
     }
 
     return (
         <span className="relative inline-flex size-4">
-            {value === "active" ? (
-                <CircleIcon weight="fill" className="absolute inset-0 size-4 opacity-20" aria-hidden />
-            ) : (
-                <Icon weight="fill" className="absolute inset-0 size-4 opacity-20" aria-hidden />
-            )}
+            <Icon weight="fill" className="absolute inset-0 size-4 opacity-20" aria-hidden />
             <Icon weight="bold" className="relative size-4" />
         </span>
     );
@@ -135,32 +130,39 @@ function CourseStatusField({
     onChange,
     onBlur,
     disabled,
+    inProgress,
 }: {
     value?: SlotValue["status"];
     onChange?: (value: SlotValue["status"]) => void;
     onBlur?: () => void;
     disabled?: boolean;
+    inProgress?: boolean;
 }) {
     return (
-        <ToggleInputGroup
-            {...(value === undefined ? {} : { value })}
-            onValueChange={(next) => {
-                if (next === "" || next === "complete" || next === "transfer" || next === "active") {
-                    onChange?.(next);
-                }
-            }}
-            onBlur={onBlur}
-            disabled={disabled}
-            variant="default"
-            attached
-            className="w-full sm:w-fit"
-        >
-            {courseStatuses.map(({ value: status, label, icon }) => (
-                <ToggleInput key={status} value={status} aria-label={label} title={label} className="flex-1 px-0 sm:flex-none">
-                    <StatusIcon value={status} icon={icon} />
-                </ToggleInput>
-            ))}
-        </ToggleInputGroup>
+        <div className="flex items-center gap-2">
+            {inProgress && !value ? (
+                <span className="text-xs text-muted-foreground">In progress</span>
+            ) : null}
+            <ToggleInputGroup
+                {...(value === undefined ? {} : { value })}
+                onValueChange={(next) => {
+                    if (next === "" || next === "complete" || next === "transfer") {
+                        onChange?.(next);
+                    }
+                }}
+                onBlur={onBlur}
+                disabled={disabled}
+                variant="default"
+                attached
+                className="w-full sm:w-fit"
+            >
+                {courseStatuses.map(({ value: status, label, icon }) => (
+                    <ToggleInput key={status} value={status} aria-label={label} title={label} className="flex-1 px-0 sm:flex-none">
+                        <StatusIcon icon={icon} />
+                    </ToggleInput>
+                ))}
+            </ToggleInputGroup>
+        </div>
     );
 }
 
@@ -533,6 +535,7 @@ function SlotField({
     allowUnlisted,
     minNumber,
     statusError,
+    inProgress,
     onChange,
     onBlur,
 }: {
@@ -545,6 +548,7 @@ function SlotField({
     allowUnlisted: boolean;
     minNumber: number;
     statusError?: string;
+    inProgress?: boolean;
     onChange: (value: SlotValue) => void;
     onBlur: () => void;
 }) {
@@ -576,6 +580,7 @@ function SlotField({
                 <CourseStatusField
                     value={value.status}
                     disabled={!hasCourse}
+                    inProgress={inProgress}
                     onChange={(status) => onChange({ ...value, status })}
                     onBlur={onBlur}
                 />
@@ -623,6 +628,8 @@ export default function ProgressForm({
     defaultSlots,
     slotCourses,
     reservedCourseCodes,
+    inProgressCourseIds,
+    inProgressSlotIds,
     startConfirmed,
     standing,
 }: {
@@ -631,9 +638,13 @@ export default function ProgressForm({
     defaultSlots: ProgressFormValues["slots"];
     slotCourses: Record<string, ProgressSlotCourse[]>;
     reservedCourseCodes: string[];
+    inProgressCourseIds: string[];
+    inProgressSlotIds: string[];
     startConfirmed: boolean;
     standing: ProgressFormValues["standing"];
 }) {
+    const inProgressCourses = new Set(inProgressCourseIds);
+    const inProgressSlots = new Set(inProgressSlotIds);
     const router = useRouter();
     const form = useForm<ProgressFormValues>({
         resolver: zodResolver(formSchema),
@@ -807,6 +818,7 @@ export default function ProgressForm({
                                                         render={({ field }) => (
                                                             <CourseStatusField
                                                                 value={field.value ?? ""}
+                                                                inProgress={inProgressCourses.has(row.courseId)}
                                                                 onChange={field.onChange}
                                                                 onBlur={field.onBlur}
                                                             />
@@ -827,6 +839,7 @@ export default function ProgressForm({
                                                                 allowUnlisted={row.allowUnlisted}
                                                                 minNumber={row.minNumber}
                                                                 statusError={form.formState.errors.slots?.[row.id]?.status?.message}
+                                                                inProgress={inProgressSlots.has(row.id)}
                                                                 onChange={field.onChange}
                                                                 onBlur={field.onBlur}
                                                             />

@@ -2,6 +2,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { getSessionUser } from "@/lib/student";
+import { recordCoursesInProgress } from "@/lib/transcript";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
@@ -27,22 +28,39 @@ export async function approvePlannedTerm(plannedTermId: string, registrationPin:
             status: "SUBMITTED",
             student: { advisorId: user.id },
         },
-        select: { id: true },
+        select: {
+            id: true,
+            studentId: true,
+            termId: true,
+            courses: { select: { courseId: true, course: { select: { credits: true } } } },
+        },
     });
     if (!plan) {
         return { success: false as const, error: "That term plan is not waiting for your review." };
     }
 
-    await prisma.plannedTerm.update({
-        where: { id: plan.id },
-        data: {
-            status: "APPROVED",
-            registrationPin: parsed.data.registrationPin,
-            reviewedAt: new Date(),
-        },
+    await prisma.$transaction(async (tx) => {
+        await tx.plannedTerm.update({
+            where: { id: plan.id },
+            data: {
+                status: "APPROVED",
+                registrationPin: parsed.data.registrationPin,
+                reviewedAt: new Date(),
+            },
+        });
+        await recordCoursesInProgress(tx, {
+            studentId: plan.studentId,
+            termId: plan.termId,
+            courses: plan.courses.map((row) => ({
+                courseId: row.courseId,
+                credits: row.course.credits,
+            })),
+        });
     });
 
     revalidatePath("/advisor/plans");
     revalidatePath("/student/planner");
+    revalidatePath("/student/progress");
+    revalidatePath("/student");
     return { success: true as const };
 }

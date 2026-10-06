@@ -79,7 +79,7 @@ export default async function AdvisorPlansPage() {
                         </header>
                         <p className="mt-2 text-sm text-muted-foreground">
                             Pin <span className="font-mono text-foreground">{plan.registrationPin}</span>
-                            {plan.registeredAt ? ". The student recorded these courses as in progress." : ". Waiting for the student to register."}
+                            {plan.registeredAt ? ". The student confirmed registration." : ". These courses are in progress. Waiting for the student to register."}
                         </p>
                         <ul className="mt-3 space-y-2">
                             {plan.courses.map((row) => (

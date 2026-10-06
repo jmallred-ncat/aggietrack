@@ -2,7 +2,7 @@
 
 import { getProgressSlotCourses } from "@/lib/catalog";
 import { courseCodeLabel, parseCourseCode } from "@/lib/course-code";
-import { Prisma, RequirementSlot, type Grade } from "@/lib/generated/prisma/client";
+import { Prisma, RequirementSlot, type Grade, type TranscriptStatus } from "@/lib/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireStudentProfile } from "@/lib/student";
 import { progressStatuses, transcriptFieldsForProgressStatus, type ProgressStatus } from "@/lib/transcript";
@@ -185,7 +185,7 @@ export async function saveTranscriptProgress(input: unknown) {
             });
 
             if (!slot.status || (!slot.courseId && !slot.subject)) {
-                if (existing) {
+                if (existing && !(existing.status === "IN_PROGRESS" && !slot.status)) {
                     await tx.transcriptEntry.delete({ where: { id: existing.id } });
                 }
                 continue;
@@ -344,7 +344,7 @@ function courseIdentity(entry: { courseId: string | null; subject: string | null
 async function writeTranscriptEntry(
     tx: Prisma.TransactionClient,
     input: {
-        existing: { id: string; courseId: string | null; subject: string | null; number: string | null; grade: Grade | null } | null;
+        existing: { id: string; courseId: string | null; subject: string | null; number: string | null; grade: Grade | null; status: TranscriptStatus } | null;
         studentId: string;
         courseId: string | null;
         subject: string | null;
@@ -356,7 +356,7 @@ async function writeTranscriptEntry(
     },
 ) {
     if (!input.status) {
-        if (input.existing) {
+        if (input.existing && input.existing.status !== "IN_PROGRESS") {
             await tx.transcriptEntry.delete({ where: { id: input.existing.id } });
         }
         return;

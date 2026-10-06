@@ -80,9 +80,9 @@ export default function PlanEditor({
 
             <p className="mt-2 max-w-prose text-sm text-balance text-muted-foreground">
                 {plan?.registered
-                    ? "These courses are on your transcript as in progress."
+                    ? "These courses are on your transcript as in progress. You confirmed that you registered."
                     : status === "APPROVED"
-                        ? "Your advisor approved this plan. Register with the pin, then record the courses as in progress."
+                        ? "Your advisor approved this plan, so these courses are in progress. Register with the pin, then confirm that you registered."
                         : status === "SUBMITTED"
                             ? advisorName
                                 ? `Waiting for ${advisorName} to review this plan and add a registration pin.`
@@ -209,7 +209,7 @@ export default function PlanEditor({
                     <Button
                         type="button"
                         disabled={pending}
-                        onClick={() => run(() => markPlannedTermRegistered(plan.id), "Courses marked in progress")}
+                        onClick={() => run(() => markPlannedTermRegistered(plan.id), "Registration recorded")}
                     >
                         I&apos;ve registered
                     </Button>

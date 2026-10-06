@@ -5,6 +5,7 @@ import { academicTermLabel, courseIdsSatisfiedBefore, courseOfferedInSeason, get
 import { coursePrerequisitesSatisfied } from "@/lib/prerequisites";
 import { prisma } from "@/lib/prisma";
 import { requireStudentProfile } from "@/lib/student";
+import { recordCoursesInProgress } from "@/lib/transcript";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
@@ -273,30 +274,14 @@ export async function markPlannedTermRegistered(plannedTermId: string) {
     }
 
     await prisma.$transaction(async (tx) => {
-        const existing = await tx.transcriptEntry.findMany({
-            where: {
-                studentId: profile.id,
-                courseId: { in: plan.courses.map((row) => row.courseId) },
-                status: { in: ["IN_PROGRESS", "COMPLETED"] },
-            },
-            select: { courseId: true },
+        await recordCoursesInProgress(tx, {
+            studentId: profile.id,
+            termId: plan.termId,
+            courses: plan.courses.map((row) => ({
+                courseId: row.courseId,
+                credits: row.course.credits,
+            })),
         });
-        const taken = new Set(existing.map((entry) => entry.courseId));
-        const additions = plan.courses.filter((row) => !taken.has(row.courseId));
-
-        if (additions.length > 0) {
-            await tx.transcriptEntry.createMany({
-                data: additions.map((row) => ({
-                    studentId: profile.id,
-                    courseId: row.courseId,
-                    termId: plan.termId,
-                    credits: row.course.credits,
-                    status: "IN_PROGRESS" as const,
-                    source: "NCAT" as const,
-                    grade: null,
-                })),
-            });
-        }
 
         await tx.plannedTerm.update({
             where: { id: plan.id },

@@ -81,7 +81,7 @@ model PlannedTerm {
   registrationPin String?
   submittedAt     DateTime?
   reviewedAt      DateTime?
-  /// Set when the student records these courses as in progress after registering.
+  /// Set when the student confirms they registered with the pin.
   registeredAt    DateTime?
 
   courses PlannedCourse[]

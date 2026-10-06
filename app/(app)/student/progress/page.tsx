@@ -2,7 +2,7 @@ import { getProgressSlotCourses, type ProgressSlotCourse } from "@/lib/catalog";
 import { getCurriculumRecommendations, planPosition, requirementGroupTitle } from "@/lib/planner";
 import { hasConfirmedStart, requireStudentProfile } from "@/lib/student";
 import { getTranscript, progressStatusFromEntry, type ProgressStatus } from "@/lib/transcript";
-import { ArrowsLeftRightIcon, CheckCircleIcon, ClockIcon } from "@phosphor-icons/react/dist/ssr";
+import { ArrowsLeftRightIcon, CheckCircleIcon } from "@phosphor-icons/react/dist/ssr";
 import ProgressForm, { type ProgressTerm, type ProgressYear } from "./ProgressForm";
 
 const emptySlot = {
@@ -17,7 +17,6 @@ const emptySlot = {
 const courseStatuses = [
     { value: "complete", label: "Complete", detail: "Completed at NCA&T", icon: CheckCircleIcon },
     { value: "transfer", label: "Transfer", detail: "Credit from another school", icon: ArrowsLeftRightIcon },
-    { value: "active", label: "Active", detail: "Currently taking", icon: ClockIcon },
 ] as const;
 
 function StatusLegend() {
@@ -104,6 +103,8 @@ export default async function ProgressPage() {
         status: "" | ProgressStatus;
     }> = {};
     const reservedCourseCodes: string[] = [];
+    const inProgressCourseIds = new Set<string>();
+    const inProgressSlotIds = new Set<string>();
     for (const row of years.flatMap((year) => year.terms.flatMap((term) => term.rows))) {
         if (row.kind === "course") {
             defaultCourses[row.courseId] = "";
@@ -113,6 +114,13 @@ export default async function ProgressPage() {
         }
     }
     for (const entry of [...transcript].reverse()) {
+        if (entry.status === "IN_PROGRESS") {
+            if (entry.recommendedTermCourseId) {
+                inProgressSlotIds.add(entry.recommendedTermCourseId);
+            } else if (entry.courseId) {
+                inProgressCourseIds.add(entry.courseId);
+            }
+        }
         if (entry.recommendedTermCourseId && entry.recommendedTermCourseId in defaultSlots) {
             defaultSlots[entry.recommendedTermCourseId] = entry.courseId
                 ? {
@@ -168,6 +176,8 @@ export default async function ProgressPage() {
                 defaultSlots={defaultSlots}
                 slotCourses={coursesByGroup}
                 reservedCourseCodes={reservedCourseCodes}
+                inProgressCourseIds={[...inProgressCourseIds]}
+                inProgressSlotIds={[...inProgressSlotIds]}
                 startConfirmed={hasConfirmedStart(profile)}
                 standing={profile.standing ?? ""}
             />

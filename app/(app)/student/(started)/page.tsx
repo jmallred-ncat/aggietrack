@@ -95,7 +95,7 @@ export default async function Dashboard() {
         <div className="flex flex-col @container @lg:flex-row gap-x-8 space-y-16">
             <section className="flex-1 not-typeset flex flex-col space-y-6">
                 <header className="flex justify-between items-center gap-3">
-                    <h2 className="text-2xl font-bold">In-Progress Courses</h2>
+                    <h2 className="text-2xl font-bold">{semester ? academicTermLabel(semester) : "No semester in session"}</h2>
                     {semesterPlan && (
                         <Badge variant={semesterPlan.status === "APPROVED" ? "default" : "secondary"}>
                             {semesterPlan.status === "APPROVED" ? "Approved" : "Pending review"}
