@@ -14,7 +14,7 @@
 /coverage
 
 # next.js
-/.next/
+.next/
 /out/
 
 # production
@@ -45,7 +45,8 @@ dist/
 .env
 
 # prisma
-/lib/generated/prisma
+lib/generated/prisma
+apps/*/lib/generated/prisma
 
 # local sample data model notes
 SAMPLE_DATA_MODEL.md
