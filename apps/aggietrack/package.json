@@ -13,9 +13,11 @@
     "build": "prisma generate && next build",
     "vercel-build": "prisma generate && tsx prisma/wake-database.ts && prisma migrate deploy && pnpm run seed:preview && next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test": "node --import tsx --test lib/test-students.test.ts"
   },
   "dependencies": {
+    "@aggietrack/ui": "workspace:*",
     "@base-ui/react": "^1.8.0",
     "@hookform/resolvers": "^5.9.1",
     "@neondatabase/serverless": "^1.1.0",
@@ -36,6 +38,7 @@
     "pluralize": "^8.0.0",
     "prisma": "7.10.0",
     "react": "19.2.8",
+    "react-day-picker": "^10.0.2",
     "react-dom": "19.2.8",
     "react-email": "^6.9.5",
     "react-hook-form": "^7.87.0",

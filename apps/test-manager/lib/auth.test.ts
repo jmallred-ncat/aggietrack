@@ -1,0 +1,92 @@
+import assert from "node:assert/strict";
+import { test } from "node:test";
+import { mkdtempSync, readFileSync, readdirSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { resolve, join } from "node:path";
+import { createPrisma } from "./prisma";
+import { createTestAuth, trustedOriginsFor } from "./auth";
+import { seedAdmin } from "./seed-admin";
+import { personalEmail } from "./email-policy";
+import { claimNameMessage } from "./members";
+import { render } from "react-email";
+import { MagicLinkEmail } from "../emails/magic-link";
+
+test("personal email policy rejects academic addresses consistently", () => {
+  assert.equal(personalEmail(" Person@Gmail.com "), "person@gmail.com");
+  for (const email of ["tester@aggies.ncat.edu", "tester@AGGIES.NCAT.EDU", "tester@ncat.edu", "tester@sub.aggies.ncat.edu", "tester@example.edu", "tester@school.edu.uk", "invalid-email"]) assert.throws(() => personalEmail(email));
+});
+
+test("magic links create siloed verified sessions and cannot be replayed or used after expiry", async () => {
+  const directory = mkdtempSync(join(tmpdir(), "test-manager-auth-"));
+  const db = createPrisma(`file:${join(directory, "isolated.db")}`);
+  const links: string[] = [];
+  const baseURL = "http://127.0.0.1:3999";
+  try {
+    for (const migration of readdirSync(resolve("prisma/migrations")).filter(name => !name.endsWith(".toml")).sort()) for (const sql of readFileSync(resolve("prisma/migrations", migration, "migration.sql"), "utf8").split(";").filter(sql => sql.trim())) await db.$executeRawUnsafe(sql);
+    const auth = createTestAuth({ db, secret: "isolated-testing-secret-32-characters-long", baseURL, linkLimit: 20, sendMagicLink: async ({ url }) => { links.push(url); } });
+    const requestLink = (email: string) => auth.handler(new Request(`${baseURL}/api/auth/sign-in/magic-link`, { method: "POST", headers: { "Content-Type": "application/json", Origin: baseURL }, body: JSON.stringify({ email, name: "Synthetic tester", callbackURL: "/", errorCallbackURL: "/sign-in" }) }));
+    assert.equal((await requestLink("tester@aggies.ncat.edu")).status, 400);
+    assert.equal((await requestLink("tester@example.test")).status, 403);
+    assert.equal(links.length, 0);
+    assert.equal(await db.user.count(), 0);
+    await seedAdmin(db, "tester@example.test");
+    assert.equal((await db.user.findUnique({ where: { email: "tester@example.test" } }))?.emailVerified, false);
+    const unnamed = await auth.handler(new Request(`${baseURL}/api/auth/sign-in/magic-link`, { method: "POST", headers: { "Content-Type": "application/json", Origin: baseURL }, body: JSON.stringify({ email: "tester@example.test", callbackURL: "/" }) }));
+    assert.equal(unnamed.status, 400);
+    assert.match(await unnamed.text(), new RegExp(claimNameMessage));
+    assert.equal((await requestLink("stranger@example.test")).status, 403);
+    assert.equal((await requestLink("tester@example.test")).status, 200);
+    assert.equal((await db.user.findUnique({ where: { email: "tester@example.test" } }))?.name, "Synthetic tester");
+    const token = new URL(links[0]).searchParams.get("token")!;
+    const stored = await db.verification.findFirstOrThrow();
+    assert(!stored.identifier.includes(token));
+    const verified = await auth.handler(new Request(links[0]));
+    assert.equal(verified.status, 302);
+    const setCookies = verified.headers.getSetCookie();
+    assert(setCookies.some(cookie => cookie.includes("aggietrack-test-manager.session_token=")));
+    const cookie = setCookies.map(value => value.split(";")[0]).join("; ");
+    const session = await auth.api.getSession({ headers: new Headers({ cookie }) });
+    assert.equal(session?.user.email, "tester@example.test");
+    assert.equal(session?.user.emailVerified, true);
+    assert.equal(session?.user.role, "admin");
+    assert.equal(await auth.api.getSession({ headers: new Headers({ cookie: cookie.replaceAll("aggietrack-test-manager.", "better-auth.") }) }), null);
+    const replay = await auth.handler(new Request(links[0]));
+    assert(replay.headers.get("location")?.includes("error=INVALID_TOKEN"));
+    assert.equal(await db.session.count(), 1);
+    assert.equal((await requestLink("other@example.test")).status, 403);
+    assert.equal(links.length, 1);
+    const created = await auth.api.createUser({ body: { email: "other@example.test", name: "Teammate", role: "user" }, headers: new Headers({ cookie, origin: baseURL }) });
+    assert.equal(created?.user.role, "user");
+    assert.equal((await requestLink("other@example.test")).status, 200);
+    await db.verification.updateMany({ data: { expiresAt: new Date(Date.now() - 60000) } });
+    const expired = await auth.handler(new Request(links[1]));
+    assert(expired.headers.get("location")?.includes("error="));
+    assert.equal(await db.user.count(), 2);
+    assert.equal((await db.user.findUnique({ where: { email: "other@example.test" } }))?.emailVerified, false);
+    const returning = await auth.handler(new Request(`${baseURL}/api/auth/sign-in/magic-link`, { method: "POST", headers: { "Content-Type": "application/json", Origin: baseURL }, body: JSON.stringify({ email: "tester@example.test", name: "Someone else", callbackURL: "/" }) }));
+    assert.equal(returning.status, 200);
+    assert.equal((await db.user.findUnique({ where: { email: "tester@example.test" } }))?.name, "Synthetic tester");
+    const invited = await auth.handler(new Request(`${baseURL}/api/auth/sign-in/magic-link`, { method: "POST", headers: { "Content-Type": "application/json", Origin: baseURL }, body: JSON.stringify({ email: "other@example.test", callbackURL: "/" }) }));
+    assert.equal(invited.status, 200);
+    assert.equal((await db.user.findUnique({ where: { email: "other@example.test" } }))?.name, "Teammate");
+    const signout = await auth.handler(new Request(`${baseURL}/api/auth/sign-out`, { method: "POST", headers: { cookie, Origin: baseURL, "Content-Type": "application/json" }, body: "{}" }));
+    assert.equal(signout.status, 200);
+    assert.equal(await auth.api.getSession({ headers: new Headers({ cookie }) }), null);
+    const rejectedOrigin = await auth.handler(new Request(`${baseURL}/api/auth/sign-in/magic-link`, { method: "POST", headers: { Origin: "https://untrusted.example", "Content-Type": "application/json" }, body: JSON.stringify({ email: "other@example.test" }) }));
+    assert.equal(rejectedOrigin.status, 403);
+    assert.deepEqual(trustedOriginsFor(baseURL), ["http://127.0.0.1:3999", "http://localhost:3999"]);
+    assert.deepEqual(trustedOriginsFor("https://testing.example"), ["https://testing.example"]);
+    const deliveryFailure = createTestAuth({ db, secret: "isolated-testing-secret-32-characters-long", baseURL, linkLimit: 20, sendMagicLink: async () => { throw new Error("Synthetic provider failure"); } });
+    const failed = await deliveryFailure.handler(new Request(`${baseURL}/api/auth/sign-in/magic-link`, { method: "POST", headers: { Origin: baseURL, "Content-Type": "application/json" }, body: JSON.stringify({ email: "tester@example.test" }) }));
+    assert.equal(failed.status, 500);
+  } finally { await db.$disconnect(); rmSync(directory, { recursive: true, force: true }); }
+});
+
+test("React Email renders the magic-link button, expiry, and plain text", async () => {
+  const email = MagicLinkEmail({ url: "https://testing.example/api/auth/magic-link/verify?token=synthetic" });
+  const html = await render(email);
+  const text = await render(email, { plainText: true });
+  assert(html.includes("https://testing.example/api/auth/magic-link/verify?token=synthetic"));
+  assert(text.includes("10 minutes"));
+  assert(text.includes("can be used once"));
+});

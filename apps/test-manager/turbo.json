@@ -1,0 +1,11 @@
+{
+  "extends": ["//"],
+  "tasks": {
+    "dev": {
+      "env": ["TEST_MANAGER_DATABASE_URL", "TEST_MANAGER_AUTH_SECRET", "TEST_MANAGER_AUTH_URL", "TEST_MANAGER_RESEND_KEY", "TEST_MANAGER_EMAIL_FROM"]
+    },
+    "build": {
+      "env": ["TEST_MANAGER_DATABASE_URL"]
+    }
+  }
+}

@@ -2,6 +2,7 @@
 
 # dependencies
 /node_modules
+.turbo
 /.pnp
 .pnp.*
 .yarn/*
@@ -33,6 +34,7 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+!apps/test-manager/.env.example
 
 # vercel
 .vercel
@@ -51,5 +53,10 @@ apps/*/lib/generated/prisma
 # local sample data model notes
 SAMPLE_DATA_MODEL.md
 SAMPLE_DATA_MODEL.pdf
+*.db
+*.db-journal
+*.db-shm
+*.db-wal
 /MODEL_DATA/
 STUDENT_PROFILE_IMPLEMENTATION.md
+.env*.local

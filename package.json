@@ -2,10 +2,15 @@
   "name": "aggietrack-workspace",
   "private": true,
   "scripts": {
-    "dev": "pnpm --filter aggietrack dev",
-    "build": "pnpm --filter aggietrack build",
-    "lint": "pnpm --filter aggietrack lint",
-    "generate": "pnpm --filter aggietrack generate"
+    "dev": "turbo dev",
+    "build": "turbo build",
+    "lint": "turbo lint",
+    "generate": "turbo generate",
+    "dev:test-manager": "pnpm --filter test-manager dev",
+    "setup:test-manager": "pnpm --filter test-manager generate && pnpm --filter test-manager db:setup"
   },
-  "packageManager": "pnpm@12.5.1"
+  "packageManager": "pnpm@12.5.1",
+  "devDependencies": {
+    "turbo": "^2.11.7"
+  }
 }

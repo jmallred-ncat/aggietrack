@@ -1,3 +1,4 @@
+import { getCurriculumCourseSections, requirementLabelsByCourse } from "@/lib/catalog";
 import { academicTermLabel, getPlannerWindow, getPlannableCourses, getStudentPlannedTerm } from "@/lib/planned-term";
 import { prisma } from "@/lib/prisma";
 import { requireStudentProfile } from "@/lib/student";
@@ -29,12 +30,14 @@ export default async function PlannerPage({
         : null;
     const terms = planner.terms;
     const selected = terms.find((term) => term.id === params.term) ?? terms[0] ?? null;
-    const [plan, courses] = selected
+    const [plan, courses, sections] = selected
         ? await Promise.all([
             getStudentPlannedTerm(selected.id),
             getPlannableCourses(selected),
+            getCurriculumCourseSections(),
         ])
-        : [null, []];
+        : [null, [], []];
+    const requirementLabels = requirementLabelsByCourse(sections);
 
     return (
         <div>
@@ -50,7 +53,14 @@ export default async function PlannerPage({
                     termId={selected.id}
                     termLabel={academicTermLabel(selected)}
                     advisorName={advisor ? `${advisor.firstName} ${advisor.lastName}` : null}
-                    courses={courses}
+                    courses={courses.map((course) => ({
+                        id: course.id,
+                        subject: course.subject,
+                        number: course.number,
+                        title: course.title,
+                        credits: course.credits,
+                        requirements: requirementLabels(course),
+                    }))}
                     plan={plan ? {
                         id: plan.id,
                         status: plan.status,
@@ -63,6 +73,7 @@ export default async function PlannerPage({
                             number: row.course.number,
                             title: row.course.title,
                             credits: row.course.credits,
+                            requirements: requirementLabels(row.course),
                         })),
                     } : null}
                 />

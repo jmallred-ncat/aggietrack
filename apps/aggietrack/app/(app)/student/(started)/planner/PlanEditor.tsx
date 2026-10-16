@@ -18,7 +18,20 @@ type CatalogCourse = {
     number: string;
     title: string;
     credits: number;
+    requirements: string[];
 };
+
+function RequirementNames({ requirements }: { requirements: string[] }) {
+    if (requirements.length === 0) {
+        return null;
+    }
+
+    return (
+        <span className="block truncate text-xs font-normal text-muted-foreground">
+            {requirements.join(", ")}
+        </span>
+    );
+}
 
 type PlannedRow = CatalogCourse & { plannedCourseId: string };
 
@@ -144,7 +157,10 @@ export default function PlanEditor({
                                             )}
                                         >
                                             <Badge className="font-mono">{course.subject} {course.number}</Badge>
-                                            <span className="min-w-0 truncate">{course.title}</span>
+                                            <span className="min-w-0 flex-1">
+                                                <span className="block truncate">{course.title}</span>
+                                                <RequirementNames requirements={course.requirements} />
+                                            </span>
                                             <span className="ml-auto shrink-0 text-muted-foreground tabular-nums">{course.credits} credits</span>
                                         </button>
                                     </li>
@@ -161,7 +177,10 @@ export default function PlanEditor({
                         <div key={course.plannedCourseId} className="flex items-center justify-between gap-3 not-typeset">
                             <p className="flex min-w-0 items-center gap-2 text-sm font-medium">
                                 <Badge className="font-mono">{course.subject} {course.number}</Badge>
-                                <span className="min-w-0 truncate">{course.title}</span>
+                                <span className="min-w-0">
+                                    <span className="block truncate">{course.title}</span>
+                                    <RequirementNames requirements={course.requirements} />
+                                </span>
                             </p>
                             <span className="flex shrink-0 items-center gap-2">
                                 <span className="text-sm text-muted-foreground tabular-nums">{course.credits} credits</span>

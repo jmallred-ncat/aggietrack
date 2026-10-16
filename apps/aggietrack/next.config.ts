@@ -1,6 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  transpilePackages: ["@aggietrack/ui"],
   serverExternalPackages: ["ws", "@neondatabase/serverless", "resend", "react-email"],
   async redirects() {
     return [

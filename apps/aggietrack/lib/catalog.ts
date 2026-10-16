@@ -4,6 +4,7 @@ import {
     RequirementSlot,
     type Course,
 } from "./generated/prisma/client";
+import { requirementSlotTitle } from "./planner";
 import { prisma } from "./prisma";
 import { requireStudentProfile } from "./student";
 
@@ -283,6 +284,81 @@ export async function getCurriculumCourseSections() {
 
 export type CurriculumCourseSection =
     Awaited<ReturnType<typeof getCurriculumCourseSections>>[number];
+
+const requiredRequirementSlots = new Set<RequirementSlot>([
+    RequirementSlot.PROGRAM_CORE,
+    RequirementSlot.SUPPORTING_REQUIRED,
+]);
+
+const poolRequirementSlots = new Set<RequirementSlot>([
+    RequirementSlot.GEN_ED_POOL,
+    RequirementSlot.TECHNICAL_ELECTIVE,
+    RequirementSlot.RELATED_POOL,
+]);
+
+function requirementDisplayName(group: CurriculumCourseSection["group"]) {
+    const title = requirementSlotTitle(group.name);
+    if (group.slot === RequirementSlot.TECHNICAL_ELECTIVE && group.subject) {
+        const rule = group.minNumber != null ? `${group.subject} ${group.minNumber}+` : group.subject;
+        return `${rule} ${title}`;
+    }
+    return title;
+}
+
+function labelsInHandbookOrder(entries: { sortOrder: number; label: string }[]) {
+    const labels: string[] = [];
+    for (const entry of [...entries].sort((a, b) => a.sortOrder - b.sortOrder || a.label.localeCompare(b.label))) {
+        if (!labels.includes(entry.label)) {
+            labels.push(entry.label);
+        }
+    }
+    return labels;
+}
+
+/** Requirement names a course fills in this catalog, most specific match first. */
+export function requirementLabelsByCourse(sections: CurriculumCourseSection[]) {
+    const required = new Map<string, { sortOrder: number; label: string }[]>();
+    const pools = new Map<string, { sortOrder: number; label: string }[]>();
+    const freeElectives: { sortOrder: number; label: string; minNumber: number | null }[] = [];
+
+    for (const section of sections) {
+        const label = requirementDisplayName(section.group);
+        const entry = { sortOrder: section.group.sortOrder, label };
+        if (requiredRequirementSlots.has(section.group.slot)) {
+            for (const course of section.courses) {
+                const matches = required.get(course.id) ?? [];
+                matches.push(entry);
+                required.set(course.id, matches);
+            }
+            continue;
+        }
+        if (poolRequirementSlots.has(section.group.slot)) {
+            for (const course of section.courses) {
+                const matches = pools.get(course.id) ?? [];
+                matches.push(entry);
+                pools.set(course.id, matches);
+            }
+            continue;
+        }
+        if (section.group.slot === RequirementSlot.FREE_ELECTIVE) {
+            freeElectives.push({ ...entry, minNumber: section.group.minNumber });
+        }
+    }
+
+    return (course: { id: string; number: string }) => {
+        const requiredNames = required.get(course.id);
+        if (requiredNames && requiredNames.length > 0) {
+            return labelsInHandbookOrder(requiredNames);
+        }
+        const poolNames = pools.get(course.id);
+        if (poolNames && poolNames.length > 0) {
+            return labelsInHandbookOrder(poolNames);
+        }
+        return labelsInHandbookOrder(
+            freeElectives.filter((group) => applyMinimumNumber([course], group.minNumber).length > 0),
+        );
+    };
+}
 
 const progressSlotSelect = {
     id: true,
