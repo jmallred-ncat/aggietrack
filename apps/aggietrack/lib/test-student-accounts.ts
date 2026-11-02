@@ -188,6 +188,11 @@ async function writeFrozen(userId: string, student: TestStudent, catalogYearId: 
         });
         
         // CST 112: F (first attempt in term 2), then B (retake after F)
+        // Give explicit createdAt timestamps to ensure chronological order (first attempt earlier)
+        const now = new Date();
+        const firstAttemptTime = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000); // 1 year ago
+        const secondAttemptTime = new Date(now.getTime() - 180 * 24 * 60 * 60 * 1000); // 6 months ago
+        
         await tx.transcriptEntry.createMany({
           data: [
             {
@@ -198,6 +203,7 @@ async function writeFrozen(userId: string, student: TestStudent, catalogYearId: 
               grade: Grade.F,
               status: TranscriptStatus.COMPLETED,
               source: TranscriptSource.NCAT,
+              createdAt: firstAttemptTime,
             },
             {
               studentId: profile.id,
@@ -207,6 +213,7 @@ async function writeFrozen(userId: string, student: TestStudent, catalogYearId: 
               grade: Grade.B,
               status: TranscriptStatus.COMPLETED,
               source: TranscriptSource.NCAT,
+              createdAt: secondAttemptTime,
             },
           ],
         });
@@ -229,6 +236,11 @@ async function writeFrozen(userId: string, student: TestStudent, catalogYearId: 
         
         // CST 130: W (withdrew first attempt), then A (retake after W)
         // W is non-countable, so this is a realistic retake scenario
+        // Give explicit createdAt timestamps to ensure chronological order (first attempt earlier)
+        const now = new Date();
+        const firstAttemptTime = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000); // 1 year ago
+        const secondAttemptTime = new Date(now.getTime() - 180 * 24 * 60 * 60 * 1000); // 6 months ago
+        
         await tx.transcriptEntry.createMany({
           data: [
             {
@@ -239,6 +251,7 @@ async function writeFrozen(userId: string, student: TestStudent, catalogYearId: 
               grade: Grade.W,
               status: TranscriptStatus.COMPLETED,
               source: TranscriptSource.NCAT,
+              createdAt: firstAttemptTime,
             },
             {
               studentId: profile.id,
@@ -248,6 +261,7 @@ async function writeFrozen(userId: string, student: TestStudent, catalogYearId: 
               grade: Grade.A,
               status: TranscriptStatus.COMPLETED,
               source: TranscriptSource.NCAT,
+              createdAt: secondAttemptTime,
             },
           ],
         });

@@ -44,6 +44,7 @@ type TranscriptAttempt = {
     grade: string | null;
     status: TranscriptStatus;
     source: TranscriptSource;
+    createdAt: Date;
 };
 
 export default async function ProgressPage() {
@@ -141,6 +142,7 @@ export default async function ProgressPage() {
             grade: entry.grade,
             status: entry.status,
             source: entry.source,
+            createdAt: entry.createdAt,
         };
 
         if (entry.recommendedTermCourseId && entry.recommendedTermCourseId in defaultSlots) {

@@ -14,6 +14,7 @@ type Attempt = {
     grade: string | null;
     status: TranscriptStatus;
     source: TranscriptSource;
+    createdAt: Date;
 };
 
 export function CourseAttempts({
@@ -101,7 +102,15 @@ export function CourseAttempts({
         });
     }
 
-    const completedAttempts = localAttempts.filter(a => a.status === "COMPLETED");
+    const completedAttempts = localAttempts
+        .filter(a => a.status === "COMPLETED")
+        .sort((a, b) => {
+            // Sort chronologically: oldest first (attempt 1, attempt 2, ...)
+            const timeCompare = a.createdAt.getTime() - b.createdAt.getTime();
+            if (timeCompare !== 0) return timeCompare;
+            // Deterministic tiebreaker: by id
+            return a.id.localeCompare(b.id);
+        });
 
     if (completedAttempts.length === 0) {
         return null;
