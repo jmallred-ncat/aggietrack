@@ -38,9 +38,18 @@ const fillers: Record<string, { subject: string; number: string }> = {
 };
 
 export const testStudents: TestStudent[] = [
+  // Zero credits (as required)
   { email: "it.start@example.test", firstName: "Avery", lastName: "Cole", standing: StudentStanding.FRESHMAN, through: 0 },
+  
+  // Standard progress scenarios
   { email: "it.mid@example.test", firstName: "Jordan", lastName: "Hale", standing: StudentStanding.JUNIOR, through: 4 },
   { email: "it.late@example.test", firstName: "Riley", lastName: "Brooks", standing: StudentStanding.SENIOR, through: 6 },
+  
+  // Grade scenarios for testing
+  { email: "it.retake-f-to-pass@example.test", firstName: "Taylor", lastName: "Morgan", standing: StudentStanding.SOPHOMORE, through: 2 },
+  { email: "it.retake-c-to-a@example.test", firstName: "Casey", lastName: "Parker", standing: StudentStanding.SOPHOMORE, through: 2 },
+  { email: "it.diverse-grades@example.test", firstName: "Alex", lastName: "Rivera", standing: StudentStanding.JUNIOR, through: 3 },
+  { email: "it.over-credits@example.test", firstName: "Morgan", lastName: "Lee", standing: StudentStanding.SENIOR, through: 8 },
 ];
 
 export const testAdvisors: TestAdvisor[] = [

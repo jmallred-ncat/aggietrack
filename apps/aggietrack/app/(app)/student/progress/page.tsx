@@ -1,5 +1,6 @@
 import { getProgressSlotCourses, type ProgressSlotCourse } from "@/lib/catalog";
 import { computeDegreeProgress } from "@/lib/degree-progress";
+import { TranscriptSource, TranscriptStatus } from "@/lib/generated/prisma/client";
 import { getCurriculumRecommendations, planPosition, requirementGroupTitle, requirementSlotBadge } from "@/lib/planner";
 import { hasConfirmedStart, requireStudentProfile } from "@/lib/student";
 import { getTranscript, progressStatusFromEntry, type ProgressStatus } from "@/lib/transcript";
@@ -37,6 +38,13 @@ function StatusLegend() {
         </dl>
     );
 }
+
+type TranscriptAttempt = {
+    id: string;
+    grade: string | null;
+    status: TranscriptStatus;
+    source: TranscriptSource;
+};
 
 export default async function ProgressPage() {
     const profile = await requireStudentProfile();
@@ -105,6 +113,8 @@ export default async function ProgressPage() {
         credits: string;
         status: "" | ProgressStatus;
     }> = {};
+    const courseAttempts: Record<string, TranscriptAttempt[]> = {};
+    const slotAttempts: Record<string, TranscriptAttempt[]> = {};
     const reservedCourseCodes: string[] = [];
     const inProgressCourseIds = new Set<string>();
     const inProgressSlotIds = new Set<string>();
@@ -124,25 +134,50 @@ export default async function ProgressPage() {
                 inProgressCourseIds.add(entry.courseId);
             }
         }
+
+        // Collect all attempts for this course/slot
+        const attempt: TranscriptAttempt = {
+            id: entry.id,
+            grade: entry.grade,
+            status: entry.status,
+            source: entry.source,
+        };
+
         if (entry.recommendedTermCourseId && entry.recommendedTermCourseId in defaultSlots) {
-            defaultSlots[entry.recommendedTermCourseId] = entry.courseId
-                ? {
-                    ...emptySlot,
-                    courseId: entry.courseId,
-                    status: progressStatusFromEntry(entry),
-                }
-                : {
-                    ...emptySlot,
-                    subject: entry.subject ?? "",
-                    number: entry.number ?? "",
-                    title: entry.title ?? "",
-                    credits: String(entry.credits),
-                    status: progressStatusFromEntry(entry),
-                };
+            if (!slotAttempts[entry.recommendedTermCourseId]) {
+                slotAttempts[entry.recommendedTermCourseId] = [];
+            }
+            slotAttempts[entry.recommendedTermCourseId].push(attempt);
+
+            // Only set the default slot value from the most recent entry
+            if (!defaultSlots[entry.recommendedTermCourseId] || defaultSlots[entry.recommendedTermCourseId] === emptySlot) {
+                defaultSlots[entry.recommendedTermCourseId] = entry.courseId
+                    ? {
+                        ...emptySlot,
+                        courseId: entry.courseId,
+                        status: progressStatusFromEntry(entry),
+                    }
+                    : {
+                        ...emptySlot,
+                        subject: entry.subject ?? "",
+                        number: entry.number ?? "",
+                        title: entry.title ?? "",
+                        credits: String(entry.credits),
+                        status: progressStatusFromEntry(entry),
+                    };
+            }
             continue;
         }
         if (entry.courseId && entry.courseId in defaultCourses) {
-            defaultCourses[entry.courseId] = progressStatusFromEntry(entry);
+            if (!courseAttempts[entry.courseId]) {
+                courseAttempts[entry.courseId] = [];
+            }
+            courseAttempts[entry.courseId].push(attempt);
+
+            // Only set the default course value from the most recent entry
+            if (!defaultCourses[entry.courseId]) {
+                defaultCourses[entry.courseId] = progressStatusFromEntry(entry);
+            }
         }
     }
 
@@ -187,6 +222,8 @@ export default async function ProgressPage() {
                 years={years}
                 defaultCourses={defaultCourses}
                 defaultSlots={defaultSlots}
+                courseAttempts={courseAttempts}
+                slotAttempts={slotAttempts}
                 slotCourses={coursesByGroup}
                 reservedCourseCodes={reservedCourseCodes}
                 inProgressCourseIds={[...inProgressCourseIds]}

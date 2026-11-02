@@ -103,20 +103,129 @@ async function writeFrozen(userId: string, student: TestStudent, catalogYearId: 
     });
     const byCode = new Map(catalog.map(course => [`${course.subject} ${course.number}`, course]));
 
-    await tx.transcriptEntry.createMany({
-      data: courses.map(course => {
-        const row = transcriptRow(terms, byCode, course);
-        return {
-          studentId: profile.id,
-          courseId: row.courseId,
-          recommendedTermCourseId: row.recommendedTermCourseId,
-          credits: row.credits,
-          grade: Grade.C,
-          status: TranscriptStatus.COMPLETED,
-          source: TranscriptSource.NCAT,
-        };
-      }),
+    // Generate transcript entries with custom grades for test scenarios
+    const entries = courses.map(course => {
+      const row = transcriptRow(terms, byCode, course);
+      const code = `${course.subject} ${course.number}`;
+      let grade = Grade.C;
+
+      // Custom grades for specific test students
+      if (student.email === "it.diverse-grades@example.test") {
+        // P/TR/W/I/F grades scenario
+        if (code === "ENGL 100") grade = Grade.P;
+        else if (code === "MATH 125") grade = Grade.TR;
+        else if (code === "CST 100") grade = Grade.W;
+        else if (code === "CST 110") grade = Grade.I;
+        else if (code === "HIST 207") grade = Grade.F;
+        else if (code === "PSYC 101") grade = Grade.A;
+        else grade = Grade.B;
+      } else if (student.email === "it.over-credits@example.test") {
+        // Over 120 credits - mix of good grades
+        grade = Math.random() > 0.3 ? (Math.random() > 0.5 ? Grade.A : Grade.B) : Grade.C;
+      }
+
+      return {
+        studentId: profile.id,
+        courseId: row.courseId,
+        recommendedTermCourseId: row.recommendedTermCourseId,
+        credits: row.credits,
+        grade,
+        status: TranscriptStatus.COMPLETED,
+        source: grade === Grade.TR ? TranscriptSource.TRANSFER : TranscriptSource.NCAT,
+      };
     });
+
+    await tx.transcriptEntry.createMany({ data: entries });
+
+    // Add retake scenarios
+    if (student.email === "it.retake-f-to-pass@example.test") {
+      // F then passing retake for CST 110
+      const cst110 = catalog.find(c => c.subject === "CST" && c.number === "110");
+      if (cst110) {
+        const term = terms.find(t => t.courses.some(c => c.course?.id === cst110.id));
+        const termCourse = term?.courses.find(c => c.course?.id === cst110.id);
+        
+        await tx.transcriptEntry.createMany({
+          data: [
+            {
+              studentId: profile.id,
+              courseId: cst110.id,
+              recommendedTermCourseId: termCourse?.id ?? null,
+              credits: cst110.credits,
+              grade: Grade.F,
+              status: TranscriptStatus.COMPLETED,
+              source: TranscriptSource.NCAT,
+            },
+            {
+              studentId: profile.id,
+              courseId: cst110.id,
+              recommendedTermCourseId: termCourse?.id ?? null,
+              credits: cst110.credits,
+              grade: Grade.B,
+              status: TranscriptStatus.COMPLETED,
+              source: TranscriptSource.NCAT,
+            },
+          ],
+        });
+      }
+    }
+
+    if (student.email === "it.retake-c-to-a@example.test") {
+      // C then A retake for CST 100
+      const cst100 = catalog.find(c => c.subject === "CST" && c.number === "100");
+      if (cst100) {
+        const term = terms.find(t => t.courses.some(c => c.course?.id === cst100.id));
+        const termCourse = term?.courses.find(c => c.course?.id === cst100.id);
+        
+        await tx.transcriptEntry.createMany({
+          data: [
+            {
+              studentId: profile.id,
+              courseId: cst100.id,
+              recommendedTermCourseId: termCourse?.id ?? null,
+              credits: cst100.credits,
+              grade: Grade.C,
+              status: TranscriptStatus.COMPLETED,
+              source: TranscriptSource.NCAT,
+            },
+            {
+              studentId: profile.id,
+              courseId: cst100.id,
+              recommendedTermCourseId: termCourse?.id ?? null,
+              credits: cst100.credits,
+              grade: Grade.A,
+              status: TranscriptStatus.COMPLETED,
+              source: TranscriptSource.NCAT,
+            },
+          ],
+        });
+      }
+    }
+
+    // Add an unmapped course for diverse-grades student
+    if (student.email === "it.diverse-grades@example.test") {
+      const unmappedCourse = await tx.course.findFirst({
+        where: {
+          subject: "JOUR",
+          number: "101",
+        },
+        select: { id: true, credits: true },
+      });
+
+      if (unmappedCourse) {
+        await tx.transcriptEntry.create({
+          data: {
+            studentId: profile.id,
+            courseId: unmappedCourse.id,
+            recommendedTermCourseId: null,
+            credits: unmappedCourse.credits,
+            grade: Grade.B,
+            status: TranscriptStatus.COMPLETED,
+            source: TranscriptSource.NCAT,
+          },
+        });
+      }
+    }
   });
 }
 
