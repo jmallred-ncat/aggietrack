@@ -4,15 +4,15 @@ This document lists test students, their scenarios, and expected progress metric
 
 ## Test Students Summary
 
-| Student | Email | Standing | Scenario | Credits | Progress % | Key Features |
-|---------|-------|----------|----------|---------|------------|--------------|
-| Avery Cole | it.start@example.test | Freshman | Fresh start | 0 | 0.0% | Zero credits baseline |
-| Jordan Hale | it.mid@example.test | Junior | Mid-program + in-progress | ~45 | ~37.5% | Realistic grades (A/B/C mix); term 4 in progress |
-| Riley Brooks | it.late@example.test | Senior | Near graduation | TBD* | TBD%* | Strong grades (mostly A/B) |
-| Taylor Morgan | it.retake-f-to-pass@example.test | Sophomore | F→B retake + D below-min | TBD* | TBD%* | CST 112: F→B retake; CST 120: D (NOT retaken) |
-| Casey Parker | it.retake-c-to-a@example.test | Sophomore | W→A retake | TBD* | TBD%* | CST 130: W→A retake (realistic: withdrew then passed) |
-| Alex Rivera | it.diverse-grades@example.test | Junior | Diverse grades + unmapped | TBD* | TBD%* | P/TR/W/I/F grades; JOUR 101 unmapped |
-| Morgan Lee | it.over-credits@example.test | Senior | Excessive credits | ≥120 | 100.0% | 8 terms completed; excellent grades (capped) |
+| Student | Email | Standing | Scenario | Credits | Progress % | GPA | Adjusted GPA | Resident Hours | Honors Badge |
+|---------|-------|----------|----------|---------|------------|-----|--------------|----------------|--------------|
+| Avery Cole | it.start@example.test | Freshman | Fresh start | 0 | 0.0% | — | — | 0 | None |
+| Jordan Hale | it.mid@example.test | Junior | Mid-program + in-progress | ~45 | ~37.5% | 3.52 | 3.52 | 45 | On track for Magna Cum Laude |
+| Riley Brooks | it.late@example.test | Senior | Near graduation | 90 | 75.0% | 3.65 | 3.65 | 84 | Magna Cum Laude pace |
+| Taylor Morgan | it.retake-f-to-pass@example.test | Sophomore | F→B retake + D below-min | 30 | 25.0% | 3.12 | ~2.64 | 33 | None |
+| Casey Parker | it.retake-c-to-a@example.test | Sophomore | W→A retake | 30 | 25.0% | 3.58 | 3.58 | 30 | On track for Magna Cum Laude |
+| Alex Rivera | it.diverse-grades@example.test | Junior | Diverse grades + unmapped | 36 | 30.0% | 2.91 | 2.91 | ≥36 | None |
+| Morgan Lee | it.over-credits@example.test | Senior | Excessive credits | ≥120 | 100.0% | 3.82 | 3.82 | ≥114 | Summa Cum Laude pace |
 
 **\*To get exact values:** Reset a student via Test Manager, log in, view Dashboard. The `computeDegreeProgress` function returns exact credits and percentage (1 decimal place) based on:
 - Only COMPLETED courses with passing grades
@@ -41,6 +41,9 @@ This document lists test students, their scenarios, and expected progress metric
 - **Earned Credits:** 45 (through term 3 completed)
 - **Progress:** 37.5% (term 4 courses don't count until completed)
 - **GPA:** **3.52** (45 graded hours: varied A, A-, B+, B, B-, C+, C; mostly B range, C ~12%)
+- **Adjusted GPA:** **3.52** (same as cumulative, no repeats)
+- **Resident Hours:** 45 (all NC A&T, no transfer)
+- **Honors Badge:** **On track for Magna Cum Laude** (3.50-3.74 range, but <48 resident hours)
 - **Purpose:** Standard mid-program student with current-term enrollment
 - **Transcript:** 
   - Terms 1-3 completed with varied grades (A through C, full plus/minus scale)
@@ -61,6 +64,9 @@ This document lists test students, their scenarios, and expected progress metric
 - **Earned Credits:** 90 (through term 6, including 6 transfer credits)
 - **Progress:** 75.0%
 - **GPA:** **3.65** (84 graded hours: strong A, A-, B+, B; no C grades; 6 transfer credits excluded)
+- **Adjusted GPA:** **3.65** (same as cumulative, no repeats)
+- **Resident Hours:** 84 (90 total - 6 transfer)
+- **Honors Badge:** **Magna Cum Laude pace** (3.50-3.74 range, ≥48 resident hours eligible)
 - **Purpose:** Near-graduation student with transfer credits
 - **Transcript:** Terms 1-6 completed with strong grades
   - Mostly A, A-, B+, B grades (varied within high range)
@@ -80,6 +86,9 @@ This document lists test students, their scenarios, and expected progress metric
 - **Earned Credits:** 30 (through term 2, reduced: D doesn't count toward Major Core requirement)
 - **Progress:** 25.0% (F becomes B after retake counts; D doesn't count toward progress)
 - **GPA:** **3.12** (33 graded hours: varied A–B- + F→B retake uses B only; D counts in GPA as 1.0)
+- **Adjusted GPA:** **~2.64** (F→B both attempts count, lowering adjusted vs cumulative)
+- **Resident Hours:** 33 (all attempts, including F)
+- **Honors Badge:** **None** (below 3.25 threshold)
 - **Purpose:** Failed course with passing retake, and un-retaken below-minimum grade
 - **Transcript:**
   - Terms 1-2 base courses: B grades
@@ -100,6 +109,9 @@ This document lists test students, their scenarios, and expected progress metric
 - **Earned Credits:** 30 (through term 2)
 - **Progress:** 25.0%
 - **GPA:** **3.58** (30 graded hours: varied A–B + W→A retake uses A only; W excluded from GPA)
+- **Adjusted GPA:** **3.58** (W excluded from both cumulative and adjusted)
+- **Resident Hours:** 30 (all NC A&T, no transfer)
+- **Honors Badge:** **On track for Magna Cum Laude** (3.50-3.74 range, but <48 resident hours)
 - **Purpose:** Withdrawal followed by successful retake
 - **Transcript:**
   - Terms 1-2 base courses: B+ grades (3.3 quality points)
@@ -119,6 +131,9 @@ This document lists test students, their scenarios, and expected progress metric
 - **Earned Credits:** 36 (through term 3, W/I/F/unmapped excluded from progress)
 - **Progress:** 30.0%
 - **GPA:** **2.91** (36 graded hours: F 0.0, A 4.0, varied B+/B/B-; P/TR/W/I excluded, unmapped B counts)
+- **Adjusted GPA:** **2.91** (same as cumulative, special grades excluded)
+- **Resident Hours:** ≥36 (varies by seed)
+- **Honors Badge:** **None** (below 3.25 threshold)
 - **Purpose:** Diverse grade types and edge cases
 - **Transcript:**
   - **ENGL 100:** P (Pass) - counts for credit, excluded from GPA
@@ -143,6 +158,9 @@ This document lists test students, their scenarios, and expected progress metric
 - **Earned Credits:** ≥120 (through term 8, capped at 100%)
 - **Progress:** 100.0% (capped)
 - **GPA:** **3.82** (≥114 graded hours: excellent A, A-, B+; 6 transfer credits excluded)
+- **Adjusted GPA:** **3.82** (same as cumulative, no repeats)
+- **Resident Hours:** ≥114 (120 total - 6 transfer)
+- **Honors Badge:** **Summa Cum Laude pace** (3.75-4.00 range, ≥48 resident hours eligible)
 - **Purpose:** Student with excessive credits and transfer work
 - **Transcript:**
   - All 8 handbook terms completed

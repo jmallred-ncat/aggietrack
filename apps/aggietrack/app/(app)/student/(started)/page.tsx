@@ -7,7 +7,7 @@ import { CircularProgress } from "@/components/ui/circular-progress";
 import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty";
 import { academicTermLabel, semesterInSession } from "@/lib/academic-term";
 import { computeDegreeProgress } from "@/lib/degree-progress";
-import { computeGpa } from "@/lib/gpa";
+import { computeGpa, computeHonors } from "@/lib/gpa";
 import { prisma } from "@/lib/prisma";
 import { getTranscript } from "@/lib/transcript";
 import { formatProgramName } from "@/lib/program";
@@ -47,6 +47,7 @@ export default async function Dashboard() {
         getTranscript(),
     ]);
     const gpa = computeGpa(transcript);
+    const honors = computeHonors(transcript);
     const semester = semesterInSession(terms, now);
     const semesterPlan = plans
         .filter((plan) =>
@@ -91,9 +92,21 @@ export default async function Dashboard() {
             <div className="flex flex-col items-center w-full rounded-lg bg-muted p-4 border border-border space-y-2 not-typeset">
                 <span className="text-sm font-semibold">Cumulative GPA</span>
                 <h4 className="text-6xl font-bold flex-1 place-content-center">{gpa !== null ? gpa.toFixed(2) : "—"}</h4>
-                <div className="flex items-center justify-center">
-                    <MedalIcon weight="fill" size={24} className="text-primary mr-2" />
-                    <Badge variant="default">{gpa !== null ? "Based on completed courses" : "No GPA yet"}</Badge>
+                <div className="flex flex-col items-center justify-center gap-2">
+                    <div className="flex items-center justify-center">
+                        <MedalIcon weight="fill" size={24} className="text-primary mr-2" />
+                        <Badge variant="default">{gpa !== null ? "Based on completed courses" : "No GPA yet"}</Badge>
+                    </div>
+                    {honors.honor && (
+                        <Badge variant={honors.eligible ? "default" : "outline"} className={honors.eligible ? "" : "text-muted-foreground"}>
+                            {honors.eligible ? `${honors.honor} pace` : `On track for ${honors.honor}`}
+                        </Badge>
+                    )}
+                    {honors.honor && (
+                        <p className="text-xs text-muted-foreground text-center">
+                            Honors use all attempts; requires 48 A&T credit hours
+                        </p>
+                    )}
                 </div>
             </div>
         </section>
