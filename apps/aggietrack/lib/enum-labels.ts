@@ -1,4 +1,4 @@
-import { Grade, TranscriptStatus, TranscriptSource } from "./generated/prisma/client";
+import { Grade, TranscriptStatus, TranscriptSource } from "./generated/prisma/browser";
 
 /**
  * Human-readable labels for Grade enum values

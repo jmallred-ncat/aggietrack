@@ -1,7 +1,7 @@
 import { Badge } from "@/components/ui/badge";
 import { getProgressSlotCourses, type ProgressSlotCourse } from "@/lib/catalog";
 import { computeDegreeProgress } from "@/lib/degree-progress";
-import type { TranscriptSource, TranscriptStatus } from "@/lib/generated/prisma/client";
+import type { TranscriptSource, TranscriptStatus } from "@/lib/generated/prisma/browser";
 import { computeGpa } from "@/lib/gpa";
 import { getCurriculumRecommendations, planPosition, requirementGroupTitle, requirementSlotBadge } from "@/lib/planner";
 import { hasConfirmedStart, requireStudentProfile } from "@/lib/student";

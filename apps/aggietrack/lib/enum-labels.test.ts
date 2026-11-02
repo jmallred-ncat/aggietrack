@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { Grade, TranscriptStatus, TranscriptSource } from "./generated/prisma/client";
+import { Grade, TranscriptStatus, TranscriptSource } from "./generated/prisma/browser";
 import { gradeLabel, transcriptStatusLabel, transcriptSourceLabel } from "./enum-labels";
 
 test("every Grade enum value has a human label", () => {
