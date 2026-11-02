@@ -1,41 +1,57 @@
-<<<<<<< HEAD
-# aggietrack
+# AggieTrack
 Information Technology Degree Tracking Platform
-=======
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+
+A comprehensive student advising and degree planning system for the Information Technology program at North Carolina A&T State University.
+
+## Overview
+
+AggieTrack helps students plan their courses, track degree progress, and coordinate with advisors. The platform includes:
+
+- **Student Portal**: Course planning, degree progress tracking, and transcript management
+- **Advisor Tools**: Plan review, approval workflow, and student management
+- **Test Manager**: Quality assurance and test data management
+
+## Tech Stack
+
+- **Framework**: Next.js with TypeScript
+- **Database**: PostgreSQL with Prisma ORM
+- **Authentication**: Better Auth
+- **Monorepo**: pnpm + Turborepo
+- **Deployment**: Vercel + Neon
 
 ## Getting Started
 
-First, run the development server:
-
 ```bash
-npm run dev
-# or
-yarn dev
-# or
+# Install dependencies
+pnpm install
+
+# Set up environment variables
+cp apps/aggietrack/.env.example apps/aggietrack/.env.local
+
+# Run database migrations
+pnpm --filter aggietrack db:migrate
+
+# Seed the catalog
+pnpm --filter aggietrack db:seed
+
+# Start development servers
 pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000) for the main app and [http://localhost:3001](http://localhost:3001) for the test manager.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Project Structure
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```
+apps/
+  aggietrack/        # Main student portal application
+  test-manager/      # QA and test account management
+packages/
+  ui/                # Shared UI components
+```
 
-## Learn More
+## Documentation
 
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
->>>>>>> 2974ab4 (Initial commit from Create Next App)
+- Architecture and technical decisions in `/docs`
+- Test plan and requirements in test-manager
+- Prisma schema documentation in `apps/aggietrack/prisma/`

@@ -9,6 +9,7 @@ import { Popover, PopoverContent } from "@/components/ui/popover";
 import { toast } from "@/components/ui/toast";
 import type { PlannedTermStatus } from "@/lib/generated/prisma/client";
 import { MagnifyingGlassIcon, XIcon } from "@phosphor-icons/react";
+import { useRouter } from "next/navigation";
 import { useRef, useState, useTransition } from "react";
 import { addPlannedCourse, markPlannedTermRegistered, removePlannedCourse, submitPlannedTerm } from "./actions";
 
@@ -54,6 +55,7 @@ export default function PlanEditor({
     } | null;
     courses: CatalogCourse[];
 }) {
+    const router = useRouter();
     const [query, setQuery] = useState("");
     const [resultsOpen, setResultsOpen] = useState(false);
     const searchRef = useRef<HTMLDivElement>(null);
@@ -79,6 +81,7 @@ export default function PlanEditor({
             toast.add({ title: success });
             setQuery("");
             setResultsOpen(false);
+            router.refresh();
         });
     }
 

@@ -2,13 +2,21 @@ export type TestStudentCard = {
   email: string;
   name: string;
   place: string;
+  role?: "student" | "advisor";
 };
 
 export const testStudentCards: TestStudentCard[] = [
-  { email: "it.start@example.test", name: "Avery Cole", place: "Information Technology 2025. Just started, with no prior coursework." },
-  { email: "it.mid@example.test", name: "Jordan Hale", place: "Information Technology 2025. Midway, with the first four handbook terms complete." },
-  { email: "it.late@example.test", name: "Riley Brooks", place: "Information Technology 2025. Near the end, with the first six handbook terms complete." },
+  { email: "it.start@example.test", name: "Avery Cole", place: "Information Technology 2025. Just started, with no prior coursework.", role: "student" },
+  { email: "it.mid@example.test", name: "Jordan Hale", place: "Information Technology 2025. Midway, with the first four handbook terms complete.", role: "student" },
+  { email: "it.late@example.test", name: "Riley Brooks", place: "Information Technology 2025. Near the end, with the first six handbook terms complete.", role: "student" },
 ];
+
+export const testAdvisorCards: TestStudentCard[] = [
+  { email: "advisor.1@example.test", name: "Sarah Martinez", place: "Academic advisor. Test account for reviewing student plans and providing guidance.", role: "advisor" },
+  { email: "advisor.2@example.test", name: "Michael Chen", place: "Academic advisor. Test account for advisor workflow and plan approval testing.", role: "advisor" },
+];
+
+export const testAccountCards = [...testStudentCards, ...testAdvisorCards];
 
 export const resetAfterUse = "Reset this student after every use.";
 
@@ -21,7 +29,7 @@ export function testStudentConfig() {
 
 export function testStudentByEmail(email: string) {
   const normalized = email.trim().toLowerCase();
-  return testStudentCards.find(student => student.email === normalized) ?? null;
+  return testAccountCards.find(account => account.email === normalized) ?? null;
 }
 
 export function aggietrackRequest(path: "/api/test-students/ensure" | "/api/test-students/reset", config: { origin: string; secret: string }, email?: string) {
