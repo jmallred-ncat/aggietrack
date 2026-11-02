@@ -154,27 +154,46 @@ async function writeFrozen(userId: string, student: TestStudent, catalogYearId: 
 
     await tx.transcriptEntry.createMany({ data: entries });
 
-    // Add retake scenarios
+    // Add realistic retake scenarios (only after non-countable grades)
     if (student.email === "it.retake-f-to-pass@example.test") {
-      // F then passing retake for CST 112 (Major Core with C requirement)
+      // Taylor Morgan: Sophomore with F→B retake and D below-min (not retaken)
       const cst112 = catalog.find(c => c.subject === "CST" && c.number === "112");
-      if (cst112) {
-        const term = terms.find(t => t.courses.some(c => c.course?.id === cst112.id));
-        const termCourse = term?.courses.find(c => c.course?.id === cst112.id);
+      const cst120 = catalog.find(c => c.subject === "CST" && c.number === "120");
+      
+      if (cst112 && cst120) {
+        const term1 = terms.find(t => t.sequence === 1);
+        const term2 = terms.find(t => t.sequence === 2);
+        const cst120Course = term1?.courses.find(c => c.course?.id === cst120.id);
+        const cst112Course = term2?.courses.find(c => c.course?.id === cst112.id);
         
-        // Add explicit entries for their base courses (from term 1-2) with decent grades
-        const baseCourses = entries.filter(e => e.recommendedTermCourseId || e.courseId);
+        // Add base courses from terms 1-2 with decent grades
+        const baseCourses = entries.filter(e => 
+          e.courseId !== cst112.id && e.courseId !== cst120.id
+        );
         await tx.transcriptEntry.createMany({
           data: baseCourses.map(e => ({ ...e, grade: e.grade || Grade.B })),
         });
         
-        // Then add the F and retake
+        // CST 120: D (below C minimum for Major Core) - NOT RETAKEN
+        await tx.transcriptEntry.create({
+          data: {
+            studentId: profile.id,
+            courseId: cst120.id,
+            recommendedTermCourseId: cst120Course?.id ?? null,
+            credits: cst120.credits,
+            grade: Grade.D,
+            status: TranscriptStatus.COMPLETED,
+            source: TranscriptSource.NCAT,
+          },
+        });
+        
+        // CST 112: F (first attempt in term 2), then B (retake)
         await tx.transcriptEntry.createMany({
           data: [
             {
               studentId: profile.id,
               courseId: cst112.id,
-              recommendedTermCourseId: termCourse?.id ?? null,
+              recommendedTermCourseId: cst112Course?.id ?? null,
               credits: cst112.credits,
               grade: Grade.F,
               status: TranscriptStatus.COMPLETED,
@@ -183,7 +202,7 @@ async function writeFrozen(userId: string, student: TestStudent, catalogYearId: 
             {
               studentId: profile.id,
               courseId: cst112.id,
-              recommendedTermCourseId: termCourse?.id ?? null,
+              recommendedTermCourseId: cst112Course?.id ?? null,
               credits: cst112.credits,
               grade: Grade.B,
               status: TranscriptStatus.COMPLETED,
@@ -191,56 +210,39 @@ async function writeFrozen(userId: string, student: TestStudent, catalogYearId: 
             },
           ],
         });
-        
-        // Add a D in CST 120 (below C minimum for Major Core)
-        const cst120 = catalog.find(c => c.subject === "CST" && c.number === "120");
-        if (cst120) {
-          const cst120Term = terms.find(t => t.courses.some(c => c.course?.id === cst120.id));
-          const cst120Course = cst120Term?.courses.find(c => c.course?.id === cst120.id);
-          await tx.transcriptEntry.create({
-            data: {
-              studentId: profile.id,
-              courseId: cst120.id,
-              recommendedTermCourseId: cst120Course?.id ?? null,
-              credits: cst120.credits,
-              grade: Grade.D,
-              status: TranscriptStatus.COMPLETED,
-              source: TranscriptSource.NCAT,
-            },
-          });
-        }
-        return; // Skip default createMany
+        return;
       }
     }
 
     if (student.email === "it.retake-c-to-a@example.test") {
-      // C then A retake for CST 130
+      // Casey Parker: Sophomore with W→A retake (realistic: withdrew, then passed)
       const cst130 = catalog.find(c => c.subject === "CST" && c.number === "130");
       if (cst130) {
-        const term = terms.find(t => t.courses.some(c => c.course?.id === cst130.id));
-        const termCourse = term?.courses.find(c => c.course?.id === cst130.id);
+        const term1 = terms.find(t => t.sequence === 1);
+        const cst130Course = term1?.courses.find(c => c.course?.id === cst130.id);
         
-        // Add explicit entries for base courses with good grades
-        const baseCourses = entries.filter(e => e.recommendedTermCourseId || e.courseId);
+        // Add base courses from terms 1-2 with good grades
+        const baseCourses = entries.filter(e => e.courseId !== cst130.id);
         await tx.transcriptEntry.createMany({
           data: baseCourses.map(e => ({ ...e, grade: e.grade || Grade.B_PLUS })),
         });
         
+        // CST 130: W (withdrew first attempt), then A (retake)
         await tx.transcriptEntry.createMany({
           data: [
             {
               studentId: profile.id,
               courseId: cst130.id,
-              recommendedTermCourseId: termCourse?.id ?? null,
+              recommendedTermCourseId: cst130Course?.id ?? null,
               credits: cst130.credits,
-              grade: Grade.C,
+              grade: Grade.W,
               status: TranscriptStatus.COMPLETED,
               source: TranscriptSource.NCAT,
             },
             {
               studentId: profile.id,
               courseId: cst130.id,
-              recommendedTermCourseId: termCourse?.id ?? null,
+              recommendedTermCourseId: cst130Course?.id ?? null,
               credits: cst130.credits,
               grade: Grade.A,
               status: TranscriptStatus.COMPLETED,
@@ -248,7 +250,7 @@ async function writeFrozen(userId: string, student: TestStudent, catalogYearId: 
             },
           ],
         });
-        return; // Skip default createMany
+        return;
       }
     }
 

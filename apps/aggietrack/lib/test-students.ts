@@ -45,7 +45,7 @@ export const testStudents: TestStudent[] = [
   { email: "it.mid@example.test", firstName: "Jordan", lastName: "Hale", standing: StudentStanding.JUNIOR, through: 4 },
   { email: "it.late@example.test", firstName: "Riley", lastName: "Brooks", standing: StudentStanding.SENIOR, through: 6 },
   
-  // Grade scenarios for testing
+  // Realistic retake scenarios (only after F, W, or D below-min)
   { email: "it.retake-f-to-pass@example.test", firstName: "Taylor", lastName: "Morgan", standing: StudentStanding.SOPHOMORE, through: 2 },
   { email: "it.retake-c-to-a@example.test", firstName: "Casey", lastName: "Parker", standing: StudentStanding.SOPHOMORE, through: 2 },
   { email: "it.diverse-grades@example.test", firstName: "Alex", lastName: "Rivera", standing: StudentStanding.JUNIOR, through: 3 },

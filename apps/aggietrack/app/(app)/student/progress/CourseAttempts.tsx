@@ -108,48 +108,46 @@ export function CourseAttempts({
     }
 
     return (
-        <div className="flex flex-col gap-2 sm:items-end">
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-                {completedAttempts.map((attempt, index) => (
-                    <div key={attempt.id} className="flex items-center gap-2">
-                        {completedAttempts.length > 1 && (
-                            <span className="text-xs text-muted-foreground">
-                                #{index + 1}
-                            </span>
-                        )}
-                        <GradeSelect
-                            value={attempt.grade as Grade | null}
-                            onChange={(grade) => handleGradeChange(attempt.id, grade)}
+        <div className="flex flex-wrap items-center gap-2">
+            {completedAttempts.map((attempt, index) => (
+                <div key={attempt.id} className="flex items-center gap-2">
+                    {completedAttempts.length > 1 && (
+                        <span className="text-xs text-muted-foreground">
+                            #{index + 1}
+                        </span>
+                    )}
+                    <GradeSelect
+                        value={attempt.grade as Grade | null}
+                        onChange={(grade) => handleGradeChange(attempt.id, grade)}
+                        disabled={isPending}
+                        size="sm"
+                    />
+                    {completedAttempts.length > 1 && (
+                        <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon-sm"
+                            onClick={() => handleRemoveAttempt(attempt.id)}
                             disabled={isPending}
-                            size="sm"
-                        />
-                        {completedAttempts.length > 1 && (
-                            <Button
-                                type="button"
-                                variant="ghost"
-                                size="icon-sm"
-                                onClick={() => handleRemoveAttempt(attempt.id)}
-                                disabled={isPending}
-                                aria-label={`Remove attempt ${index + 1}`}
-                                className="text-muted-foreground hover:text-destructive"
-                            >
-                                <TrashIcon className="size-4" />
-                            </Button>
-                        )}
-                    </div>
-                ))}
-                <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={handleAddAttempt}
-                    disabled={isPending}
-                    className="gap-1.5"
-                >
-                    <PlusIcon className="size-3.5" />
-                    <span className="text-xs">Add attempt</span>
-                </Button>
-            </div>
+                            aria-label={`Remove attempt ${index + 1}`}
+                            className="size-11 text-muted-foreground hover:text-destructive sm:size-auto"
+                        >
+                            <TrashIcon className="size-4" />
+                        </Button>
+                    )}
+                </div>
+            ))}
+            <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleAddAttempt}
+                disabled={isPending}
+                className="h-11 gap-1.5 px-4 sm:h-auto"
+            >
+                <PlusIcon className="size-3.5" />
+                <span className="text-xs">Add attempt</span>
+            </Button>
         </div>
     );
 }

@@ -6,15 +6,20 @@ This document lists test students, their scenarios, and expected progress metric
 
 | Student | Email | Standing | Scenario | Credits | Progress % | Key Features |
 |---------|-------|----------|----------|---------|------------|--------------|
-| Avery Cole | it.start@example.test | Freshman | Fresh start | 0 | 0% | Zero credits baseline |
-| Jordan Hale | it.mid@example.test | Junior | Mid-program | ~60 | ~50% | Realistic passing grades (A/B/C mix) |
-| Riley Brooks | it.late@example.test | Senior | Near graduation | ~90 | ~75% | Strong grades (mostly A/B) |
-| Taylor Morgan | it.retake-f-to-pass@example.test | Sophomore | Failed→passing retake + below-min | ~30 | ~25% | CST 112: F→B retake; CST 120: D (below C min) |
-| Casey Parker | it.retake-c-to-a@example.test | Sophomore | Grade improvement | ~30 | ~25% | CST 130: C→A retake |
-| Alex Rivera | it.diverse-grades@example.test | Junior | Diverse grades + unmapped | ~35-40 | ~30-35% | P/TR/W/I/F grades; JOUR 101 unmapped |
-| Morgan Lee | it.over-credits@example.test | Senior | Excessive credits | >120 | 100% | 8 terms completed; excellent grades |
+| Avery Cole | it.start@example.test | Freshman | Fresh start | 0 | 0.0% | Zero credits baseline |
+| Jordan Hale | it.mid@example.test | Junior | Mid-program | TBD* | TBD%* | Realistic passing grades (A/B/C mix) |
+| Riley Brooks | it.late@example.test | Senior | Near graduation | TBD* | TBD%* | Strong grades (mostly A/B) |
+| Taylor Morgan | it.retake-f-to-pass@example.test | Sophomore | F→B retake + D below-min | TBD* | TBD%* | CST 112: F→B retake; CST 120: D (NOT retaken) |
+| Casey Parker | it.retake-c-to-a@example.test | Sophomore | W→A retake | TBD* | TBD%* | CST 130: W→A retake (realistic: withdrew then passed) |
+| Alex Rivera | it.diverse-grades@example.test | Junior | Diverse grades + unmapped | TBD* | TBD%* | P/TR/W/I/F grades; JOUR 101 unmapped |
+| Morgan Lee | it.over-credits@example.test | Senior | Excessive credits | ≥120 | 100.0% | 8 terms completed; excellent grades (capped) |
 
-**Note:** Progress percentages are approximate and depend on which courses count toward degree requirements after applying grade minimums and best-attempt logic.
+**\*To get exact values:** Reset a student via Test Manager, log in, view Dashboard. The `computeDegreeProgress` function returns exact credits and percentage (1 decimal place) based on:
+- Only COMPLETED courses with passing grades
+- Best attempt for retakes
+- Excludes grades below requirement minimums (e.g., D where C required)
+- Excludes unmapped courses
+- Capped at 100.0%
 
 ## Detailed Test Student Profiles
 
@@ -63,34 +68,37 @@ This document lists test students, their scenarios, and expected progress metric
 ### 4. Taylor Morgan
 - **Email:** `it.retake-f-to-pass@example.test`
 - **Standing:** Sophomore
-- **Credits:** ~30 (through term 2)
-- **Progress:** ~25% (reduced due to below-min grade)
-- **Purpose:** Failed course, retake, and below-minimum grade scenarios
+- **Credits:** TBD (through term 2, reduced due to F and below-min)
+- **Progress:** TBD% (reduced: F becomes B after retake, D doesn't count)
+- **Purpose:** Failed course with passing retake, and un-retaken below-minimum grade
 - **Transcript:**
-  - Terms 1-2 base courses: mostly B grades
-  - **CST 112:** F (first attempt), B (second attempt) - demonstrates retake logic
-  - **CST 120:** D - **BELOW minimum grade** (C required for Major Core)
+  - Terms 1-2 base courses: B grades
+  - **CST 112:** F (first attempt in term 2), B (retake) - demonstrates F→pass logic
+  - **CST 120:** D - **BELOW minimum grade** (C required for Major Core) - **NOT RETAKEN**
   - All courses have explicit grades
+  - **Realistic:** Only retakes after F (non-passing grade)
 - **Tests:**
-  - ✅ **F then passing retake**
-  - ✅ **Below-min grade** (D where C required)
-  - Best attempt selection
-  - Grade requirement enforcement
+  - ✅ **F then passing retake** (realistic: failed, then passed)
+  - ✅ **Below-min grade not retaken** (D where C required, permanent example)
+  - Best attempt selection (B counts, F doesn't)
+  - Grade requirement enforcement (D doesn't count toward progress)
 
 ### 5. Casey Parker
 - **Email:** `it.retake-c-to-a@example.test`
 - **Standing:** Sophomore
-- **Credits:** ~30 (through term 2)
-- **Progress:** ~25%
-- **Purpose:** Grade improvement retake
+- **Credits:** TBD (through term 2)
+- **Progress:** TBD%
+- **Purpose:** Withdrawal followed by successful retake
 - **Transcript:**
-  - Terms 1-2 base courses: mostly B+ grades
-  - **CST 130:** C (first attempt), A (second attempt)
+  - Terms 1-2 base courses: B+ grades
+  - **CST 130:** W (withdrew first attempt), A (retake and passed)
   - All courses have explicit grades
+  - **Realistic:** Only retakes after W (withdrew, non-countable)
 - **Tests:**
-  - ✅ **C then A retake** (grade improvement)
-  - Best grade selection logic
+  - ✅ **W then A retake** (realistic: withdrew, then passed on retry)
+  - Best grade selection logic (A counts, W doesn't)
   - Multiple attempts display
+  - **No unrealistic pass→retake** (e.g., C→A would be unrealistic)
 
 ### 6. Alex Rivera
 - **Email:** `it.diverse-grades@example.test`
