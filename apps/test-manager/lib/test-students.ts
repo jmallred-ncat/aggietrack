@@ -6,9 +6,13 @@ export type TestStudentCard = {
 };
 
 export const testStudentCards: TestStudentCard[] = [
-  { email: "it.start@example.test", name: "Avery Cole", place: "Information Technology 2025. Just started, with no prior coursework.", role: "student" },
-  { email: "it.mid@example.test", name: "Jordan Hale", place: "Information Technology 2025. Midway, with the first four handbook terms complete.", role: "student" },
-  { email: "it.late@example.test", name: "Riley Brooks", place: "Information Technology 2025. Near the end, with the first six handbook terms complete.", role: "student" },
+  { email: "it.start@example.test", name: "Avery Cole", place: "Information Technology 2025. Just started, with no prior coursework (0 credits).", role: "student" },
+  { email: "it.mid@example.test", name: "Jordan Hale", place: "Information Technology 2025. Midway through (4 terms, ~60 credits). Realistic passing grades.", role: "student" },
+  { email: "it.late@example.test", name: "Riley Brooks", place: "Information Technology 2025. Near completion (6 terms, ~90 credits). Strong grades.", role: "student" },
+  { email: "it.retake-f-to-pass@example.test", name: "Taylor Morgan", place: "Information Technology 2025. Sophomore (2 terms). Has F→B retake and D below min-grade.", role: "student" },
+  { email: "it.retake-c-to-a@example.test", name: "Casey Parker", place: "Information Technology 2025. Sophomore (2 terms). Has C→A grade improvement retake.", role: "student" },
+  { email: "it.diverse-grades@example.test", name: "Alex Rivera", place: "Information Technology 2025. Junior (3 terms). Diverse grades (P/TR/W/I/F) plus unmapped course.", role: "student" },
+  { email: "it.over-credits@example.test", name: "Morgan Lee", place: "Information Technology 2025. Senior (8 terms, >120 credits). Excellent grades throughout.", role: "student" },
 ];
 
 export const testAdvisorCards: TestStudentCard[] = [
