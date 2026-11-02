@@ -96,10 +96,6 @@ export async function computeDegreeProgress(studentId: string) {
       courseId: true,
       credits: true,
       grade: true,
-      updatedAt: true,
-    },
-    orderBy: {
-      updatedAt: "asc", // Process earliest attempts first
     },
   });
 
@@ -116,32 +112,49 @@ export async function computeDegreeProgress(studentId: string) {
     }
   }
 
-  // Track which courses have been counted (to avoid double counting)
-  const countedCourses = new Set<string>();
+  // Group entries by courseId to find the best attempt for each course
+  const entriesByCourse = new Map<string, typeof completedEntries>();
+  for (const entry of completedEntries) {
+    if (!entry.courseId) continue;
+    const existing = entriesByCourse.get(entry.courseId) || [];
+    existing.push(entry);
+    entriesByCourse.set(entry.courseId, existing);
+  }
+
   let earnedCredits = 0;
   let mappedCourses = 0;
 
-  // Process each completed entry
-  for (const entry of completedEntries) {
-    if (!entry.courseId) continue;
-    
-    // Skip if this course was already counted
-    if (countedCourses.has(entry.courseId)) continue;
-
+  // Process each course (taking best attempt)
+  for (const [courseId, attempts] of entriesByCourse.entries()) {
     // Check if this course maps to any requirement
-    const requirementGroups = courseToGroups.get(entry.courseId);
+    const requirementGroups = courseToGroups.get(courseId);
     if (!requirementGroups || requirementGroups.length === 0) continue;
 
-    // Find the first requirement group where the grade meets the minimum
-    // (We only count the course once, toward the first matching requirement)
-    const matchingGroup = requirementGroups.find(group => 
-      meetsMinimumGrade(entry.grade, group.minGrade)
-    );
+    // Find the best attempt that meets any requirement's minimum grade
+    // Best = highest grade in GRADE_ORDER
+    let bestAttempt: typeof attempts[0] | null = null;
+    let bestGradeOrder = -1;
+    let matchingGroup: { groupId: string; minGrade: Grade | null } | null = null;
 
-    if (matchingGroup) {
-      // Count this course's credits
-      earnedCredits += entry.credits;
-      countedCourses.add(entry.courseId);
+    for (const attempt of attempts) {
+      // Find if this attempt's grade meets any requirement's minimum
+      const group = requirementGroups.find(g => 
+        meetsMinimumGrade(attempt.grade, g.minGrade)
+      );
+
+      if (group && attempt.grade) {
+        const gradeOrder = GRADE_ORDER[attempt.grade];
+        if (gradeOrder > bestGradeOrder) {
+          bestGradeOrder = gradeOrder;
+          bestAttempt = attempt;
+          matchingGroup = group;
+        }
+      }
+    }
+
+    // Count the best attempt if one passed the minimum grade
+    if (bestAttempt && matchingGroup) {
+      earnedCredits += bestAttempt.credits;
       mappedCourses++;
     }
   }
