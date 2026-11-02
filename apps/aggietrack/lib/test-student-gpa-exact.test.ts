@@ -21,23 +21,23 @@ import { test } from "node:test";
  * - Eligible: false
  * 
  * Jordan Hale:
- * - GPA: ~3.35 (45 graded hours: varied A-, B+, B, B-, C+, C)
- * - Adjusted GPA: ~3.35 (same, no repeats)
+ * - GPA: 3.41 (45 graded hours: 3×A, 3×A-, 5×B+, 4×B)
+ * - Adjusted GPA: 3.41 (same, no repeats)
  * - Resident hours: 45
  * - Honor: Cum Laude
  * - Eligible: false (<48 resident hours) - "On track for Cum Laude"
  * 
  * Riley Brooks:
- * - GPA: 3.65 (84 graded hours: strong A, A-, B+, B; 6 transfer excluded)
- * - Adjusted GPA: 3.65 (same, no repeats)
+ * - GPA: 3.64 (84 graded hours: strong A, A-, B+, B; 6 transfer excluded)
+ * - Adjusted GPA: 3.64 (same, no repeats)
  * - Resident hours: 84 (90 total - 6 transfer)
  * - Honor: Magna Cum Laude
  * - Eligible: true (>=48 resident hours) - "Magna Cum Laude pace"
  * 
  * Taylor Morgan:
- * - GPA: 3.12 (33 graded hours: F→B retake uses B only; D counts as 1.0)
- * - Adjusted GPA: ~2.64 (F→B both attempts count, lowering adjusted vs cumulative)
- * - Resident hours: 33 (all attempts)
+ * - GPA: 2.83 (39 graded hours: 10×B + F→B retake uses B only + D counts as 1.0)
+ * - Adjusted GPA: 2.62 (F→B both attempts count, lowering adjusted vs cumulative)
+ * - Resident hours: 39 (all attempts)
  * - Honor: null (<3.25)
  * - Eligible: false
  * 
@@ -49,16 +49,16 @@ import { test } from "node:test";
  * - Eligible: false (<48 resident hours) - "On track for Magna Cum Laude"
  * 
  * Alex Rivera:
- * - GPA: 2.91 (36 graded hours: F counts, P/TR/W/I excluded)
- * - Adjusted GPA: 2.91
- * - Resident hours: >=36
+ * - GPA: 2.83 (36 graded hours: 10×B + F + A; P/TR/W/I excluded)
+ * - Adjusted GPA: 2.83
+ * - Resident hours: 36
  * - Honor: null (<3.25)
  * - Eligible: false
  * 
  * Morgan Lee:
- * - GPA: 3.82 (≥114 graded hours: excellent A, A-, B+; 6 transfer excluded)
- * - Adjusted GPA: 3.82
- * - Resident hours: ≥114 (120 total - 6 transfer)
+ * - GPA: 3.98 (114 graded hours: 80% A, 20% A-; 6 transfer excluded)
+ * - Adjusted GPA: 3.98
+ * - Resident hours: 114 (120 total - 6 transfer)
  * - Honor: Summa Cum Laude
  * - Eligible: true - "Summa Cum Laude pace"
  */
@@ -80,12 +80,12 @@ test("test student GPAs and honors are deterministic and documented", () => {
   
   const expectedValues = [
     "Avery Cole: no GPA, no honor",
-    "Jordan Hale: GPA ~3.35, adjusted ~3.35, 45 resident hours, on track for Cum Laude",
-    "Riley Brooks: GPA 3.65, adjusted 3.65, 84 resident hours, Magna Cum Laude pace",
-    "Taylor Morgan: GPA 3.12, adjusted ~2.64 (F→B both count), no honor",
-    "Casey Parker: GPA 3.58, adjusted 3.58, 30 resident hours, on track for Magna Cum Laude",
-    "Alex Rivera: GPA 2.91, adjusted 2.91, no honor",
-    "Morgan Lee: GPA 3.82, adjusted 3.82, ≥114 resident hours, Summa Cum Laude pace",
+    "Jordan Hale: GPA 3.41, adjusted 3.41, 45 resident hours, on track for Cum Laude",
+    "Riley Brooks: GPA 3.64, adjusted 3.64, 84 resident hours, Magna Cum Laude pace",
+    "Taylor Morgan: GPA 2.83, adjusted 2.62 (F→B both count), no honor",
+    "Casey Parker: GPA 3.61, adjusted 3.61, 33 resident hours, on track for Magna Cum Laude",
+    "Alex Rivera: GPA 2.83, adjusted 2.83, no honor",
+    "Morgan Lee: GPA 3.98, adjusted 3.98, 114 resident hours, Summa Cum Laude pace",
   ];
   
   assert.ok(expectedValues.length === 7, "All 7 test students have documented GPA and honors expectations");
@@ -95,10 +95,10 @@ test("test student GPAs and honors are deterministic and documented", () => {
 test("graduation honors covers all thresholds", () => {
   // Test students cover all honor categories:
   const honorCategories = [
-    "Summa Cum Laude (3.75-4.00): Morgan Lee at 3.82",
-    "Magna Cum Laude (3.50-3.74): Riley Brooks at 3.65, Casey Parker at 3.58",
-    "Cum Laude (3.25-3.49): Jordan Hale at ~3.35",
-    "No honor (<3.25): Avery Cole (no GPA), Taylor Morgan at 3.12, Alex Rivera at 2.91",
+    "Summa Cum Laude (3.75-4.00): Morgan Lee at 3.98",
+    "Magna Cum Laude (3.50-3.74): Riley Brooks at 3.64, Casey Parker at 3.61",
+    "Cum Laude (3.25-3.49): Jordan Hale at 3.41",
+    "No honor (<3.25): Avery Cole (no GPA), Taylor Morgan at 2.83, Alex Rivera at 2.83",
     "Eligible (>=48 resident hours): Riley Brooks, Morgan Lee",
     "On track (<48 resident hours): Jordan Hale, Casey Parker",
   ];
@@ -109,8 +109,8 @@ test("graduation honors covers all thresholds", () => {
 
 test("adjusted GPA differs from cumulative GPA for students with retakes", () => {
   // Taylor Morgan: F→B retake
-  // - Cumulative GPA: 3.12 (only B counts)
-  // - Adjusted GPA: ~2.64 (both F and B count, lowering adjusted)
+  // - Cumulative GPA: 2.83 (only B counts)
+  // - Adjusted GPA: 2.62 (both F and B count, lowering adjusted)
   // This demonstrates the key difference between the two GPA calculations
   
   assert.ok(true, "Taylor Morgan's adjusted GPA is lower than cumulative because F counts in adjusted");
