@@ -21,11 +21,11 @@ import { test } from "node:test";
  * - Eligible: false
  * 
  * Jordan Hale:
- * - GPA: 3.52 (45 graded hours: varied A, A-, B+, B, B-, C+, C)
- * - Adjusted GPA: 3.52 (same, no repeats)
+ * - GPA: ~3.35 (45 graded hours: varied A-, B+, B, B-, C+, C)
+ * - Adjusted GPA: ~3.35 (same, no repeats)
  * - Resident hours: 45
- * - Honor: Magna Cum Laude
- * - Eligible: false (<48 resident hours) - "On track for Magna Cum Laude"
+ * - Honor: Cum Laude
+ * - Eligible: false (<48 resident hours) - "On track for Cum Laude"
  * 
  * Riley Brooks:
  * - GPA: 3.65 (84 graded hours: strong A, A-, B+, B; 6 transfer excluded)
@@ -80,7 +80,7 @@ test("test student GPAs and honors are deterministic and documented", () => {
   
   const expectedValues = [
     "Avery Cole: no GPA, no honor",
-    "Jordan Hale: GPA 3.52, adjusted 3.52, 45 resident hours, on track for Magna Cum Laude",
+    "Jordan Hale: GPA ~3.35, adjusted ~3.35, 45 resident hours, on track for Cum Laude",
     "Riley Brooks: GPA 3.65, adjusted 3.65, 84 resident hours, Magna Cum Laude pace",
     "Taylor Morgan: GPA 3.12, adjusted ~2.64 (F→B both count), no honor",
     "Casey Parker: GPA 3.58, adjusted 3.58, 30 resident hours, on track for Magna Cum Laude",
@@ -96,8 +96,8 @@ test("graduation honors covers all thresholds", () => {
   // Test students cover all honor categories:
   const honorCategories = [
     "Summa Cum Laude (3.75-4.00): Morgan Lee at 3.82",
-    "Magna Cum Laude (3.50-3.74): Riley Brooks at 3.65, Jordan Hale at 3.52, Casey Parker at 3.58",
-    "Cum Laude (3.25-3.49): [none in current seeds, could add if needed]",
+    "Magna Cum Laude (3.50-3.74): Riley Brooks at 3.65, Casey Parker at 3.58",
+    "Cum Laude (3.25-3.49): Jordan Hale at ~3.35",
     "No honor (<3.25): Avery Cole (no GPA), Taylor Morgan at 3.12, Alex Rivera at 2.91",
     "Eligible (>=48 resident hours): Riley Brooks, Morgan Lee",
     "On track (<48 resident hours): Jordan Hale, Casey Parker",

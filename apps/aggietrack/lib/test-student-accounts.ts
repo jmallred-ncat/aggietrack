@@ -121,17 +121,17 @@ async function writeFrozen(userId: string, student: TestStudent, catalogYearId: 
                         defaultHash === 4 ? Grade.C_PLUS : 
                         Grade.B; // B as final fallback, not C
 
-      // Jordan Hale: varied mid-range grades (GPA ~3.0-3.3 range)
+      // Jordan Hale: varied mid-range grades (GPA ~3.35, Cum Laude 3.25-3.49 range)
       if (student.email === "it.mid@example.test") {
         const hash = (code.length + course.sequence) % 8;
-        grade = hash === 0 ? Grade.A : 
-                hash === 1 ? Grade.A_MINUS : 
+        grade = hash === 0 ? Grade.A_MINUS : 
+                hash === 1 ? Grade.B_PLUS : 
                 hash === 2 ? Grade.B_PLUS : 
                 hash === 3 ? Grade.B : 
-                hash === 4 ? Grade.B_MINUS : 
-                hash === 5 ? Grade.C_PLUS : 
-                hash === 6 ? Grade.B :  // Extra B instead of C
-                Grade.C; // C only ~12.5% of the time
+                hash === 4 ? Grade.B : 
+                hash === 5 ? Grade.B_MINUS : 
+                hash === 6 ? Grade.C_PLUS :  
+                Grade.C; // Varied B-range with some C, targeting ~3.35 GPA
         // Term 4 courses (current term for junior) are in progress
         if (course.sequence === 4) {
           status = TranscriptStatus.IN_PROGRESS;

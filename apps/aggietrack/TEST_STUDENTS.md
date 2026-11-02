@@ -7,7 +7,7 @@ This document lists test students, their scenarios, and expected progress metric
 | Student | Email | Standing | Scenario | Credits | Progress % | GPA | Adjusted GPA | Resident Hours | Honors Badge |
 |---------|-------|----------|----------|---------|------------|-----|--------------|----------------|--------------|
 | Avery Cole | it.start@example.test | Freshman | Fresh start | 0 | 0.0% | — | — | 0 | None |
-| Jordan Hale | it.mid@example.test | Junior | Mid-program + in-progress | ~45 | ~37.5% | 3.52 | 3.52 | 45 | On track for Magna Cum Laude |
+| Jordan Hale | it.mid@example.test | Junior | Mid-program + in-progress | ~45 | ~37.5% | ~3.35 | ~3.35 | 45 | On track for Cum Laude |
 | Riley Brooks | it.late@example.test | Senior | Near graduation | 90 | 75.0% | 3.65 | 3.65 | 84 | Magna Cum Laude pace |
 | Taylor Morgan | it.retake-f-to-pass@example.test | Sophomore | F→B retake + D below-min | 30 | 25.0% | 3.12 | ~2.64 | 33 | None |
 | Casey Parker | it.retake-c-to-a@example.test | Sophomore | W→A retake | 30 | 25.0% | 3.58 | 3.58 | 30 | On track for Magna Cum Laude |
@@ -40,10 +40,10 @@ This document lists test students, their scenarios, and expected progress metric
 - **Standing:** Junior
 - **Earned Credits:** 45 (through term 3 completed)
 - **Progress:** 37.5% (term 4 courses don't count until completed)
-- **GPA:** **3.52** (45 graded hours: varied A, A-, B+, B, B-, C+, C; mostly B range, C ~12%)
-- **Adjusted GPA:** **3.52** (same as cumulative, no repeats)
+- **GPA:** **~3.35** (45 graded hours: varied A-, B+, B, B-, C+, C; mostly B range, C ~12%)
+- **Adjusted GPA:** **~3.35** (same as cumulative, no repeats)
 - **Resident Hours:** 45 (all NC A&T, no transfer)
-- **Honors Badge:** **On track for Magna Cum Laude** (3.50-3.74 range, but <48 resident hours)
+- **Honors Badge:** **On track for Cum Laude** (3.25-3.49 range, but <48 resident hours)
 - **Purpose:** Standard mid-program student with current-term enrollment
 - **Transcript:** 
   - Terms 1-3 completed with varied grades (A through C, full plus/minus scale)
