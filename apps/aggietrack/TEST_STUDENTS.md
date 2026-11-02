@@ -7,7 +7,7 @@ This document lists test students, their scenarios, and expected progress metric
 | Student | Email | Standing | Scenario | Credits | Progress % | Key Features |
 |---------|-------|----------|----------|---------|------------|--------------|
 | Avery Cole | it.start@example.test | Freshman | Fresh start | 0 | 0.0% | Zero credits baseline |
-| Jordan Hale | it.mid@example.test | Junior | Mid-program | TBD* | TBD%* | Realistic passing grades (A/B/C mix) |
+| Jordan Hale | it.mid@example.test | Junior | Mid-program + in-progress | ~45 | ~37.5% | Realistic grades (A/B/C mix); term 4 in progress |
 | Riley Brooks | it.late@example.test | Senior | Near graduation | TBD* | TBD%* | Strong grades (mostly A/B) |
 | Taylor Morgan | it.retake-f-to-pass@example.test | Sophomore | F→B retake + D below-min | TBD* | TBD%* | CST 112: F→B retake; CST 120: D (NOT retaken) |
 | Casey Parker | it.retake-c-to-a@example.test | Sophomore | W→A retake | TBD* | TBD%* | CST 130: W→A retake (realistic: withdrew then passed) |
@@ -38,14 +38,18 @@ This document lists test students, their scenarios, and expected progress metric
 ### 2. Jordan Hale
 - **Email:** `it.mid@example.test`
 - **Standing:** Junior
-- **Credits:** ~60 (through term 4)
-- **Progress:** ~50%
-- **Purpose:** Standard mid-program student
-- **Transcript:** Terms 1-4 completed with realistic grades
-  - Mix of A (33%), B (33%), C (33%)
-  - All courses have explicit grades
-  - Represents typical student performance
+- **Credits:** ~45 (through term 3 completed + term 4 in progress)
+- **Progress:** ~37.5% (term 4 courses don't count until completed)
+- **Purpose:** Standard mid-program student with current-term enrollment
+- **Transcript:** 
+  - Terms 1-3 completed with realistic grades (A/B/C mix)
+  - **Term 4 courses: IN_PROGRESS** (no final grades yet)
+  - Mix of A (33%), B (33%), C (33%) for completed courses
+  - Represents typical student mid-semester
 - **Tests:**
+  - ✅ **In-progress courses** (term 4, no grades)
+  - In-progress excluded from earned credits
+  - In-progress courses don't block prerequisites
   - Standard progress tracking
   - Mid-program completion
   - Realistic grade distribution
@@ -175,6 +179,9 @@ The `computeDegreeProgress` function ensures each course only counts once toward
 ## Validation Covered
 
 All test students support testing:
+- ✅ **In-progress courses** (Jordan Hale: term 4 enrollment, no grades yet)
+- ✅ In-progress excluded from earned credits (don't count toward progress %)
+- ✅ Converting in-progress to completed by setting grade
 - ✅ Grade required when marking completed
 - ✅ TR grade implies transfer (automatically sets source)
 - ✅ Server-side ownership checks (students can only edit their own entries)

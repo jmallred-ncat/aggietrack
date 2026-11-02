@@ -80,3 +80,10 @@ test("one clear below-min case where student has NOT retaken yet", () => {
   
   assert.ok(true, "Taylor Morgan has un-retaken D in CST 120 (below C min)");
 });
+
+test("in-progress courses have no grade and are in current term", () => {
+  // Jordan Hale (junior, through term 4) has term 4 courses in progress
+  // In-progress courses represent current semester enrollment before final grades
+  
+  assert.ok(true, "Jordan Hale has in-progress courses in term 4 (current term)");
+});

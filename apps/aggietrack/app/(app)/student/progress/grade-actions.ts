@@ -20,11 +20,15 @@ const addAttemptSchema = z.object({
     number: z.string().max(8).nullable(),
     title: z.string().max(120).nullable(),
     credits: z.number().int().min(1).max(6),
-    grade: gradeSchema,
+    grade: gradeSchema.nullable(),
+    status: z.enum(["IN_PROGRESS", "COMPLETED"]),
     recommendedTermCourseId: z.string().min(1).nullable(),
 }).refine(
     (data) => (data.courseId != null) !== (data.subject != null && data.number != null && data.title != null),
     { message: "Must provide either courseId or subject/number/title" }
+).refine(
+    (data) => data.status === "IN_PROGRESS" || data.grade != null,
+    { message: "Grade required for completed courses" }
 );
 
 const removeAttemptSchema = z.object({
@@ -58,15 +62,13 @@ export async function updateTranscriptGrade(input: unknown) {
         return { success: false as const, error: "You can only update your own transcript entries." };
     }
 
-    if (existing.status !== "COMPLETED") {
-        return { success: false as const, error: "Only completed courses can have grades." };
-    }
-
-    // Update the grade
+    // Allow converting IN_PROGRESS to COMPLETED by setting a grade
+    // Update the grade and mark as completed
     await prisma.transcriptEntry.update({
         where: { id: entryId },
         data: {
             grade,
+            status: "COMPLETED",
             source: grade === Grade.TR ? "TRANSFER" : "NCAT",
         },
     });
@@ -90,7 +92,7 @@ export async function addTranscriptAttempt(input: unknown) {
         return { success: false as const, error: "Invalid attempt request." };
     }
 
-    const { courseId, subject, number, title, credits, grade, recommendedTermCourseId } = parsed.data;
+    const { courseId, subject, number, title, credits, grade, status, recommendedTermCourseId } = parsed.data;
 
     // Verify the student has access to this course (either catalog course or it's their own entry)
     if (recommendedTermCourseId) {
@@ -126,8 +128,8 @@ export async function addTranscriptAttempt(input: unknown) {
             number: courseId ? null : number,
             title: courseId ? null : title,
             credits,
-            grade,
-            status: "COMPLETED",
+            grade: status === "IN_PROGRESS" ? null : grade,
+            status: status as TranscriptStatus,
             source: grade === Grade.TR ? "TRANSFER" : "NCAT",
             recommendedTermCourseId,
         },

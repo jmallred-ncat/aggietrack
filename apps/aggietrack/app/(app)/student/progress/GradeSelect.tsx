@@ -26,11 +26,13 @@ export function GradeSelect({
     onChange,
     disabled,
     size = "sm",
+    placeholder = "Grade",
 }: {
     value: Grade | null;
     onChange: (grade: Grade) => void;
     disabled?: boolean;
     size?: "sm" | "default";
+    placeholder?: string;
 }) {
     return (
         <Select
@@ -43,7 +45,7 @@ export function GradeSelect({
             disabled={disabled}
         >
             <SelectTrigger size={size} className="w-[4.5rem]">
-                <SelectValue placeholder="Grade" />
+                <SelectValue placeholder={placeholder} />
             </SelectTrigger>
             <SelectContent>
                 <SelectGroup>

@@ -61,7 +61,7 @@ export function CourseAttempts({
         });
     }
 
-    async function handleAddAttempt() {
+    async function handleAddAttempt(asInProgress = false) {
         startTransition(async () => {
             const result = await addTranscriptAttempt({
                 courseId,
@@ -69,14 +69,16 @@ export function CourseAttempts({
                 number: null,
                 title: null,
                 credits,
-                grade: Grade.C,
+                grade: asInProgress ? null : Grade.C,
+                status: asInProgress ? "IN_PROGRESS" : "COMPLETED",
                 recommendedTermCourseId: recommendedTermCourseId ?? null,
             });
 
             if (!result.success) {
                 toast.add({ type: "error", title: "Failed to add attempt", description: result.error });
             } else {
-                toast.add({ type: "success", title: "Attempt added", description: "You can now edit the grade." });
+                const message = asInProgress ? "Marked as in progress" : "Attempt added";
+                toast.add({ type: "success", title: message });
                 onUpdate?.();
             }
         });
@@ -102,36 +104,48 @@ export function CourseAttempts({
         });
     }
 
-    const completedAttempts = localAttempts
-        .filter(a => a.status === "COMPLETED")
-        .sort((a, b) => {
-            // Sort chronologically: oldest first (attempt 1, attempt 2, ...)
-            const timeCompare = a.createdAt.getTime() - b.createdAt.getTime();
-            if (timeCompare !== 0) return timeCompare;
-            // Deterministic tiebreaker: by id
-            return a.id.localeCompare(b.id);
-        });
+    // Sort all attempts chronologically (oldest first)
+    const sortedAttempts = [...localAttempts].sort((a, b) => {
+        const timeCompare = a.createdAt.getTime() - b.createdAt.getTime();
+        if (timeCompare !== 0) return timeCompare;
+        return a.id.localeCompare(b.id);
+    });
 
-    if (completedAttempts.length === 0) {
+    if (sortedAttempts.length === 0) {
         return null;
     }
 
     return (
         <div className="flex flex-wrap items-center gap-2">
-            {completedAttempts.map((attempt, index) => (
+            {sortedAttempts.map((attempt, index) => (
                 <div key={attempt.id} className="flex items-center gap-2">
-                    {completedAttempts.length > 1 && (
+                    {sortedAttempts.length > 1 && (
                         <span className="text-xs text-muted-foreground">
                             #{index + 1}
                         </span>
                     )}
-                    <GradeSelect
-                        value={attempt.grade as Grade | null}
-                        onChange={(grade) => handleGradeChange(attempt.id, grade)}
-                        disabled={isPending}
-                        size="sm"
-                    />
-                    {completedAttempts.length > 1 && (
+                    {attempt.status === "IN_PROGRESS" ? (
+                        <>
+                            <Badge variant="secondary" className="h-11 px-3 text-xs sm:h-auto">
+                                In progress
+                            </Badge>
+                            <GradeSelect
+                                value={null}
+                                onChange={(grade) => handleGradeChange(attempt.id, grade)}
+                                disabled={isPending}
+                                size="sm"
+                                placeholder="Set grade"
+                            />
+                        </>
+                    ) : (
+                        <GradeSelect
+                            value={attempt.grade as Grade | null}
+                            onChange={(grade) => handleGradeChange(attempt.id, grade)}
+                            disabled={isPending}
+                            size="sm"
+                        />
+                    )}
+                    {sortedAttempts.length > 1 && attempt.status === "COMPLETED" && (
                         <Button
                             type="button"
                             variant="ghost"
@@ -148,13 +162,13 @@ export function CourseAttempts({
             ))}
             <Button
                 type="button"
-                variant="outline"
+                variant="ghost"
                 size="sm"
-                onClick={handleAddAttempt}
+                onClick={() => handleAddAttempt(false)}
                 disabled={isPending}
-                className="h-11 gap-1.5 px-4 sm:h-auto"
+                className="h-11 gap-1.5 px-3 text-muted-foreground hover:text-foreground sm:h-auto"
             >
-                <PlusIcon className="size-3.5" />
+                <PlusIcon className="size-4" />
                 <span className="text-xs">Add attempt</span>
             </Button>
         </div>

@@ -110,11 +110,17 @@ async function writeFrozen(userId: string, student: TestStudent, catalogYearId: 
       const row = transcriptRow(terms, byCode, course);
       const code = `${course.subject} ${course.number}`;
       let grade = Grade.C;
+      let status = TranscriptStatus.COMPLETED;
 
-      // Jordan Hale: realistic passing grades (mostly Bs and Cs)
+      // Jordan Hale: realistic passing grades (mostly Bs and Cs) + current term in-progress
       if (student.email === "it.mid@example.test") {
         const hash = (code.length + course.sequence) % 3;
         grade = hash === 0 ? Grade.A : hash === 1 ? Grade.B : Grade.C;
+        // Term 4 courses (current term for junior) are in progress
+        if (course.sequence === 4) {
+          status = TranscriptStatus.IN_PROGRESS;
+          grade = Grade.C; // Will be null in the actual entry
+        }
       }
       // Riley Brooks: strong grades (mostly As and Bs)
       else if (student.email === "it.late@example.test") {
@@ -146,8 +152,8 @@ async function writeFrozen(userId: string, student: TestStudent, catalogYearId: 
         courseId: row.courseId,
         recommendedTermCourseId: row.recommendedTermCourseId,
         credits: row.credits,
-        grade,
-        status: TranscriptStatus.COMPLETED,
+        grade: status === TranscriptStatus.IN_PROGRESS ? null : grade,
+        status,
         source: grade === Grade.TR ? TranscriptSource.TRANSFER : TranscriptSource.NCAT,
       };
     });
