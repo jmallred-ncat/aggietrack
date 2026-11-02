@@ -104,6 +104,8 @@ async function writeFrozen(userId: string, student: TestStudent, catalogYearId: 
     const byCode = new Map(catalog.map(course => [`${course.subject} ${course.number}`, course]));
 
     // Generate transcript entries with custom grades for test scenarios
+    // Note: Taylor Morgan and Casey Parker's specific courses are handled in their special sections
+    // to avoid any countable-grade-followed-by-another-attempt sequences
     const entries = courses.map(course => {
       const row = transcriptRow(terms, byCode, course);
       const code = `${course.subject} ${course.number}`;
@@ -119,9 +121,8 @@ async function writeFrozen(userId: string, student: TestStudent, catalogYearId: 
         const hash = (code.length + course.sequence) % 4;
         grade = hash === 0 ? Grade.A : hash === 1 ? Grade.A : hash === 2 ? Grade.B : Grade.B_PLUS;
       }
-      // Alex Rivera: diverse grades scenario
+      // Alex Rivera: diverse grades scenario (W, I, F are non-countable, so no issue with "attempts")
       else if (student.email === "it.diverse-grades@example.test") {
-        // P/TR/W/I/F grades scenario
         if (code === "ENGL 100") grade = Grade.P;
         else if (code === "MATH 125") grade = Grade.TR;
         else if (code === "CST 100") grade = Grade.W;
@@ -135,9 +136,8 @@ async function writeFrozen(userId: string, student: TestStudent, catalogYearId: 
         const hash = code.charCodeAt(0) % 5;
         grade = hash === 0 ? Grade.A : hash === 1 ? Grade.A_MINUS : hash === 2 ? Grade.B_PLUS : hash === 3 ? Grade.B : Grade.A;
       }
-      // Taylor Morgan and Casey Parker get default grades (their retakes are added separately)
+      // Default for others
       else {
-        // Default: solid C
         grade = Grade.C;
       }
 
@@ -152,11 +152,10 @@ async function writeFrozen(userId: string, student: TestStudent, catalogYearId: 
       };
     });
 
-    await tx.transcriptEntry.createMany({ data: entries });
-
-    // Add realistic retake scenarios (only after non-countable grades)
+    // Add realistic retake scenarios (only after non-countable grades: F, W, D below-min)
+    // These special cases run FIRST and return early to avoid the default createMany below
     if (student.email === "it.retake-f-to-pass@example.test") {
-      // Taylor Morgan: Sophomore with F→B retake and D below-min (not retaken)
+      // Taylor Morgan: Sophomore with F→B retake and SINGLE D below-min (not retaken)
       const cst112 = catalog.find(c => c.subject === "CST" && c.number === "112");
       const cst120 = catalog.find(c => c.subject === "CST" && c.number === "120");
       
@@ -166,7 +165,7 @@ async function writeFrozen(userId: string, student: TestStudent, catalogYearId: 
         const cst120Course = term1?.courses.find(c => c.course?.id === cst120.id);
         const cst112Course = term2?.courses.find(c => c.course?.id === cst112.id);
         
-        // Add base courses from terms 1-2 with decent grades
+        // Add base courses from terms 1-2 with decent grades, EXCLUDING CST 112 and CST 120
         const baseCourses = entries.filter(e => 
           e.courseId !== cst112.id && e.courseId !== cst120.id
         );
@@ -174,7 +173,8 @@ async function writeFrozen(userId: string, student: TestStudent, catalogYearId: 
           data: baseCourses.map(e => ({ ...e, grade: e.grade || Grade.B })),
         });
         
-        // CST 120: D (below C minimum for Major Core) - NOT RETAKEN
+        // CST 120: SINGLE attempt with D (below C minimum for Major Core) - NOT RETAKEN
+        // This is the clear below-min example that must not count toward progress
         await tx.transcriptEntry.create({
           data: {
             studentId: profile.id,
@@ -187,7 +187,7 @@ async function writeFrozen(userId: string, student: TestStudent, catalogYearId: 
           },
         });
         
-        // CST 112: F (first attempt in term 2), then B (retake)
+        // CST 112: F (first attempt in term 2), then B (retake after F)
         await tx.transcriptEntry.createMany({
           data: [
             {
@@ -221,13 +221,14 @@ async function writeFrozen(userId: string, student: TestStudent, catalogYearId: 
         const term1 = terms.find(t => t.sequence === 1);
         const cst130Course = term1?.courses.find(c => c.course?.id === cst130.id);
         
-        // Add base courses from terms 1-2 with good grades
+        // Add base courses from terms 1-2 with good grades, EXCLUDING CST 130
         const baseCourses = entries.filter(e => e.courseId !== cst130.id);
         await tx.transcriptEntry.createMany({
           data: baseCourses.map(e => ({ ...e, grade: e.grade || Grade.B_PLUS })),
         });
         
-        // CST 130: W (withdrew first attempt), then A (retake)
+        // CST 130: W (withdrew first attempt), then A (retake after W)
+        // W is non-countable, so this is a realistic retake scenario
         await tx.transcriptEntry.createMany({
           data: [
             {
@@ -277,6 +278,15 @@ async function writeFrozen(userId: string, student: TestStudent, catalogYearId: 
           },
         });
       }
+    }
+
+    // Default: create all entries for students without special retake handling
+    // (This runs for Jordan Hale, Riley Brooks, Alex Rivera, Morgan Lee, and Avery Cole)
+    if (
+      student.email !== "it.retake-f-to-pass@example.test" &&
+      student.email !== "it.retake-c-to-a@example.test"
+    ) {
+      await tx.transcriptEntry.createMany({ data: entries });
     }
   });
 }
