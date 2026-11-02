@@ -6,8 +6,7 @@ import { requireStudentProfile } from "@/lib/student";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
-const gradeValues = Object.values(Grade);
-const gradeSchema = z.enum(gradeValues as [string, ...string[]]);
+const gradeSchema = z.nativeEnum(Grade);
 
 const updateGradeSchema = z.object({
     entryId: z.string().min(1),
@@ -21,7 +20,7 @@ const addAttemptSchema = z.object({
     title: z.string().max(120).nullable(),
     credits: z.number().int().min(1).max(6),
     grade: gradeSchema.nullable(),
-    status: z.enum(["IN_PROGRESS", "COMPLETED"]),
+    status: z.enum(["IN_PROGRESS", "COMPLETED"] as const),
     recommendedTermCourseId: z.string().min(1).nullable(),
 }).refine(
     (data) => (data.courseId != null) !== (data.subject != null && data.number != null && data.title != null),

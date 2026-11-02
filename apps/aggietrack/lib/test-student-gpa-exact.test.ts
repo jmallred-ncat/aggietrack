@@ -11,7 +11,7 @@ import { info2025 } from "../prisma/seed/info-2025";
  */
 
 // Helper to simulate transcript entries from frozen courses
-function simulateTranscriptEntries(student: { email: string; through: number }): Array<{
+function simulateTranscriptEntries(studentLookup: { email: string }): Array<{
   id: string;
   courseId: string;
   subject: string | null;
@@ -22,6 +22,9 @@ function simulateTranscriptEntries(student: { email: string; through: number }):
   source: string;
   createdAt: Date;
 }> {
+  const student = testStudents.find(s => s.email === studentLookup.email);
+  if (!student) throw new Error(`Test student not found: ${studentLookup.email}`);
+  
   const courses = frozenCourses(student);
   const entries: Array<{
     id: string;
@@ -41,7 +44,7 @@ function simulateTranscriptEntries(student: { email: string; through: number }):
   for (let idx = 0; idx < courses.length; idx++) {
     const course = courses[idx]!;
     const code = `${course.subject} ${course.number}`;
-    let status = TranscriptStatus.COMPLETED;
+    let status: TranscriptStatus = TranscriptStatus.COMPLETED;
     
     // Default varied grade (matches seed logic)
     const defaultHash = (code.length + idx) % 6;
@@ -113,9 +116,10 @@ function simulateTranscriptEntries(student: { email: string; through: number }):
       }
     }
 
-    // Don't add courses for students with special retake handling (handled separately)
-    if (student.email === "it.retake-f-to-pass@example.test" || 
-        student.email === "it.retake-c-to-a@example.test") {
+    // Don't add courses for students with special retake handling (handled separately below)
+    const isSpecialStudent = student.email === "it.retake-f-to-pass@example.test" || 
+                            student.email === "it.retake-c-to-a@example.test";
+    if (isSpecialStudent) {
       // These are handled specially with retakes
       continue;
     }

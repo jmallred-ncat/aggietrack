@@ -109,7 +109,7 @@ async function writeFrozen(userId: string, student: TestStudent, catalogYearId: 
     const entries = courses.map((course, idx) => {
       const row = transcriptRow(terms, byCode, course);
       const code = `${course.subject} ${course.number}`;
-      let status = TranscriptStatus.COMPLETED;
+      let status: TranscriptStatus = TranscriptStatus.COMPLETED;
       
       // Default varied grade (no student should default to all C)
       // This ensures even Avery Cole (if they had courses) would have varied grades
