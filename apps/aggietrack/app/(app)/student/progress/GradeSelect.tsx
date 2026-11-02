@@ -1,7 +1,7 @@
 "use client";
 
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Grade } from "@/lib/generated/prisma/client";
+import { Grade } from "@/lib/generated/prisma/browser";
 
 const gradeOptions = [
     { value: Grade.A, label: "A" },

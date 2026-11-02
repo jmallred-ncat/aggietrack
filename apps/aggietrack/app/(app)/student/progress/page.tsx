@@ -1,6 +1,6 @@
 import { getProgressSlotCourses, type ProgressSlotCourse } from "@/lib/catalog";
 import { computeDegreeProgress } from "@/lib/degree-progress";
-import { TranscriptSource, TranscriptStatus } from "@/lib/generated/prisma/client";
+import type { TranscriptSource, TranscriptStatus } from "@/lib/generated/prisma/client";
 import { getCurriculumRecommendations, planPosition, requirementGroupTitle, requirementSlotBadge } from "@/lib/planner";
 import { hasConfirmedStart, requireStudentProfile } from "@/lib/student";
 import { getTranscript, progressStatusFromEntry, type ProgressStatus } from "@/lib/transcript";

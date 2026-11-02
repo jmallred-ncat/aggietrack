@@ -3,7 +3,7 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/toast";
-import { Grade, type TranscriptSource, type TranscriptStatus } from "@/lib/generated/prisma/client";
+import { Grade, type TranscriptSource, type TranscriptStatus } from "@/lib/generated/prisma/browser";
 import { PlusIcon, TrashIcon } from "@phosphor-icons/react";
 import { useState, useTransition } from "react";
 import { addTranscriptAttempt, removeTranscriptAttempt, updateTranscriptGrade } from "./grade-actions";
@@ -52,9 +52,9 @@ export function CourseAttempts({
             if (!result.success) {
                 // Revert on failure
                 setLocalAttempts(oldAttempts);
-                toast.error({ title: "Failed to update grade", description: result.error });
+                toast.add({ type: "error", title: "Failed to update grade", description: result.error });
             } else {
-                toast.success({ title: "Grade updated", description: "Your grade has been saved." });
+                toast.add({ type: "success", title: "Grade updated", description: "Your grade has been saved." });
                 onUpdate?.();
             }
         });
@@ -73,9 +73,9 @@ export function CourseAttempts({
             });
 
             if (!result.success) {
-                toast.error({ title: "Failed to add attempt", description: result.error });
+                toast.add({ type: "error", title: "Failed to add attempt", description: result.error });
             } else {
-                toast.success({ title: "Attempt added", description: "You can now edit the grade." });
+                toast.add({ type: "success", title: "Attempt added", description: "You can now edit the grade." });
                 onUpdate?.();
             }
         });
@@ -93,9 +93,9 @@ export function CourseAttempts({
             if (!result.success) {
                 // Revert on failure
                 setLocalAttempts(oldAttempts);
-                toast.error({ title: "Failed to remove attempt", description: result.error });
+                toast.add({ type: "error", title: "Failed to remove attempt", description: result.error });
             } else {
-                toast.success({ title: "Attempt removed" });
+                toast.add({ type: "success", title: "Attempt removed" });
                 onUpdate?.();
             }
         });
