@@ -1,8 +1,8 @@
 import { randomUUID } from "node:crypto";
 import { hashPassword } from "better-auth/crypto";
-import { Grade, TranscriptSource, TranscriptStatus } from "./generated/prisma/client";
+import { Grade, TranscriptSource, TranscriptStatus, UserRole } from "./generated/prisma/client";
 import { prisma } from "./prisma";
-import { authorizeTestStudents, bearerSecret, stateAfterReset, testStudentByEmail, testStudents, type FrozenCourse, type TestStudent } from "./test-students";
+import { authorizeTestStudents, bearerSecret, stateAfterReset, testAccountByEmail, testAdvisorByEmail, testStudentByEmail, testStudents, testAdvisors, type FrozenCourse, type TestStudent, type TestAdvisor } from "./test-students";
 
 const frozenAt = new Date("2026-01-15T00:00:00.000Z");
 
@@ -38,20 +38,21 @@ async function infoCatalogYearId() {
   return year.id;
 }
 
-async function ensureUser(student: TestStudent, password: string, refreshPassword: boolean) {
+async function ensureUser(account: TestStudent | TestAdvisor, password: string, refreshPassword: boolean) {
   const hash = await hashPassword(password);
-  const existing = await prisma.user.findUnique({ where: { email: student.email }, include: { accounts: true } });
+  const role = "role" in account ? account.role : UserRole.STUDENT;
+  const existing = await prisma.user.findUnique({ where: { email: account.email }, include: { accounts: true } });
   if (!existing) {
     const id = randomUUID();
     await prisma.user.create({
       data: {
         id,
-        name: `${student.firstName} ${student.lastName}`,
-        email: student.email,
+        name: `${account.firstName} ${account.lastName}`,
+        email: account.email,
         emailVerified: true,
-        firstName: student.firstName,
-        lastName: student.lastName,
-        role: "STUDENT",
+        firstName: account.firstName,
+        lastName: account.lastName,
+        role,
         accounts: { create: { id: randomUUID(), accountId: id, providerId: "credential", password: hash } },
       },
     });
@@ -60,7 +61,7 @@ async function ensureUser(student: TestStudent, password: string, refreshPasswor
 
   await prisma.user.update({
     where: { id: existing.id },
-    data: { emailVerified: true, firstName: student.firstName, lastName: student.lastName, name: `${student.firstName} ${student.lastName}`, role: "STUDENT" },
+    data: { emailVerified: true, firstName: account.firstName, lastName: account.lastName, name: `${account.firstName} ${account.lastName}`, role },
   });
   if (refreshPassword) {
     const credential = existing.accounts.find(account => account.providerId === "credential");
@@ -147,18 +148,37 @@ function transcriptRow(
 export async function ensureTestStudents(request: Request) {
   const password = guardTestStudents(request);
   const catalogYearId = await infoCatalogYearId();
+  
+  // Ensure student accounts
   for (const student of testStudents) {
     const userId = await ensureUser(student, password, false);
     const profile = await prisma.studentProfile.findUnique({ where: { userId }, select: { id: true } });
     if (!profile) await writeFrozen(userId, student, catalogYearId);
   }
-  return testStudents.map(student => student.email);
+  
+  // Ensure advisor accounts (no profile needed)
+  for (const advisor of testAdvisors) {
+    await ensureUser(advisor, password, false);
+  }
+  
+  return [...testStudents.map(s => s.email), ...testAdvisors.map(a => a.email)];
 }
 
 export async function resetTestStudent(request: Request, email: string) {
   const password = guardTestStudents(request, email, true);
+  const account = testAccountByEmail(email);
+  if (!account) throw new TestStudentError("That is not a test account.", 400);
+  
+  const advisor = testAdvisorByEmail(email);
+  if (advisor) {
+    // Advisors just need their account refreshed, no profile or transcript
+    const userId = await ensureUser(advisor, password, true);
+    await prisma.session.deleteMany({ where: { userId } });
+    return { email: advisor.email, name: `${advisor.firstName} ${advisor.lastName}` };
+  }
+  
   const student = testStudentByEmail(email);
-  if (!student) throw new TestStudentError("That is not a test student.", 400);
+  if (!student) throw new TestStudentError("That is not a test account.", 400);
   const catalogYearId = await infoCatalogYearId();
   const userId = await ensureUser(student, password, true);
   await writeFrozen(userId, student, catalogYearId);

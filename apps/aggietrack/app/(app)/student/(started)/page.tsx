@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { CircularProgress } from "@/components/ui/circular-progress";
 import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty";
 import { academicTermLabel, semesterInSession } from "@/lib/academic-term";
+import { computeDegreeProgress } from "@/lib/degree-progress";
 import { prisma } from "@/lib/prisma";
 import { formatProgramName } from "@/lib/program";
 import { getSessionUser, requireStudentProfile } from "@/lib/student";
@@ -17,7 +18,7 @@ export default async function Dashboard() {
     const profile = await requireStudentProfile();
 
     const now = new Date();
-    const [terms, plans] = await Promise.all([
+    const [terms, plans, progress] = await Promise.all([
         prisma.academicTerm.findMany({ orderBy: { startsOn: "asc" } }),
         prisma.plannedTerm.findMany({
             where: { studentId: profile.id },
@@ -40,6 +41,7 @@ export default async function Dashboard() {
                 },
             },
         }),
+        computeDegreeProgress(profile.id),
     ]);
     const semester = semesterInSession(terms, now);
     const semesterPlan = plans
@@ -75,8 +77,8 @@ export default async function Dashboard() {
         <section className="grid sm:grid-cols-2 md:grid-cols-3 gap-4">
             <div className="flex flex-col items-center w-full rounded-lg bg-muted p-4 border border-border space-y-3 not-typeset">
                 <span className="text-sm font-semibold">Degree Completion</span>
-                <CircularProgress strokeWidth={16} size={120} value={0} max={profile.catalogYear.program.totalCredits} label labelClassName="text-2xl font-bold" />
-                <p className="text-sm text-muted-foreground text-center leading-tight mt-1">0 of {profile.catalogYear.program.totalCredits} Credits</p>
+                <CircularProgress strokeWidth={16} size={120} value={progress.earnedCredits} max={progress.totalCredits} label labelClassName="text-2xl font-bold" />
+                <p className="text-sm text-muted-foreground text-center leading-tight mt-1">{progress.earnedCredits} of {progress.totalCredits} Credits ({progress.percentage}%)</p>
                 <div className="flex items-center justify-center">
                     <GraduationCapIcon weight="fill" size={24} className="text-primary mr-2" />
                     <Badge variant="default">Spring 2027</Badge>

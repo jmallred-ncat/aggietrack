@@ -1,4 +1,5 @@
 import { getProgressSlotCourses, type ProgressSlotCourse } from "@/lib/catalog";
+import { computeDegreeProgress } from "@/lib/degree-progress";
 import { getCurriculumRecommendations, planPosition, requirementGroupTitle, requirementSlotBadge } from "@/lib/planner";
 import { hasConfirmedStart, requireStudentProfile } from "@/lib/student";
 import { getTranscript, progressStatusFromEntry, type ProgressStatus } from "@/lib/transcript";
@@ -38,11 +39,12 @@ function StatusLegend() {
 }
 
 export default async function ProgressPage() {
-    const [profile, transcript, curriculum, slotCourses] = await Promise.all([
-        requireStudentProfile(),
+    const profile = await requireStudentProfile();
+    const [transcript, curriculum, slotCourses, progress] = await Promise.all([
         getTranscript(),
         getCurriculumRecommendations(),
         getProgressSlotCourses(),
+        computeDegreeProgress(profile.id),
     ]);
 
     const terms: Array<ProgressTerm & { yearLabel: string }> = [...curriculum]
@@ -169,6 +171,16 @@ export default async function ProgressPage() {
             <header>
                 <h1>Your Degree Progress</h1>
                 <p className="text-sm text-muted-foreground max-w-prose w-full text-balance">AggieTrack needs the courses you have already completed before you can continue. Mark those courses below, or say you have no prior coursework.</p>
+                {progress.earnedCredits > 0 && (
+                    <div className="mt-4 rounded-lg border border-border bg-muted px-4 py-3 not-typeset">
+                        <p className="text-sm font-medium">
+                            Progress: {progress.earnedCredits} of {progress.totalCredits} credits ({progress.percentage}%)
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                            {progress.mappedCourses} {progress.mappedCourses === 1 ? "course" : "courses"} counted toward degree requirements
+                        </p>
+                    </div>
+                )}
                 <StatusLegend />
             </header>
             <ProgressForm

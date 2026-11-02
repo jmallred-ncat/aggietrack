@@ -1,4 +1,4 @@
-import { StudentStanding } from "./generated/prisma/client";
+import { StudentStanding, UserRole } from "./generated/prisma/client";
 import { timingSafeEqual } from "node:crypto";
 import { info2025 } from "../prisma/seed/info-2025";
 import type { PlaceholderSeed } from "../prisma/seed/curriculum";
@@ -10,6 +10,13 @@ export type TestStudent = {
   standing: StudentStanding;
   /** Handbook terms that are already complete. Zero means the student has no prior coursework. */
   through: number;
+};
+
+export type TestAdvisor = {
+  email: string;
+  firstName: string;
+  lastName: string;
+  role: "ADVISOR";
 };
 
 export type FrozenCourse = {
@@ -36,9 +43,26 @@ export const testStudents: TestStudent[] = [
   { email: "it.late@example.test", firstName: "Riley", lastName: "Brooks", standing: StudentStanding.SENIOR, through: 6 },
 ];
 
+export const testAdvisors: TestAdvisor[] = [
+  { email: "advisor.1@example.test", firstName: "Sarah", lastName: "Martinez", role: "ADVISOR" },
+  { email: "advisor.2@example.test", firstName: "Michael", lastName: "Chen", role: "ADVISOR" },
+];
+
+export const testAccounts = [...testStudents, ...testAdvisors] as const;
+
 export function testStudentByEmail(email: string) {
   const normalized = email.trim().toLowerCase();
   return testStudents.find(student => student.email === normalized) ?? null;
+}
+
+export function testAdvisorByEmail(email: string) {
+  const normalized = email.trim().toLowerCase();
+  return testAdvisors.find(advisor => advisor.email === normalized) ?? null;
+}
+
+export function testAccountByEmail(email: string) {
+  const normalized = email.trim().toLowerCase();
+  return testAccounts.find(account => account.email === normalized) ?? null;
 }
 
 function slotKey(sequence: number, group: string, requiresLab: boolean) {
@@ -103,8 +127,8 @@ export function authorizeTestStudents(input: {
   if (expected.length !== actual.length || !timingSafeEqual(expected, actual)) {
     return { ok: false, status: 401, error: "The reset secret does not match." };
   }
-  if (input.requireEmail && !testStudentByEmail(input.email ?? "")) {
-    return { ok: false, status: 400, error: "That is not a test student." };
+  if (input.requireEmail && !testAccountByEmail(input.email ?? "")) {
+    return { ok: false, status: 400, error: "That is not a test account." };
   }
   return { ok: true };
 }
