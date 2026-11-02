@@ -16,6 +16,16 @@ export type Assignment = {
   reviewerOnly: boolean;
 };
 
+export const decisionFilters = [
+  { status: "Open", label: "Open", detail: "Still needs a decision" },
+  { status: "Approved", label: "Resolved", detail: "Approved" },
+  { status: "Deferred", label: "Deferred", detail: "Postponed" },
+] as const;
+
+export function decisionLabel(status: string) {
+  return decisionFilters.find(filter => filter.status === status)?.label ?? status;
+}
+
 export function assignedTo(user: { name: string; email: string }, stored: string | undefined) {
   if (!stored?.trim()) return false;
   const name = normalizePerson(user.name).trim().toLowerCase();

@@ -6,6 +6,7 @@ import { ac, admin as adminRole, advisor, student } from "./permissions";
 import { prisma } from "./prisma";
 
 const APP_ROLES = ["STUDENT", "ADVISOR", "ADMIN"] as const;
+const credentialTokenExpiresIn = 60 * 60;
 
 function resolveAppRole(role: unknown) {
     return APP_ROLES.includes(role as (typeof APP_ROLES)[number])
@@ -20,6 +21,8 @@ async function verificationUrlFor(email: string, request?: Request) {
     const token = await createEmailVerificationToken(
         process.env.BETTER_AUTH_SECRET ?? "",
         email,
+        undefined,
+        credentialTokenExpiresIn,
     );
     const origin = appUrlFromRequest(request);
     return `${origin}/api/auth/verify-email?token=${token}&callbackURL=${encodeURIComponent("/enter")}`;
@@ -81,6 +84,7 @@ export const auth = betterAuth({
     emailAndPassword: {
         enabled: true,
         requireEmailVerification: true,
+        resetPasswordTokenExpiresIn: credentialTokenExpiresIn,
         sendResetPassword: async ({ user, url }) => {
             await sendPasswordReset(user as MailUser, url);
         },
@@ -95,6 +99,7 @@ export const auth = betterAuth({
         },
     },
     emailVerification: {
+        expiresIn: credentialTokenExpiresIn,
         sendOnSignUp: true,
         sendOnSignIn: true,
         autoSignInAfterVerification: true,

@@ -94,7 +94,7 @@ export const guideGroups: GuideGroup[] = [
       { term: "Source gap or constraint", plain: "What is missing or unclear in the requirement, the product, or the rules." },
       { term: "Affected requirements", plain: "The requirements this decision changes." },
       { term: "Affected tests", plain: "The test cases this decision changes." },
-      { term: "Decision status", plain: "Open means the call is not made yet. Approved means it was accepted. Deferred means it was postponed.", labels: [{ section: "Risks & Decisions", label: "Status" }] },
+      { term: "Decision status", plain: "Open means the call is not made yet. Approved is the resolved state: the call was accepted. Deferred means it was postponed.", labels: [{ section: "Risks & Decisions", label: "Status" }] },
       { term: "Decision owner role", plain: "The people who need to make this call. More than one person can be selected." },
       { term: "Proposed control / decision", plain: "The suggested way to handle the risk." },
       { term: "Approved decision / evidence", plain: "What was decided, and the proof that it was accepted." },

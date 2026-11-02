@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { assignedTo, myWork } from "./assignments";
+import { assignedTo, decisionLabel, myWork } from "./assignments";
 import type { RecordRow, Workspace } from "./model";
 
 const jay = { name: "Jay Allred", email: "jay@example.test" };
@@ -27,6 +27,9 @@ test("my work keeps each person's tests, defects, and decisions", () => {
   assert.deepEqual(jays.tests.map(item => item.id), []);
   assert.deepEqual(jays.defects.map(item => item.id), ["D-02"]);
   assert.deepEqual(jays.decisions.map(item => item.id), ["Q-01"]);
+  assert.equal(decisionLabel("Approved"), "Resolved");
+  assert.equal(decisionLabel("Open"), "Open");
+  assert.equal(work.decisions.filter(item => decisionLabel(item.status) === "Resolved").map(item => item.id).join(), "Q-03");
 });
 
 function sample(): Workspace {

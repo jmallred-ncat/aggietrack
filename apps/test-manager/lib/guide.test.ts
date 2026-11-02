@@ -7,6 +7,7 @@ test("jargon fields have a plain explanation and everyday labels stay quiet", ()
   assert.match(explain("Tests", "Status")?.plain ?? "", /Not run/);
   assert.match(explain("Defects", "Status")?.plain ?? "", /Closed/);
   assert.match(explain("Risks & Decisions", "Status")?.plain ?? "", /Deferred/);
+  assert.match(explain("Risks & Decisions", "Status")?.plain ?? "", /resolved state/);
   assert.equal(explain("Tests", "Summary"), undefined);
   assert.equal(explain("Tests", "Assignee"), undefined);
   assert.equal(explain("Course Catalog", "Credits"), undefined);
