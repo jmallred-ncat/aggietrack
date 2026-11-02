@@ -106,36 +106,47 @@ async function writeFrozen(userId: string, student: TestStudent, catalogYearId: 
     // Generate transcript entries with custom grades for test scenarios
     // Note: Taylor Morgan and Casey Parker's specific courses are handled in their special sections
     // to avoid any countable-grade-followed-by-another-attempt sequences
-    const entries = courses.map(course => {
+    const entries = courses.map((course, idx) => {
       const row = transcriptRow(terms, byCode, course);
       const code = `${course.subject} ${course.number}`;
-      let grade = Grade.C;
       let status = TranscriptStatus.COMPLETED;
+      
+      // Default varied grade (no student should default to all C)
+      // This ensures even Avery Cole (if they had courses) would have varied grades
+      const defaultHash = (code.length + idx) % 6;
+      let grade: Grade = defaultHash === 0 ? Grade.A_MINUS : 
+                        defaultHash === 1 ? Grade.B_PLUS : 
+                        defaultHash === 2 ? Grade.B : 
+                        defaultHash === 3 ? Grade.B_MINUS : 
+                        defaultHash === 4 ? Grade.C_PLUS : 
+                        Grade.B; // B as final fallback, not C
 
-      // Jordan Hale: varied passing grades across plus/minus scale + current term in-progress
+      // Jordan Hale: varied mid-range grades (GPA ~3.0-3.3 range)
       if (student.email === "it.mid@example.test") {
-        const hash = (code.length + course.sequence) % 7;
+        const hash = (code.length + course.sequence) % 8;
         grade = hash === 0 ? Grade.A : 
                 hash === 1 ? Grade.A_MINUS : 
                 hash === 2 ? Grade.B_PLUS : 
                 hash === 3 ? Grade.B : 
                 hash === 4 ? Grade.B_MINUS : 
                 hash === 5 ? Grade.C_PLUS : 
-                Grade.C;
+                hash === 6 ? Grade.B :  // Extra B instead of C
+                Grade.C; // C only ~12.5% of the time
         // Term 4 courses (current term for junior) are in progress
         if (course.sequence === 4) {
           status = TranscriptStatus.IN_PROGRESS;
-          grade = Grade.C; // Will be null in the actual entry
+          grade = Grade.B; // Will be null in the actual entry
         }
       }
-      // Riley Brooks: strong grades with plus/minus variation + transfer credits
+      // Riley Brooks: strong grades (GPA ~3.5-3.8 range)
       else if (student.email === "it.late@example.test") {
-        const hash = (code.length + course.sequence) % 5;
+        const hash = (code.length + course.sequence) % 6;
         grade = hash === 0 ? Grade.A : 
-                hash === 1 ? Grade.A_MINUS : 
-                hash === 2 ? Grade.B_PLUS : 
-                hash === 3 ? Grade.B : 
-                Grade.A;
+                hash === 1 ? Grade.A : 
+                hash === 2 ? Grade.A_MINUS : 
+                hash === 3 ? Grade.B_PLUS : 
+                hash === 4 ? Grade.B : 
+                Grade.A_MINUS; // No C grades
       }
       // Alex Rivera: diverse grades scenario (W, I, F are non-countable, so no issue with "attempts")
       else if (student.email === "it.diverse-grades@example.test") {
@@ -145,19 +156,23 @@ async function writeFrozen(userId: string, student: TestStudent, catalogYearId: 
         else if (code === "CST 110") grade = Grade.I;
         else if (code === "HIST 207") grade = Grade.F;
         else if (code === "PSYC 101") grade = Grade.A;
-        else grade = Grade.B;
+        else {
+          // Other courses: varied B range, not all B
+          const hash = idx % 4;
+          grade = hash === 0 ? Grade.B_PLUS : 
+                  hash === 1 ? Grade.B : 
+                  hash === 2 ? Grade.B_MINUS : 
+                  Grade.B;
+        }
       }
-      // Morgan Lee: over 120 credits - excellent grades with plus/minus + transfer credits
+      // Morgan Lee: excellent grades (GPA ~3.7-3.9 range)
       else if (student.email === "it.over-credits@example.test") {
-        const hash = code.charCodeAt(0) % 4;
+        const hash = code.charCodeAt(0) % 5;
         grade = hash === 0 ? Grade.A : 
-                hash === 1 ? Grade.A_MINUS : 
-                hash === 2 ? Grade.B_PLUS : 
-                Grade.A;
-      }
-      // Default for others
-      else {
-        grade = Grade.C;
+                hash === 1 ? Grade.A : 
+                hash === 2 ? Grade.A_MINUS : 
+                hash === 3 ? Grade.B_PLUS : 
+                Grade.A; // No C grades, mostly A
       }
 
       return {
@@ -184,12 +199,21 @@ async function writeFrozen(userId: string, student: TestStudent, catalogYearId: 
         const cst120Course = term1?.courses.find(c => c.course?.id === cst120.id);
         const cst112Course = term2?.courses.find(c => c.course?.id === cst112.id);
         
-        // Add base courses from terms 1-2 with decent grades, EXCLUDING CST 112 and CST 120
+        // Add base courses from terms 1-2 with varied grades, EXCLUDING CST 112 and CST 120
         const baseCourses = entries.filter(e => 
           e.courseId !== cst112.id && e.courseId !== cst120.id
         );
         await tx.transcriptEntry.createMany({
-          data: baseCourses.map(e => ({ ...e, grade: e.grade || Grade.B })),
+          data: baseCourses.map((e, idx) => {
+            // Vary base grades: A, A-, B+, B, B-
+            const hash = idx % 5;
+            const variedGrade = hash === 0 ? Grade.A : 
+                               hash === 1 ? Grade.A_MINUS : 
+                               hash === 2 ? Grade.B_PLUS : 
+                               hash === 3 ? Grade.B : 
+                               Grade.B_MINUS;
+            return { ...e, grade: e.grade || variedGrade };
+          }),
         });
         
         // CST 120: SINGLE attempt with D (below C minimum for Major Core) - NOT RETAKEN
@@ -247,10 +271,18 @@ async function writeFrozen(userId: string, student: TestStudent, catalogYearId: 
         const term1 = terms.find(t => t.sequence === 1);
         const cst130Course = term1?.courses.find(c => c.course?.id === cst130.id);
         
-        // Add base courses from terms 1-2 with good grades, EXCLUDING CST 130
+        // Add base courses from terms 1-2 with varied grades, EXCLUDING CST 130
         const baseCourses = entries.filter(e => e.courseId !== cst130.id);
         await tx.transcriptEntry.createMany({
-          data: baseCourses.map(e => ({ ...e, grade: e.grade || Grade.B_PLUS })),
+          data: baseCourses.map((e, idx) => {
+            // Vary base grades: A, A-, B+, B
+            const hash = idx % 4;
+            const variedGrade = hash === 0 ? Grade.A : 
+                               hash === 1 ? Grade.A_MINUS : 
+                               hash === 2 ? Grade.B_PLUS : 
+                               Grade.B;
+            return { ...e, grade: e.grade || variedGrade };
+          }),
         });
         
         // CST 130: W (withdrew first attempt), then A (retake after W)

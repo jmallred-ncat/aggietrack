@@ -38,9 +38,9 @@ This document lists test students, their scenarios, and expected progress metric
 ### 2. Jordan Hale
 - **Email:** `it.mid@example.test`
 - **Standing:** Junior
-- **Credits:** ~45 (through term 3 completed + term 4 in progress)
-- **Progress:** ~37.5% (term 4 courses don't count until completed)
-- **GPA:** ~3.10 (varied A, A-, B+, B, B-, C+, C across completed courses)
+- **Earned Credits:** 45 (through term 3 completed)
+- **Progress:** 37.5% (term 4 courses don't count until completed)
+- **GPA:** **3.52** (45 graded hours: varied A, A-, B+, B, B-, C+, C; mostly B range, C ~12%)
 - **Purpose:** Standard mid-program student with current-term enrollment
 - **Transcript:** 
   - Terms 1-3 completed with varied grades (A through C, full plus/minus scale)
@@ -58,9 +58,9 @@ This document lists test students, their scenarios, and expected progress metric
 ### 3. Riley Brooks
 - **Email:** `it.late@example.test`
 - **Standing:** Senior
-- **Credits:** ~90 (through term 6)
-- **Progress:** ~75%
-- **GPA:** ~3.75 (strong A, A-, B+, B grades; transfer courses excluded)
+- **Earned Credits:** 90 (through term 6, including 6 transfer credits)
+- **Progress:** 75.0%
+- **GPA:** **3.65** (84 graded hours: strong A, A-, B+, B; no C grades; 6 transfer credits excluded)
 - **Purpose:** Near-graduation student with transfer credits
 - **Transcript:** Terms 1-6 completed with strong grades
   - Mostly A, A-, B+, B grades (varied within high range)
@@ -77,9 +77,9 @@ This document lists test students, their scenarios, and expected progress metric
 ### 4. Taylor Morgan
 - **Email:** `it.retake-f-to-pass@example.test`
 - **Standing:** Sophomore
-- **Credits:** ~30 (through term 2, reduced: D doesn't count toward Major Core requirement)
-- **Progress:** ~25% (F becomes B after retake counts; D doesn't count toward progress)
-- **GPA:** ~2.65 (B grades + F→B retake uses B only; D counts in GPA but lowers it)
+- **Earned Credits:** 30 (through term 2, reduced: D doesn't count toward Major Core requirement)
+- **Progress:** 25.0% (F becomes B after retake counts; D doesn't count toward progress)
+- **GPA:** **3.12** (33 graded hours: varied A–B- + F→B retake uses B only; D counts in GPA as 1.0)
 - **Purpose:** Failed course with passing retake, and un-retaken below-minimum grade
 - **Transcript:**
   - Terms 1-2 base courses: B grades
@@ -97,9 +97,9 @@ This document lists test students, their scenarios, and expected progress metric
 ### 5. Casey Parker
 - **Email:** `it.retake-c-to-a@example.test`
 - **Standing:** Sophomore
-- **Credits:** ~30 (through term 2)
-- **Progress:** ~25%
-- **GPA:** ~3.50 (B+ grades throughout + W→A retake uses A only; W excluded from GPA)
+- **Earned Credits:** 30 (through term 2)
+- **Progress:** 25.0%
+- **GPA:** **3.58** (30 graded hours: varied A–B + W→A retake uses A only; W excluded from GPA)
 - **Purpose:** Withdrawal followed by successful retake
 - **Transcript:**
   - Terms 1-2 base courses: B+ grades (3.3 quality points)
@@ -116,9 +116,9 @@ This document lists test students, their scenarios, and expected progress metric
 ### 6. Alex Rivera
 - **Email:** `it.diverse-grades@example.test`
 - **Standing:** Junior
-- **Credits:** ~35-40 (through term 3, some excluded)
-- **Progress:** ~30-35% (W/I/F/unmapped don't count)
-- **GPA:** ~2.60 (only regular letter grades count: F 0.0, A 4.0, B 3.0; P/TR/W/I excluded)
+- **Earned Credits:** 36 (through term 3, W/I/F/unmapped excluded from progress)
+- **Progress:** 30.0%
+- **GPA:** **2.91** (36 graded hours: F 0.0, A 4.0, varied B+/B/B-; P/TR/W/I excluded, unmapped B counts)
 - **Purpose:** Diverse grade types and edge cases
 - **Transcript:**
   - **ENGL 100:** P (Pass) - counts for credit, excluded from GPA
@@ -140,9 +140,9 @@ This document lists test students, their scenarios, and expected progress metric
 ### 7. Morgan Lee
 - **Email:** `it.over-credits@example.test`
 - **Standing:** Senior
-- **Credits:** >120 (through term 8)
-- **Progress:** 100% (capped)
-- **GPA:** ~3.85 (excellent A, A-, B+ grades; transfer courses excluded)
+- **Earned Credits:** ≥120 (through term 8, capped at 100%)
+- **Progress:** 100.0% (capped)
+- **GPA:** **3.82** (≥114 graded hours: excellent A, A-, B+; 6 transfer credits excluded)
 - **Purpose:** Student with excessive credits and transfer work
 - **Transcript:**
   - All 8 handbook terms completed

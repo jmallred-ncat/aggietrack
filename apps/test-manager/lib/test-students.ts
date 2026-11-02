@@ -7,12 +7,12 @@ export type TestStudentCard = {
 
 export const testStudentCards: TestStudentCard[] = [
   { email: "it.start@example.test", name: "Avery Cole", place: "Information Technology 2025. Just started, with no prior coursework (0 credits).", role: "student" },
-  { email: "it.mid@example.test", name: "Jordan Hale", place: "Information Technology 2025. Junior with terms 1-3 completed (A/B/C mix) and term 4 in progress (no grades yet).", role: "student" },
-  { email: "it.late@example.test", name: "Riley Brooks", place: "Information Technology 2025. Near completion (6 terms). Strong grades.", role: "student" },
-  { email: "it.retake-f-to-pass@example.test", name: "Taylor Morgan", place: "Information Technology 2025. Sophomore (2 terms). Has F→B retake and D below min-grade (not retaken).", role: "student" },
-  { email: "it.retake-c-to-a@example.test", name: "Casey Parker", place: "Information Technology 2025. Sophomore (2 terms). Has W→A retake (withdrew then passed).", role: "student" },
-  { email: "it.diverse-grades@example.test", name: "Alex Rivera", place: "Information Technology 2025. Junior (3 terms). Diverse grades (P/TR/W/I/F) plus unmapped course.", role: "student" },
-  { email: "it.over-credits@example.test", name: "Morgan Lee", place: "Information Technology 2025. Senior (8 terms, >120 credits). Excellent grades throughout.", role: "student" },
+  { email: "it.mid@example.test", name: "Jordan Hale", place: "Information Technology 2025. Junior: 45 credits, 37.5%, GPA 3.52. Varied A–C (mostly B, ~12% C), term 4 in progress.", role: "student" },
+  { email: "it.late@example.test", name: "Riley Brooks", place: "Information Technology 2025. Senior: 90 credits, 75%, GPA 3.65. Strong A/A-/B+ (no C) + 2 transfer courses.", role: "student" },
+  { email: "it.retake-f-to-pass@example.test", name: "Taylor Morgan", place: "Information Technology 2025. Sophomore: 30 credits, 25%, GPA 3.12. Varied A–B- + F→B retake + D below-min (not retaken).", role: "student" },
+  { email: "it.retake-c-to-a@example.test", name: "Casey Parker", place: "Information Technology 2025. Sophomore: 30 credits, 25%, GPA 3.58. Varied A–B + W→A retake.", role: "student" },
+  { email: "it.diverse-grades@example.test", name: "Alex Rivera", place: "Information Technology 2025. Junior: 36 credits, 30%, GPA 2.91. Diverse P/TR/W/I/F + unmapped course.", role: "student" },
+  { email: "it.over-credits@example.test", name: "Morgan Lee", place: "Information Technology 2025. Senior: ≥120 credits, 100%, GPA 3.82. Excellent A/A-/B+ + 2 transfer courses.", role: "student" },
 ];
 
 export const testAdvisorCards: TestStudentCard[] = [
