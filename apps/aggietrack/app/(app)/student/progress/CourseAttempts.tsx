@@ -79,6 +79,10 @@ export function CourseAttempts({
             } else {
                 const message = asInProgress ? "Marked as in progress" : "Attempt added";
                 toast.add({ type: "success", title: message });
+                
+                // Add the new entry to local state so it renders immediately
+                setLocalAttempts(prev => [...prev, result.entry]);
+                
                 onUpdate?.();
             }
         });

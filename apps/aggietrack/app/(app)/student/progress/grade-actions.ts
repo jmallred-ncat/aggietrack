@@ -119,7 +119,7 @@ export async function addTranscriptAttempt(input: unknown) {
     }
 
     // Create the new transcript entry
-    await prisma.transcriptEntry.create({
+    const newEntry = await prisma.transcriptEntry.create({
         data: {
             studentId: profile.id,
             courseId,
@@ -132,13 +132,29 @@ export async function addTranscriptAttempt(input: unknown) {
             source: grade === Grade.TR ? "TRANSFER" : "NCAT",
             recommendedTermCourseId,
         },
+        select: {
+            id: true,
+            grade: true,
+            status: true,
+            source: true,
+            createdAt: true,
+        },
     });
 
     revalidatePath("/student/progress");
     revalidatePath("/student", "layout");
     revalidatePath("/student");
 
-    return { success: true as const };
+    return { 
+        success: true as const, 
+        entry: {
+            id: newEntry.id,
+            grade: newEntry.grade,
+            status: newEntry.status,
+            source: newEntry.source,
+            createdAt: newEntry.createdAt,
+        },
+    };
 }
 
 /**
