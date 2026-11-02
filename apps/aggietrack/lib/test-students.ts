@@ -1,4 +1,4 @@
-import { StudentStanding, UserRole } from "./generated/prisma/client";
+import { StudentStanding } from "./generated/prisma/client";
 import { timingSafeEqual } from "node:crypto";
 import { info2025 } from "../prisma/seed/info-2025";
 import type { PlaceholderSeed } from "../prisma/seed/curriculum";

@@ -17,11 +17,15 @@ function listedCourses() {
   return new Set(info2025.groups.flatMap(group => group.courses ?? []).map(courseKey));
 }
 
-test("the three students are Information Technology at the start, the middle, and near the end", () => {
+test("test students include core scenarios and grade test cases", () => {
   assert.deepEqual(testStudents.map(student => [student.email, student.standing, student.through]), [
     ["it.start@example.test", StudentStanding.FRESHMAN, 0],
     ["it.mid@example.test", StudentStanding.JUNIOR, 4],
     ["it.late@example.test", StudentStanding.SENIOR, 6],
+    ["it.retake-f-to-pass@example.test", StudentStanding.SOPHOMORE, 2],
+    ["it.retake-c-to-a@example.test", StudentStanding.SOPHOMORE, 2],
+    ["it.diverse-grades@example.test", StudentStanding.JUNIOR, 3],
+    ["it.over-credits@example.test", StudentStanding.SENIOR, 8],
   ]);
   assert.equal(testStudentByEmail(" IT.Mid@example.test ")?.email, "it.mid@example.test");
   assert.equal(testStudentByEmail("someone@example.test"), null);
