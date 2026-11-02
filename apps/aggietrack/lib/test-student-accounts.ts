@@ -112,20 +112,30 @@ async function writeFrozen(userId: string, student: TestStudent, catalogYearId: 
       let grade = Grade.C;
       let status = TranscriptStatus.COMPLETED;
 
-      // Jordan Hale: realistic passing grades (mostly Bs and Cs) + current term in-progress
+      // Jordan Hale: varied passing grades across plus/minus scale + current term in-progress
       if (student.email === "it.mid@example.test") {
-        const hash = (code.length + course.sequence) % 3;
-        grade = hash === 0 ? Grade.A : hash === 1 ? Grade.B : Grade.C;
+        const hash = (code.length + course.sequence) % 7;
+        grade = hash === 0 ? Grade.A : 
+                hash === 1 ? Grade.A_MINUS : 
+                hash === 2 ? Grade.B_PLUS : 
+                hash === 3 ? Grade.B : 
+                hash === 4 ? Grade.B_MINUS : 
+                hash === 5 ? Grade.C_PLUS : 
+                Grade.C;
         // Term 4 courses (current term for junior) are in progress
         if (course.sequence === 4) {
           status = TranscriptStatus.IN_PROGRESS;
           grade = Grade.C; // Will be null in the actual entry
         }
       }
-      // Riley Brooks: strong grades (mostly As and Bs)
+      // Riley Brooks: strong grades with plus/minus variation + transfer credits
       else if (student.email === "it.late@example.test") {
-        const hash = (code.length + course.sequence) % 4;
-        grade = hash === 0 ? Grade.A : hash === 1 ? Grade.A : hash === 2 ? Grade.B : Grade.B_PLUS;
+        const hash = (code.length + course.sequence) % 5;
+        grade = hash === 0 ? Grade.A : 
+                hash === 1 ? Grade.A_MINUS : 
+                hash === 2 ? Grade.B_PLUS : 
+                hash === 3 ? Grade.B : 
+                Grade.A;
       }
       // Alex Rivera: diverse grades scenario (W, I, F are non-countable, so no issue with "attempts")
       else if (student.email === "it.diverse-grades@example.test") {
@@ -137,10 +147,13 @@ async function writeFrozen(userId: string, student: TestStudent, catalogYearId: 
         else if (code === "PSYC 101") grade = Grade.A;
         else grade = Grade.B;
       }
-      // Morgan Lee: over 120 credits - excellent grades
+      // Morgan Lee: over 120 credits - excellent grades with plus/minus + transfer credits
       else if (student.email === "it.over-credits@example.test") {
-        const hash = code.charCodeAt(0) % 5;
-        grade = hash === 0 ? Grade.A : hash === 1 ? Grade.A_MINUS : hash === 2 ? Grade.B_PLUS : hash === 3 ? Grade.B : Grade.A;
+        const hash = code.charCodeAt(0) % 4;
+        grade = hash === 0 ? Grade.A : 
+                hash === 1 ? Grade.A_MINUS : 
+                hash === 2 ? Grade.B_PLUS : 
+                Grade.A;
       }
       // Default for others
       else {
@@ -300,9 +313,34 @@ async function writeFrozen(userId: string, student: TestStudent, catalogYearId: 
       }
     }
 
+    // Add transfer credits for Riley Brooks and Morgan Lee before creating entries
+    if (student.email === "it.late@example.test" || student.email === "it.over-credits@example.test") {
+      // Find ENGL 100 and MATH 125 to mark as transfer
+      const transferCourses = entries.filter(e => {
+        const course = catalog.find(c => c.id === e.courseId);
+        return course && ((course.subject === "ENGL" && course.number === "100") || 
+                         (course.subject === "MATH" && course.number === "125"));
+      });
+      
+      // Mark these as transfer credits (grade TR, source TRANSFER)
+      const transferEntries = transferCourses.map(e => ({
+        ...e,
+        grade: Grade.TR,
+        source: TranscriptSource.TRANSFER,
+      }));
+      
+      // Non-transfer entries
+      const nonTransferEntries = entries.filter(e => {
+        const course = catalog.find(c => c.id === e.courseId);
+        return !course || !((course.subject === "ENGL" && course.number === "100") || 
+                           (course.subject === "MATH" && course.number === "125"));
+      });
+      
+      await tx.transcriptEntry.createMany({ data: [...nonTransferEntries, ...transferEntries] });
+    }
     // Default: create all entries for students without special retake handling
-    // (This runs for Jordan Hale, Riley Brooks, Alex Rivera, Morgan Lee, and Avery Cole)
-    if (
+    // (This runs for Jordan Hale, Alex Rivera, and Avery Cole)
+    else if (
       student.email !== "it.retake-f-to-pass@example.test" &&
       student.email !== "it.retake-c-to-a@example.test"
     ) {

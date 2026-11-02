@@ -7,7 +7,9 @@ import { CircularProgress } from "@/components/ui/circular-progress";
 import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty";
 import { academicTermLabel, semesterInSession } from "@/lib/academic-term";
 import { computeDegreeProgress } from "@/lib/degree-progress";
+import { computeGpa } from "@/lib/gpa";
 import { prisma } from "@/lib/prisma";
+import { getTranscript } from "@/lib/transcript";
 import { formatProgramName } from "@/lib/program";
 import { getSessionUser, requireStudentProfile } from "@/lib/student";
 import { CheckSquareIcon, FlaskIcon, GraduationCapIcon, MedalIcon, NoteIcon } from "@phosphor-icons/react/dist/ssr";
@@ -18,7 +20,7 @@ export default async function Dashboard() {
     const profile = await requireStudentProfile();
 
     const now = new Date();
-    const [terms, plans, progress] = await Promise.all([
+    const [terms, plans, progress, transcript] = await Promise.all([
         prisma.academicTerm.findMany({ orderBy: { startsOn: "asc" } }),
         prisma.plannedTerm.findMany({
             where: { studentId: profile.id },
@@ -42,7 +44,9 @@ export default async function Dashboard() {
             },
         }),
         computeDegreeProgress(profile.id),
+        getTranscript(),
     ]);
+    const gpa = computeGpa(transcript);
     const semester = semesterInSession(terms, now);
     const semesterPlan = plans
         .filter((plan) =>
@@ -86,10 +90,10 @@ export default async function Dashboard() {
             </div>
             <div className="flex flex-col items-center w-full rounded-lg bg-muted p-4 border border-border space-y-2 not-typeset">
                 <span className="text-sm font-semibold">Cumulative GPA</span>
-                <h4 className="text-6xl font-bold flex-1 place-content-center">---</h4>
+                <h4 className="text-6xl font-bold flex-1 place-content-center">{gpa !== null ? gpa.toFixed(2) : "—"}</h4>
                 <div className="flex items-center justify-center">
                     <MedalIcon weight="fill" size={24} className="text-primary mr-2" />
-                    <Badge variant="default">To Be Determined</Badge>
+                    <Badge variant="default">{gpa !== null ? "Based on completed courses" : "No GPA yet"}</Badge>
                 </div>
             </div>
         </section>

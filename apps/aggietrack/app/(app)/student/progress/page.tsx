@@ -1,10 +1,12 @@
+import { Badge } from "@/components/ui/badge";
 import { getProgressSlotCourses, type ProgressSlotCourse } from "@/lib/catalog";
 import { computeDegreeProgress } from "@/lib/degree-progress";
 import type { TranscriptSource, TranscriptStatus } from "@/lib/generated/prisma/client";
+import { computeGpa } from "@/lib/gpa";
 import { getCurriculumRecommendations, planPosition, requirementGroupTitle, requirementSlotBadge } from "@/lib/planner";
 import { hasConfirmedStart, requireStudentProfile } from "@/lib/student";
 import { getTranscript, progressStatusFromEntry, type ProgressStatus } from "@/lib/transcript";
-import { ArrowsLeftRightIcon, CheckCircleIcon } from "@phosphor-icons/react/dist/ssr";
+import { ArrowsLeftRightIcon, CheckCircleIcon, MedalIcon } from "@phosphor-icons/react/dist/ssr";
 import ProgressForm, { type ProgressTerm, type ProgressYear } from "./ProgressForm";
 
 const emptySlot = {
@@ -55,6 +57,7 @@ export default async function ProgressPage() {
         getProgressSlotCourses(),
         computeDegreeProgress(profile.id),
     ]);
+    const gpa = computeGpa(transcript);
 
     const terms: Array<ProgressTerm & { yearLabel: string }> = [...curriculum]
         .sort((a, b) => a.sequence - b.sequence)
@@ -210,12 +213,26 @@ export default async function ProgressPage() {
                 <p className="text-sm text-muted-foreground max-w-prose w-full text-balance">AggieTrack needs the courses you have already completed before you can continue. Mark those courses below, or say you have no prior coursework.</p>
                 {progress.earnedCredits > 0 && (
                     <div className="mt-4 rounded-lg border border-border bg-muted px-4 py-3 not-typeset">
-                        <p className="text-sm font-medium">
-                            Progress: {progress.earnedCredits} of {progress.totalCredits} credits ({progress.percentage}%)
-                        </p>
-                        <p className="text-xs text-muted-foreground mt-1">
-                            {progress.mappedCourses} {progress.mappedCourses === 1 ? "course" : "courses"} counted toward degree requirements
-                        </p>
+                        <div className="flex flex-wrap gap-4 items-start">
+                            <div className="flex-1 min-w-[200px]">
+                                <p className="text-sm font-medium">
+                                    Progress: {progress.earnedCredits} of {progress.totalCredits} credits ({progress.percentage}%)
+                                </p>
+                                <p className="text-xs text-muted-foreground mt-1">
+                                    {progress.mappedCourses} {progress.mappedCourses === 1 ? "course" : "courses"} counted toward degree requirements
+                                </p>
+                            </div>
+                            <div className="flex flex-col items-start rounded-lg bg-background px-3 py-2 border border-border">
+                                <span className="text-xs font-medium text-muted-foreground">Cumulative GPA</span>
+                                <div className="flex items-center gap-2 mt-1">
+                                    <MedalIcon weight="fill" size={18} className="text-primary" />
+                                    <span className="text-xl font-bold">{gpa !== null ? gpa.toFixed(2) : "—"}</span>
+                                </div>
+                                <Badge variant="secondary" className="mt-1.5 text-xs">
+                                    {gpa !== null ? "Completed courses" : "No GPA yet"}
+                                </Badge>
+                            </div>
+                        </div>
                     </div>
                 )}
                 <StatusLegend />

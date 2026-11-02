@@ -40,66 +40,75 @@ This document lists test students, their scenarios, and expected progress metric
 - **Standing:** Junior
 - **Credits:** ~45 (through term 3 completed + term 4 in progress)
 - **Progress:** ~37.5% (term 4 courses don't count until completed)
+- **GPA:** ~3.10 (varied A, A-, B+, B, B-, C+, C across completed courses)
 - **Purpose:** Standard mid-program student with current-term enrollment
 - **Transcript:** 
-  - Terms 1-3 completed with realistic grades (A/B/C mix)
-  - **Term 4 courses: IN_PROGRESS** (no final grades yet)
-  - Mix of A (33%), B (33%), C (33%) for completed courses
+  - Terms 1-3 completed with varied grades (A through C, full plus/minus scale)
+  - **Term 4 courses: IN_PROGRESS** (no final grades yet, excluded from GPA)
+  - No transfer credits
   - Represents typical student mid-semester
 - **Tests:**
   - ✅ **In-progress courses** (term 4, no grades)
-  - In-progress excluded from earned credits
+  - ✅ **Varied plus/minus grades** (A, A-, B+, B, B-, C+, C)
+  - In-progress excluded from earned credits and GPA
   - In-progress courses don't block prerequisites
   - Standard progress tracking
   - Mid-program completion
-  - Realistic grade distribution
 
 ### 3. Riley Brooks
 - **Email:** `it.late@example.test`
 - **Standing:** Senior
 - **Credits:** ~90 (through term 6)
 - **Progress:** ~75%
-- **Purpose:** Near-graduation student
+- **GPA:** ~3.75 (strong A, A-, B+, B grades; transfer courses excluded)
+- **Purpose:** Near-graduation student with transfer credits
 - **Transcript:** Terms 1-6 completed with strong grades
-  - Mostly A and B+ grades (50% A, 50% B/B+)
+  - Mostly A, A-, B+, B grades (varied within high range)
+  - **ENGL 100 and MATH 125: Transfer credits (TR)** - earn credit, but excluded from GPA
   - All courses have explicit grades
-  - Represents high-performing student
+  - Represents high-performing student with transfer work
 - **Tests:**
+  - ✅ **Transfer credits** (TR grade, source TRANSFER, excluded from GPA)
   - Late-stage progress
   - Near-complete curriculum
   - High GPA scenario
+  - Plus/minus grade variation
 
 ### 4. Taylor Morgan
 - **Email:** `it.retake-f-to-pass@example.test`
 - **Standing:** Sophomore
-- **Credits:** TBD (through term 2, reduced due to F and below-min)
-- **Progress:** TBD% (reduced: F becomes B after retake, D doesn't count)
+- **Credits:** ~30 (through term 2, reduced: D doesn't count toward Major Core requirement)
+- **Progress:** ~25% (F becomes B after retake counts; D doesn't count toward progress)
+- **GPA:** ~2.65 (B grades + F→B retake uses B only; D counts in GPA but lowers it)
 - **Purpose:** Failed course with passing retake, and un-retaken below-minimum grade
 - **Transcript:**
   - Terms 1-2 base courses: B grades
-  - **CST 112:** F (first attempt in term 2), B (retake) - demonstrates F→pass logic
-  - **CST 120:** D - **BELOW minimum grade** (C required for Major Core) - **NOT RETAKEN**
+  - **CST 112:** F (first attempt), B (retake) - only B counts in GPA (repeat rule)
+  - **CST 120:** D - **BELOW minimum** (C required for Major Core) - **NOT RETAKEN** - counts in GPA but not progress
   - All courses have explicit grades
   - **Realistic:** Only retakes after F (non-passing grade)
 - **Tests:**
-  - ✅ **F then passing retake** (realistic: failed, then passed)
-  - ✅ **Below-min grade not retaken** (D where C required, permanent example)
+  - ✅ **F then passing retake** (realistic: failed, then passed; only B counts in GPA)
+  - ✅ **Below-min grade not retaken** (D where C required; counts in GPA, not progress)
+  - ✅ **GPA includes D** (quality points 1.0, lowers GPA)
   - Best attempt selection (B counts, F doesn't)
   - Grade requirement enforcement (D doesn't count toward progress)
 
 ### 5. Casey Parker
 - **Email:** `it.retake-c-to-a@example.test`
 - **Standing:** Sophomore
-- **Credits:** TBD (through term 2)
-- **Progress:** TBD%
+- **Credits:** ~30 (through term 2)
+- **Progress:** ~25%
+- **GPA:** ~3.50 (B+ grades throughout + W→A retake uses A only; W excluded from GPA)
 - **Purpose:** Withdrawal followed by successful retake
 - **Transcript:**
-  - Terms 1-2 base courses: B+ grades
-  - **CST 130:** W (withdrew first attempt), A (retake and passed)
+  - Terms 1-2 base courses: B+ grades (3.3 quality points)
+  - **CST 130:** W (withdrew first attempt), A (retake and passed) - only A counts in GPA, W excluded
   - All courses have explicit grades
   - **Realistic:** Only retakes after W (withdrew, non-countable)
 - **Tests:**
-  - ✅ **W then A retake** (realistic: withdrew, then passed on retry)
+  - ✅ **W then A retake** (realistic: withdrew, then passed; only A counts in GPA, W excluded)
+  - ✅ **GPA excludes W** (W contributes no hours or points)
   - Best grade selection logic (A counts, W doesn't)
   - Multiple attempts display
   - **No unrealistic pass→retake** (e.g., C→A would be unrealistic)
@@ -108,21 +117,23 @@ This document lists test students, their scenarios, and expected progress metric
 - **Email:** `it.diverse-grades@example.test`
 - **Standing:** Junior
 - **Credits:** ~35-40 (through term 3, some excluded)
-- **Progress:** ~30-35% (some courses don't count)
+- **Progress:** ~30-35% (W/I/F/unmapped don't count)
+- **GPA:** ~2.60 (only regular letter grades count: F 0.0, A 4.0, B 3.0; P/TR/W/I excluded)
 - **Purpose:** Diverse grade types and edge cases
 - **Transcript:**
-  - **ENGL 100:** P (Pass)
-  - **MATH 125:** TR (Transfer)
-  - **CST 100:** W (Withdrawn)
-  - **CST 110:** I (Incomplete)
-  - **HIST 207:** F (Failed)
-  - **PSYC 101:** A (regular grade)
-  - **JOUR 101:** B - **UNMAPPED COURSE** (not on degree plan)
-  - Other courses: mostly B
+  - **ENGL 100:** P (Pass) - counts for credit, excluded from GPA
+  - **MATH 125:** TR (Transfer) - counts for credit, excluded from GPA
+  - **CST 100:** W (Withdrawn) - excluded from credit and GPA
+  - **CST 110:** I (Incomplete) - excluded from credit and GPA
+  - **HIST 207:** F (Failed) - 0.0 quality points, counts in GPA (lowers it)
+  - **PSYC 101:** A (regular grade) - 4.0 quality points
+  - **JOUR 101:** B - **UNMAPPED COURSE** (not on degree plan, but counts in GPA)
+  - Other courses: mostly B (3.0 quality points)
   - All courses have explicit grades
 - **Tests:**
-  - ✅ **P/TR/W/I/F grades**
-  - ✅ **Unmapped course** (doesn't count toward progress)
+  - ✅ **P/TR/W/I/F grades** (P/TR/W/I excluded from GPA; F counts as 0.0)
+  - ✅ **Unmapped course** (doesn't count toward progress, but counts in GPA)
+  - ✅ **F lowers GPA** (0.0 quality points but counts in hours)
   - Special grade handling
   - Edge cases
 
@@ -131,16 +142,20 @@ This document lists test students, their scenarios, and expected progress metric
 - **Standing:** Senior
 - **Credits:** >120 (through term 8)
 - **Progress:** 100% (capped)
-- **Purpose:** Student with excessive credits
+- **GPA:** ~3.85 (excellent A, A-, B+ grades; transfer courses excluded)
+- **Purpose:** Student with excessive credits and transfer work
 - **Transcript:**
   - All 8 handbook terms completed
-  - Excellent grades throughout (mostly A and A-)
+  - Excellent grades throughout (A, A-, B+)
+  - **ENGL 100 and MATH 125: Transfer credits (TR)** - earn credit, but excluded from GPA
   - All courses have explicit grades
 - **Tests:**
   - ✅ **Transcript over 120 credits**
+  - ✅ **Transfer credits** (TR grade, source TRANSFER, excluded from GPA)
   - Progress capping at 100%
   - Handling extra coursework
   - Complete curriculum
+  - High GPA with plus/minus grades
 
 ## Course Matching Multiple Requirements
 
