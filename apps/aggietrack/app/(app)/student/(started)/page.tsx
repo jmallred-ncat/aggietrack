@@ -91,23 +91,15 @@ export default async function Dashboard() {
             </div>
             <div className="flex flex-col items-center w-full rounded-lg bg-muted p-4 border border-border space-y-2 not-typeset">
                 <span className="text-sm font-semibold">Cumulative GPA</span>
-                <h4 className="text-6xl font-bold flex-1 place-content-center">{gpa !== null ? gpa.toFixed(2) : "—"}</h4>
-                <div className="flex flex-col items-center justify-center gap-2">
-                    <div className="flex items-center justify-center">
-                        <MedalIcon weight="fill" size={24} className="text-primary mr-2" />
-                        <Badge variant="default">{gpa !== null ? "Based on completed courses" : "No GPA yet"}</Badge>
-                    </div>
-                    {honors.honor && (
-                        <Badge variant={honors.eligible ? "default" : "outline"} className={honors.eligible ? "" : "text-muted-foreground"}>
-                            {honors.eligible ? `${honors.honor} pace` : `On track for ${honors.honor}`}
-                        </Badge>
-                    )}
-                    {honors.honor && (
-                        <p className="text-xs text-muted-foreground text-center">
-                            Honors use all attempts; requires 48 A&T credit hours
-                        </p>
-                    )}
+                <div className="flex items-center justify-center gap-2">
+                    <MedalIcon weight="fill" size={32} className="text-primary" />
+                    <h4 className="text-6xl font-bold">{gpa !== null ? gpa.toFixed(2) : "—"}</h4>
                 </div>
+                {honors.honor && (
+                    <Badge variant={honors.eligible ? "default" : "outline"} className={honors.eligible ? "" : "text-muted-foreground"}>
+                        {honors.eligible ? `${honors.honor} pace` : `On track for ${honors.honor}`}
+                    </Badge>
+                )}
             </div>
         </section>
 
