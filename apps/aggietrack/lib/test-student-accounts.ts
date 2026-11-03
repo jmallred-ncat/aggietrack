@@ -1,8 +1,9 @@
 import { randomUUID } from "node:crypto";
 import { hashPassword } from "better-auth/crypto";
-import { Grade, TranscriptSource, TranscriptStatus, UserRole } from "./generated/prisma/client";
+import { TranscriptStatus, UserRole } from "./generated/prisma/client";
+import { plannedAttempts } from "./frozen-transcript";
 import { prisma } from "./prisma";
-import { authorizeTestStudents, bearerSecret, stateAfterReset, testAccountByEmail, testAdvisorByEmail, testStudentByEmail, testStudents, testAdvisors, type FrozenCourse, type TestStudent, type TestAdvisor } from "./test-students";
+import { authorizeTestStudents, bearerSecret, testAccountByEmail, testAdvisorByEmail, testStudentByEmail, testStudents, testAdvisors, type FrozenCourse, type TestStudent, type TestAdvisor } from "./test-students";
 
 const frozenAt = new Date("2026-01-15T00:00:00.000Z");
 
@@ -91,7 +92,7 @@ async function ensureUser(account: TestStudent | TestAdvisor, password: string, 
 }
 
 async function writeFrozen(userId: string, student: TestStudent, catalogYearId: string) {
-  const courses = stateAfterReset(student).transcript;
+  const planned = plannedAttempts(student);
   await prisma.$transaction(async tx => {
     const profile = await tx.studentProfile.upsert({
       where: { userId },
@@ -105,7 +106,7 @@ async function writeFrozen(userId: string, student: TestStudent, catalogYearId: 
     await tx.advisingAppointment.deleteMany({ where: { studentId: profile.id } });
     await tx.advisingNote.deleteMany({ where: { studentId: profile.id } });
     await tx.session.deleteMany({ where: { userId } });
-    if (courses.length === 0) return;
+    if (planned.length === 0) return;
 
     const terms = await tx.recommendedTerm.findMany({
       where: { catalogYearId, sequence: { lte: student.through } },
@@ -119,288 +120,41 @@ async function writeFrozen(userId: string, student: TestStudent, catalogYearId: 
       },
     });
     const catalog = await tx.course.findMany({
-      where: { OR: courses.map(course => ({ subject: course.subject, number: course.number })) },
+      where: { OR: planned.map(course => ({ subject: course.subject, number: course.number })) },
       select: { id: true, subject: true, number: true, credits: true },
     });
     const byCode = new Map(catalog.map(course => [`${course.subject} ${course.number}`, course]));
-
-    // Generate transcript entries with custom grades for test scenarios
-    // Note: Taylor Morgan and Casey Parker's specific courses are handled in their special sections
-    // to avoid any countable-grade-followed-by-another-attempt sequences
     const usedSlots = new Set<string>();
-    const entries = courses.map((course, idx) => {
-      const row = transcriptRow(terms, byCode, course, usedSlots);
-      const code = `${course.subject} ${course.number}`;
-      let status: TranscriptStatus = TranscriptStatus.COMPLETED;
-      
-      // Default varied grade (no student should default to all C)
-      // This ensures even Avery Cole (if they had courses) would have varied grades
-      const defaultHash = (code.length + idx) % 6;
-      let grade: Grade = defaultHash === 0 ? Grade.A_MINUS : 
-                        defaultHash === 1 ? Grade.B_PLUS : 
-                        defaultHash === 2 ? Grade.B : 
-                        defaultHash === 3 ? Grade.B_MINUS : 
-                        defaultHash === 4 ? Grade.C_PLUS : 
-                        Grade.B; // B as final fallback, not C
-
-      // Jordan Hale: varied mid-range grades (GPA 3.40, Cum Laude 3.25-3.49 range)
-      // Explicit grade assignment to guarantee 3.40 GPA: 15 courses, need 153.0 quality points
-      // Distribution: 3×A (12.0), 3×A- (11.1), 5×B+ (16.5), 4×B (12.0) = 51.6 total pts / 15 courses = 3.44
-      if (student.email === "it.mid@example.test") {
-        const gradeSequence = [
-          Grade.A, Grade.A, Grade.A,          // 3 A's
-          Grade.A_MINUS, Grade.A_MINUS, Grade.A_MINUS,  // 3 A-'s
-          Grade.B_PLUS, Grade.B_PLUS, Grade.B_PLUS, Grade.B_PLUS, Grade.B_PLUS,  // 5 B+'s  
-          Grade.B, Grade.B, Grade.B, Grade.B  // 4 B's
-        ];
-        const courseIndex = (code.charCodeAt(0) + course.sequence * 7) % 15;
-        grade = gradeSequence[courseIndex] ?? Grade.B;
-        // Term 4 courses (current term for junior) are in progress
-        if (course.sequence === 4) {
-          status = TranscriptStatus.IN_PROGRESS;
-          grade = Grade.B; // Will be null in the actual entry
-        }
+    const started = Date.UTC(2024, 7, 15);
+    const entries = planned.map((course, index) => {
+      const createdAt = new Date(started + index * 86_400_000);
+      if (course.outsidePlan) {
+        const catalogCourse = byCode.get(`${course.subject} ${course.number}`);
+        if (!catalogCourse) throw new TestStudentError(`${course.subject} ${course.number} is not in the catalog.`, 500);
+        return {
+          studentId: profile.id,
+          courseId: catalogCourse.id,
+          recommendedTermCourseId: null,
+          credits: catalogCourse.credits,
+          grade: course.grade,
+          status: course.status,
+          source: course.source,
+          createdAt,
+        };
       }
-      // Riley Brooks: strong grades (GPA ~3.5-3.8 range)
-      else if (student.email === "it.late@example.test") {
-        const hash = (code.length + course.sequence) % 6;
-        grade = hash === 0 ? Grade.A : 
-                hash === 1 ? Grade.A : 
-                hash === 2 ? Grade.A_MINUS : 
-                hash === 3 ? Grade.B_PLUS : 
-                hash === 4 ? Grade.B : 
-                Grade.A_MINUS; // No C grades
-      }
-      // Alex Rivera: diverse grades scenario (W, I, F are non-countable, so no issue with "attempts")
-      else if (student.email === "it.diverse-grades@example.test") {
-        if (code === "ENGL 100") grade = Grade.P;
-        else if (code === "MATH 125") grade = Grade.TR;
-        else if (code === "CST 100") grade = Grade.W;
-        else if (code === "CST 110") grade = Grade.I;
-        else if (code === "HIST 207") grade = Grade.F;
-        else if (code === "PSYC 101") grade = Grade.A;
-        else {
-          // Other courses: varied B range, not all B
-          const hash = idx % 4;
-          grade = hash === 0 ? Grade.B_PLUS : 
-                  hash === 1 ? Grade.B : 
-                  hash === 2 ? Grade.B_MINUS : 
-                  Grade.B;
-        }
-      }
-      // Morgan Lee: excellent grades (GPA 3.80, Summa Cum Laude 3.75+ range)
-      else if (student.email === "it.over-credits@example.test") {
-        const hash = code.charCodeAt(0) % 5;
-        grade = hash === 0 ? Grade.A : 
-                hash === 1 ? Grade.A : 
-                hash === 2 ? Grade.A : 
-                hash === 3 ? Grade.A : 
-                Grade.A_MINUS; // Mostly A (80%) with A- (20%), targeting 3.80+ GPA
-      }
-
+      const placed = transcriptRow(terms, byCode, course, usedSlots);
       return {
         studentId: profile.id,
-        courseId: row.courseId,
-        recommendedTermCourseId: row.recommendedTermCourseId,
-        credits: row.credits,
-        grade: status === TranscriptStatus.IN_PROGRESS ? null : grade,
-        status,
-        source: grade === Grade.TR ? TranscriptSource.TRANSFER : TranscriptSource.NCAT,
+        courseId: placed.courseId,
+        recommendedTermCourseId: placed.recommendedTermCourseId,
+        credits: placed.credits,
+        grade: course.status === TranscriptStatus.IN_PROGRESS ? null : course.grade,
+        status: course.status,
+        source: course.source,
+        createdAt,
       };
     });
-
-    // Add realistic retake scenarios (only after non-countable grades: F, W, D below-min)
-    // These special cases run FIRST and return early to avoid the default createMany below
-    if (student.email === "it.retake-f-to-pass@example.test") {
-      // Taylor Morgan: Sophomore with F→B retake and SINGLE D below-min (not retaken)
-      const cst112 = catalog.find(c => c.subject === "CST" && c.number === "112");
-      const cst120 = catalog.find(c => c.subject === "CST" && c.number === "120");
-      
-      if (cst112 && cst120) {
-        const term1 = terms.find(t => t.sequence === 1);
-        const term2 = terms.find(t => t.sequence === 2);
-        const cst120Course = term1?.courses.find(c => c.course?.id === cst120.id);
-        const cst112Course = term2?.courses.find(c => c.course?.id === cst112.id);
-        
-        // Add base courses from terms 1-2 with varied grades, EXCLUDING CST 112 and CST 120
-        const baseCourses = entries.filter(e => 
-          e.courseId !== cst112.id && e.courseId !== cst120.id
-        );
-        await tx.transcriptEntry.createMany({
-          data: baseCourses.map((e, idx) => {
-            // Vary base grades: A, A-, B+, B, B-
-            const hash = idx % 5;
-            const variedGrade = hash === 0 ? Grade.A : 
-                               hash === 1 ? Grade.A_MINUS : 
-                               hash === 2 ? Grade.B_PLUS : 
-                               hash === 3 ? Grade.B : 
-                               Grade.B_MINUS;
-            return { ...e, grade: e.grade || variedGrade };
-          }),
-        });
-        
-        // CST 120: SINGLE attempt with D (below C minimum for Major Core) - NOT RETAKEN
-        // This is the clear below-min example that must not count toward progress
-        await tx.transcriptEntry.create({
-          data: {
-            studentId: profile.id,
-            courseId: cst120.id,
-            recommendedTermCourseId: cst120Course?.id ?? null,
-            credits: cst120.credits,
-            grade: Grade.D,
-            status: TranscriptStatus.COMPLETED,
-            source: TranscriptSource.NCAT,
-          },
-        });
-        
-        // CST 112: F (first attempt in term 2), then B (retake after F)
-        // Give explicit createdAt timestamps to ensure chronological order (first attempt earlier)
-        const now = new Date();
-        const firstAttemptTime = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000); // 1 year ago
-        const secondAttemptTime = new Date(now.getTime() - 180 * 24 * 60 * 60 * 1000); // 6 months ago
-        
-        await tx.transcriptEntry.createMany({
-          data: [
-            {
-              studentId: profile.id,
-              courseId: cst112.id,
-              recommendedTermCourseId: cst112Course?.id ?? null,
-              credits: cst112.credits,
-              grade: Grade.F,
-              status: TranscriptStatus.COMPLETED,
-              source: TranscriptSource.NCAT,
-              createdAt: firstAttemptTime,
-            },
-            {
-              studentId: profile.id,
-              courseId: cst112.id,
-              recommendedTermCourseId: cst112Course?.id ?? null,
-              credits: cst112.credits,
-              grade: Grade.B,
-              status: TranscriptStatus.COMPLETED,
-              source: TranscriptSource.NCAT,
-              createdAt: secondAttemptTime,
-            },
-          ],
-        });
-        return;
-      }
-    }
-
-    if (student.email === "it.retake-c-to-a@example.test") {
-      // Casey Parker: Sophomore with W→A retake (realistic: withdrew, then passed)
-      const cst130 = catalog.find(c => c.subject === "CST" && c.number === "130");
-      if (cst130) {
-        const term1 = terms.find(t => t.sequence === 1);
-        const cst130Course = term1?.courses.find(c => c.course?.id === cst130.id);
-        
-        // Add base courses from terms 1-2 with varied grades, EXCLUDING CST 130
-        const baseCourses = entries.filter(e => e.courseId !== cst130.id);
-        await tx.transcriptEntry.createMany({
-          data: baseCourses.map((e, idx) => {
-            // Vary base grades: A, A-, B+, B
-            const hash = idx % 4;
-            const variedGrade = hash === 0 ? Grade.A : 
-                               hash === 1 ? Grade.A_MINUS : 
-                               hash === 2 ? Grade.B_PLUS : 
-                               Grade.B;
-            return { ...e, grade: e.grade || variedGrade };
-          }),
-        });
-        
-        // CST 130: W (withdrew first attempt), then A (retake after W)
-        // W is non-countable, so this is a realistic retake scenario
-        // Give explicit createdAt timestamps to ensure chronological order (first attempt earlier)
-        const now = new Date();
-        const firstAttemptTime = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000); // 1 year ago
-        const secondAttemptTime = new Date(now.getTime() - 180 * 24 * 60 * 60 * 1000); // 6 months ago
-        
-        await tx.transcriptEntry.createMany({
-          data: [
-            {
-              studentId: profile.id,
-              courseId: cst130.id,
-              recommendedTermCourseId: cst130Course?.id ?? null,
-              credits: cst130.credits,
-              grade: Grade.W,
-              status: TranscriptStatus.COMPLETED,
-              source: TranscriptSource.NCAT,
-              createdAt: firstAttemptTime,
-            },
-            {
-              studentId: profile.id,
-              courseId: cst130.id,
-              recommendedTermCourseId: cst130Course?.id ?? null,
-              credits: cst130.credits,
-              grade: Grade.A,
-              status: TranscriptStatus.COMPLETED,
-              source: TranscriptSource.NCAT,
-              createdAt: secondAttemptTime,
-            },
-          ],
-        });
-        return;
-      }
-    }
-
-    // Add an unmapped course for diverse-grades student
-    if (student.email === "it.diverse-grades@example.test") {
-      const unmappedCourse = await tx.course.findFirst({
-        where: {
-          subject: "JOUR",
-          number: "101",
-        },
-        select: { id: true, credits: true },
-      });
-
-      if (unmappedCourse) {
-        await tx.transcriptEntry.create({
-          data: {
-            studentId: profile.id,
-            courseId: unmappedCourse.id,
-            recommendedTermCourseId: null,
-            credits: unmappedCourse.credits,
-            grade: Grade.B,
-            status: TranscriptStatus.COMPLETED,
-            source: TranscriptSource.NCAT,
-          },
-        });
-      }
-    }
-
-    // Add transfer credits for Riley Brooks and Morgan Lee before creating entries
-    if (student.email === "it.late@example.test" || student.email === "it.over-credits@example.test") {
-      // Find ENGL 100 and MATH 125 to mark as transfer
-      const transferCourses = entries.filter(e => {
-        const course = catalog.find(c => c.id === e.courseId);
-        return course && ((course.subject === "ENGL" && course.number === "100") || 
-                         (course.subject === "MATH" && course.number === "125"));
-      });
-      
-      // Mark these as transfer credits (grade TR, source TRANSFER)
-      const transferEntries = transferCourses.map(e => ({
-        ...e,
-        grade: Grade.TR,
-        source: TranscriptSource.TRANSFER,
-      }));
-      
-      // Non-transfer entries
-      const nonTransferEntries = entries.filter(e => {
-        const course = catalog.find(c => c.id === e.courseId);
-        return !course || !((course.subject === "ENGL" && course.number === "100") || 
-                           (course.subject === "MATH" && course.number === "125"));
-      });
-      
-      await tx.transcriptEntry.createMany({ data: [...nonTransferEntries, ...transferEntries] });
-    }
-    // Default: create all entries for students without special retake handling
-    // (This runs for Jordan Hale, Alex Rivera, and Avery Cole)
-    else if (
-      student.email !== "it.retake-f-to-pass@example.test" &&
-      student.email !== "it.retake-c-to-a@example.test"
-    ) {
-      await tx.transcriptEntry.createMany({ data: entries });
-    }
+    await tx.transcriptEntry.createMany({ data: entries });
   });
 }
 

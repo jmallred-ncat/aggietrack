@@ -1,50 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-
-// Import Grade enum directly from the generated types to avoid prisma client initialization
-enum Grade {
-  A = "A",
-  A_MINUS = "A_MINUS",
-  B_PLUS = "B_PLUS",
-  B = "B",
-  B_MINUS = "B_MINUS",
-  C_PLUS = "C_PLUS",
-  C = "C",
-  C_MINUS = "C_MINUS",
-  D_PLUS = "D_PLUS",
-  D = "D",
-  F = "F",
-  W = "W",
-  I = "I",
-  P = "P",
-  TR = "TR",
-}
-
-// Import just the function we're testing without triggering prisma initialization
-// We'll inline the logic here to avoid the import
-const GRADE_ORDER: Record<Grade, number> = {
-  [Grade.F]: 0,
-  [Grade.D]: 1,
-  [Grade.D_PLUS]: 2,
-  [Grade.C_MINUS]: 3,
-  [Grade.C]: 4,
-  [Grade.C_PLUS]: 5,
-  [Grade.B_MINUS]: 6,
-  [Grade.B]: 7,
-  [Grade.B_PLUS]: 8,
-  [Grade.A_MINUS]: 9,
-  [Grade.A]: 10,
-  [Grade.P]: 4,
-  [Grade.TR]: 4,
-  [Grade.W]: 0,
-  [Grade.I]: 0,
-};
-
-function meetsMinimumGrade(actualGrade: Grade | null, minGrade: Grade | null): boolean {
-  if (!minGrade) return true;
-  if (!actualGrade) return false;
-  return GRADE_ORDER[actualGrade] >= GRADE_ORDER[minGrade];
-}
+import { GenEdTag, Grade, RequirementSlot } from "./generated/prisma/client";
+import { applicableCredits, earnsDegreeCredit, meetsMinimumGrade } from "./applicable-credits";
 
 test("meetsMinimumGrade: null minGrade allows any grade", () => {
   assert.equal(meetsMinimumGrade(Grade.F, null), true);
@@ -80,6 +37,46 @@ test("meetsMinimumGrade: grades must meet or exceed minimum", () => {
   // Withdrawn and Incomplete fail
   assert.equal(meetsMinimumGrade(Grade.W, Grade.C), false);
   assert.equal(meetsMinimumGrade(Grade.I, Grade.C), false);
+});
+
+test("F, W, and I do not earn degree credit even when a group has no minimum", () => {
+  assert.equal(earnsDegreeCredit(Grade.F), false);
+  assert.equal(earnsDegreeCredit(Grade.W), false);
+  assert.equal(earnsDegreeCredit(Grade.I), false);
+  assert.equal(earnsDegreeCredit(null), false);
+  assert.equal(earnsDegreeCredit(Grade.D), true);
+  assert.equal(earnsDegreeCredit(Grade.P), true);
+  assert.equal(meetsMinimumGrade(Grade.F, null), true);
+
+  const result = applicableCredits({
+    totalCredits: 120,
+    groups: [{
+      id: "gen-ed",
+      slot: RequirementSlot.GEN_ED_POOL,
+      minCredits: 3,
+      minGrade: null,
+      subject: null,
+      minNumber: null,
+      genEdCategory: GenEdTag.GLOBAL_AWARENESS,
+      requiredGenEdTag: null,
+      courseIds: [],
+      sortOrder: 1,
+    }],
+    courses: [{ id: "hist", subject: "HIST", number: "207", tags: [GenEdTag.GLOBAL_AWARENESS] }],
+    attempts: [{
+      courseId: "hist",
+      subject: "HIST",
+      number: "207",
+      credits: 3,
+      grade: Grade.F,
+      status: "COMPLETED",
+      groupId: "gen-ed",
+      requiresLab: false,
+      order: 1,
+    }],
+  });
+  assert.equal(result.earnedCredits, 0);
+  assert.equal(result.mappedCourses, 0);
 });
 
 test("meetsMinimumGrade: grade ordering is correct", () => {

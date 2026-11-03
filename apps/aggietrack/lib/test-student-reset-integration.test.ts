@@ -75,12 +75,14 @@ test("Jordan Hale reset produces exact expected values", async () => {
   // Verify exact values
   console.log(`Jordan Hale: ${progress.earnedCredits} credits, ${progress.percentage}%, GPA ${gpa?.toFixed(2)}, Honor: ${honors.honor}, Eligible: ${honors.eligible}`);
   
-  assert.equal(progress.earnedCredits, 45, "Jordan should have 45 earned credits");
-  assert.equal(progress.percentage, "37.5", "Jordan should be at 37.5% progress");
+  assert.equal(progress.earnedCredits, 48, "Jordan should have 48 earned credits");
+  assert.equal(progress.percentage, 40, "Jordan should be at 40% progress");
   assert.ok(gpa !== null, "Jordan should have a GPA");
-  assert.ok(Math.abs(gpa! - 3.41) < 0.01, `Jordan's GPA should be 3.41, got ${gpa?.toFixed(2)}`);
+  assert.equal(gpa, 3.41, `Jordan's GPA should be 3.41, got ${gpa}`);
+  assert.equal(honors.adjustedGpa, 3.41);
+  assert.equal(honors.residentHours, 48);
   assert.equal(honors.honor, "Cum Laude", "Jordan should have Cum Laude honor");
-  assert.equal(honors.eligible, false, "Jordan should not be eligible yet (<48 hours)");
+  assert.equal(honors.eligible, true, "Jordan has 48 resident hours");
 });
 
 test("Casey Parker reset produces exact expected values", async () => {
@@ -115,10 +117,10 @@ test("Casey Parker reset produces exact expected values", async () => {
   // Verify exact values
   console.log(`Casey Parker: ${progress.earnedCredits} credits, ${progress.percentage}%, GPA ${gpa?.toFixed(2)}, Honor: ${honors.honor}, Eligible: ${honors.eligible}`);
   
-  assert.equal(progress.earnedCredits, 33, "Casey should have 33 earned credits");
-  assert.equal(progress.percentage, "27.5", "Casey should be at 27.5% progress");
+  assert.equal(progress.earnedCredits, 32, "Casey should have 32 earned credits");
+  assert.equal(progress.percentage, 26.7, "Casey should be at 26.7% progress");
   assert.ok(gpa !== null, "Casey should have a GPA");
-  assert.ok(Math.abs(gpa! - 3.61) < 0.01, `Casey's GPA should be 3.61, got ${gpa?.toFixed(2)}`);
+  assert.equal(gpa, 3.61, `Casey's GPA should be 3.61, got ${gpa}`);
   assert.equal(honors.honor, "Magna Cum Laude", "Casey should have Magna Cum Laude honor");
   assert.equal(honors.eligible, false, "Casey should not be eligible yet (<48 hours)");
 });
@@ -155,10 +157,10 @@ test("Riley Brooks reset produces exact expected values", async () => {
   // Verify exact values
   console.log(`Riley Brooks: ${progress.earnedCredits} credits, ${progress.percentage}%, GPA ${gpa?.toFixed(2)}, Honor: ${honors.honor}, Eligible: ${honors.eligible}`);
   
-  assert.equal(progress.earnedCredits, 90, "Riley should have 90 earned credits");
-  assert.equal(progress.percentage, "75.0", "Riley should be at 75% progress");
+  assert.equal(progress.earnedCredits, 92, "Riley should have 92 earned credits");
+  assert.equal(progress.percentage, 76.7, "Riley should be at 76.7% progress");
   assert.ok(gpa !== null, "Riley should have a GPA");
-  assert.ok(Math.abs(gpa! - 3.64) < 0.01, `Riley's GPA should be 3.64, got ${gpa?.toFixed(2)}`);
+  assert.equal(gpa, 3.64, `Riley's GPA should be 3.64, got ${gpa}`);
   assert.equal(honors.honor, "Magna Cum Laude", "Riley should have Magna Cum Laude honor");
   assert.equal(honors.eligible, true, "Riley should be eligible (>=48 hours)");
 });
@@ -196,9 +198,9 @@ test("Morgan Lee reset produces exact expected values", async () => {
   console.log(`Morgan Lee: ${progress.earnedCredits} credits, ${progress.percentage}%, GPA ${gpa?.toFixed(2)}, Honor: ${honors.honor}, Eligible: ${honors.eligible}`);
   
   assert.equal(progress.earnedCredits, 120, "Morgan should have 120 earned credits");
-  assert.equal(progress.percentage, "100.0", "Morgan should be at 100% progress");
+  assert.equal(progress.percentage, 100, "Morgan should be at 100% progress");
   assert.ok(gpa !== null, "Morgan should have a GPA");
-  assert.ok(Math.abs(gpa! - 3.98) < 0.01, `Morgan's GPA should be 3.98, got ${gpa?.toFixed(2)}`);
+  assert.equal(gpa, 3.98, `Morgan's GPA should be 3.98, got ${gpa}`);
   assert.equal(honors.honor, "Summa Cum Laude", "Morgan should have Summa Cum Laude honor");
   assert.equal(honors.eligible, true, "Morgan should be eligible (>=48 hours)");
 });
@@ -236,7 +238,7 @@ test("Avery Cole reset produces exact expected values", async () => {
   console.log(`Avery Cole: ${progress.earnedCredits} credits, ${progress.percentage}%, GPA ${gpa?.toFixed(2) || "null"}, Honor: ${honors.honor || "null"}, Eligible: ${honors.eligible}`);
   
   assert.equal(progress.earnedCredits, 0, "Avery should have 0 earned credits");
-  assert.equal(progress.percentage, "0.0", "Avery should be at 0% progress");
+  assert.equal(progress.percentage, 0, "Avery should be at 0% progress");
   assert.equal(gpa, null, "Avery should have no GPA");
   assert.equal(honors.honor, null, "Avery should have no honor");
   assert.equal(honors.eligible, false, "Avery should not be eligible");

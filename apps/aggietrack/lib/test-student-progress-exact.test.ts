@@ -33,12 +33,12 @@ test("test student progress values are deterministic and documented", () => {
   
   const expectedBehaviors = [
     "Avery Cole: 0 credits, 0.0% (no transcript)",
-    "Jordan Hale: deterministic A/B/C mix through term 4",
-    "Riley Brooks: deterministic A/B+ through term 6",
-    "Taylor Morgan: F→B retake (counts B), D not retaken (doesn't count, below min)",
-    "Casey Parker: W→A retake (counts A, W doesn't count)",
-    "Alex Rivera: diverse grades, excludes W/I/F and unmapped JOUR 101",
-    "Morgan Lee: excellent grades through term 8, >120 credits capped at 100%",
+    "Jordan Hale: 48 credits, 40%, term 4 in progress",
+    "Riley Brooks: 92 credits, 76.7%",
+    "Taylor Morgan: 29 credits, 24.2% (F→B counts B, D below min does not)",
+    "Casey Parker: 32 credits, 26.7% (W→A counts A)",
+    "Alex Rivera: 41 credits, 34.2% (excludes W/I/F and JOUR 101)",
+    "Morgan Lee: 120 credits, 100%",
   ];
   
   assert.ok(expectedBehaviors.length === 7, "All 7 test students have documented expectations");
