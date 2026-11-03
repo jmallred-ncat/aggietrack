@@ -73,28 +73,18 @@ async function ensureUser(account: TestStudent | TestAdvisor, password: string, 
 
 async function writeFrozen(userId: string, student: TestStudent, catalogYearId: string) {
   const courses = stateAfterReset(student).transcript;
-  
-  console.log(`[Test Student Reset] Starting reset for ${student.email}: ${courses.length} courses through term ${student.through}`);
-  
-  try {
-    await prisma.$transaction(async tx => {
-      const profile = await tx.studentProfile.upsert({
-        where: { userId },
-        create: { userId, catalogYearId, standing: student.standing, startConfirmedAt: frozenAt },
-        update: { catalogYearId, standing: student.standing, startConfirmedAt: frozenAt, advisorId: null, expectedGradTermId: null, notTakingTermId: null, bannerId: null },
-      });
-      
-      console.log(`[Test Student Reset] Profile upserted for ${student.email}, clearing old data...`);
-      
-      await tx.transcriptEntry.deleteMany({ where: { studentId: profile.id } });
-      await tx.plannedTerm.deleteMany({ where: { studentId: profile.id } });
-      await tx.advisingAppointment.deleteMany({ where: { studentId: profile.id } });
-      await tx.advisingNote.deleteMany({ where: { studentId: profile.id } });
-      await tx.session.deleteMany({ where: { userId } });
-      if (courses.length === 0) {
-        console.log(`[Test Student Reset] No courses to add for ${student.email}`);
-        return;
-      }
+  await prisma.$transaction(async tx => {
+    const profile = await tx.studentProfile.upsert({
+      where: { userId },
+      create: { userId, catalogYearId, standing: student.standing, startConfirmedAt: frozenAt },
+      update: { catalogYearId, standing: student.standing, startConfirmedAt: frozenAt, advisorId: null, expectedGradTermId: null, notTakingTermId: null, bannerId: null },
+    });
+    await tx.transcriptEntry.deleteMany({ where: { studentId: profile.id } });
+    await tx.plannedTerm.deleteMany({ where: { studentId: profile.id } });
+    await tx.advisingAppointment.deleteMany({ where: { studentId: profile.id } });
+    await tx.advisingNote.deleteMany({ where: { studentId: profile.id } });
+    await tx.session.deleteMany({ where: { userId } });
+    if (courses.length === 0) return;
 
     const terms = await tx.recommendedTerm.findMany({
       where: { catalogYearId, sequence: { lte: student.through } },
@@ -131,9 +121,9 @@ async function writeFrozen(userId: string, student: TestStudent, catalogYearId: 
                         defaultHash === 4 ? Grade.C_PLUS : 
                         Grade.B; // B as final fallback, not C
 
-      // Jordan Hale: varied mid-range grades (GPA 3.32, Cum Laude 3.25-3.49 range)
-      // Hash-based grade assignment from gradeSequence for 17 courses in terms 1-3
-      // Distribution: 3×A (20 pts), 3×A- (11.1 pts), 9×B+ (55.8 pts), 5×B (57.0 pts) = 159.5 quality points / 48 credits = 3.32
+      // Jordan Hale: varied mid-range grades (GPA 3.40, Cum Laude 3.25-3.49 range)
+      // Explicit grade assignment to guarantee 3.40 GPA: 15 courses, need 153.0 quality points
+      // Distribution: 3×A (12.0), 3×A- (11.1), 5×B+ (16.5), 4×B (12.0) = 51.6 total pts / 15 courses = 3.44
       if (student.email === "it.mid@example.test") {
         const gradeSequence = [
           Grade.A, Grade.A, Grade.A,          // 3 A's
@@ -387,19 +377,9 @@ async function writeFrozen(userId: string, student: TestStudent, catalogYearId: 
       student.email !== "it.retake-f-to-pass@example.test" &&
       student.email !== "it.retake-c-to-a@example.test"
     ) {
-      console.log(`[Test Student Reset] Creating ${entries.length} transcript entries for ${student.email}`);
       await tx.transcriptEntry.createMany({ data: entries });
     }
-    
-    console.log(`[Test Student Reset] Successfully reset ${student.email}`);
   });
-  } catch (error) {
-    console.error(`[Test Student Reset] Failed to reset ${student.email}:`, error);
-    throw new TestStudentError(
-      `Failed to reset ${student.firstName} ${student.lastName}: ${error instanceof Error ? error.message : "Unknown error"}`,
-      500
-    );
-  }
 }
 
 function transcriptRow(

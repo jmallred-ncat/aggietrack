@@ -7,7 +7,7 @@ export type TestStudentCard = {
 
 export const testStudentCards: TestStudentCard[] = [
   { email: "it.start@example.test", name: "Avery Cole", place: "Information Technology 2025. Just started, with no prior coursework (0 credits).", role: "student" },
-  { email: "it.mid@example.test", name: "Jordan Hale", place: "Information Technology 2025. Junior: 48 credits, 40.0%, GPA 3.32. Varied A/A-/B+/B, term 4 in progress.", role: "student" },
+  { email: "it.mid@example.test", name: "Jordan Hale", place: "Information Technology 2025. Junior: 45 credits, 37.5%, GPA 3.41. Varied A/A-/B+/B, term 4 in progress.", role: "student" },
   { email: "it.late@example.test", name: "Riley Brooks", place: "Information Technology 2025. Senior: 90 credits, 75%, GPA 3.64. Strong A/A-/B+/B (no C) + 2 transfer courses.", role: "student" },
   { email: "it.retake-f-to-pass@example.test", name: "Taylor Morgan", place: "Information Technology 2025. Sophomore: 36 credits, 30%, GPA 2.83. 10×B + F→B retake + D below-min (not retaken).", role: "student" },
   { email: "it.retake-c-to-a@example.test", name: "Casey Parker", place: "Information Technology 2025. Sophomore: 33 credits, 27.5%, GPA 3.61. A/A-/B+/B cycle + W→A retake.", role: "student" },
