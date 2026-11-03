@@ -93,16 +93,16 @@ export default async function Dashboard() {
                 <span className="text-sm font-semibold">Cumulative GPA</span>
                 <h4 className="text-6xl font-bold flex-1 place-content-center">{gpa !== null ? gpa.toFixed(2) : "—"}</h4>
                 <p className="text-sm text-muted-foreground text-center leading-tight mt-1">&nbsp;</p>
-                <div className="flex items-center justify-center">
-                    <MedalIcon weight="fill" size={24} className="text-primary mr-2" />
-                    {honors.honor ? (
+                {honors.honor ? (
+                    <div className="flex items-center justify-center">
+                        <MedalIcon weight="fill" size={24} className="text-primary mr-2" />
                         <Badge variant={honors.eligible ? "default" : "outline"} className={honors.eligible ? "" : "text-muted-foreground"}>
                             {honors.eligible ? `${honors.honor} pace` : `On track for ${honors.honor}`}
                         </Badge>
-                    ) : (
-                        <Badge variant="secondary" className="invisible">Placeholder</Badge>
-                    )}
-                </div>
+                    </div>
+                ) : (
+                    <div className="h-8" />
+                )}
             </div>
         </section>
 

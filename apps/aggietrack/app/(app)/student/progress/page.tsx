@@ -210,7 +210,9 @@ export default async function ProgressPage() {
         <div className="flex min-h-full flex-1 flex-col">
             <header>
                 <h1>Your Degree Progress</h1>
-                <p className="text-sm text-muted-foreground max-w-prose w-full text-balance">AggieTrack needs the courses you have already completed before you can continue. Mark those courses below, or say you have no prior coursework.</p>
+                {progress.earnedCredits === 0 && (
+                    <p className="text-sm text-muted-foreground max-w-prose w-full text-balance">AggieTrack needs the courses you have already completed before you can continue. Mark those courses below, or say you have no prior coursework.</p>
+                )}
                 {progress.earnedCredits > 0 && (
                     <div className="mt-4 rounded-lg border border-border bg-muted px-4 py-3 not-typeset">
                         <div className="flex flex-wrap gap-4 items-start">
@@ -228,7 +230,7 @@ export default async function ProgressPage() {
                                     <MedalIcon weight="fill" size={18} className="text-primary" />
                                     <span className="text-xl font-bold">{gpa !== null ? gpa.toFixed(2) : "—"}</span>
                                 </div>
-                                <Badge variant="secondary" className="mt-1.5 text-xs">
+                                <Badge variant="outline" className="mt-1.5 text-xs border-border">
                                     {gpa !== null ? "Completed courses" : "No GPA yet"}
                                 </Badge>
                             </div>

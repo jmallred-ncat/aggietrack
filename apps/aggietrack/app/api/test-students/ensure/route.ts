@@ -10,6 +10,19 @@ export async function POST(request: Request) {
   } catch (error) {
     const message = error instanceof TestStudentError ? error.message : "Test students could not be prepared.";
     const status = error instanceof TestStudentError ? error.status : 500;
-    return Response.json({ error: message }, { status });
+    
+    // Log the full error for debugging
+    if (!(error instanceof TestStudentError)) {
+      console.error("Test students ensure error:", error);
+    }
+    
+    // Return a more detailed error message in non-production
+    const detailedMessage = process.env.VERCEL_ENV === "production" 
+      ? message 
+      : error instanceof Error 
+        ? `${message} (${error.message})` 
+        : message;
+    
+    return Response.json({ error: detailedMessage }, { status });
   }
 }

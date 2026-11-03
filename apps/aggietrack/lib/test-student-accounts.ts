@@ -73,18 +73,28 @@ async function ensureUser(account: TestStudent | TestAdvisor, password: string, 
 
 async function writeFrozen(userId: string, student: TestStudent, catalogYearId: string) {
   const courses = stateAfterReset(student).transcript;
-  await prisma.$transaction(async tx => {
-    const profile = await tx.studentProfile.upsert({
-      where: { userId },
-      create: { userId, catalogYearId, standing: student.standing, startConfirmedAt: frozenAt },
-      update: { catalogYearId, standing: student.standing, startConfirmedAt: frozenAt, advisorId: null, expectedGradTermId: null, notTakingTermId: null, bannerId: null },
-    });
-    await tx.transcriptEntry.deleteMany({ where: { studentId: profile.id } });
-    await tx.plannedTerm.deleteMany({ where: { studentId: profile.id } });
-    await tx.advisingAppointment.deleteMany({ where: { studentId: profile.id } });
-    await tx.advisingNote.deleteMany({ where: { studentId: profile.id } });
-    await tx.session.deleteMany({ where: { userId } });
-    if (courses.length === 0) return;
+  
+  console.log(`[Test Student Reset] Starting reset for ${student.email}: ${courses.length} courses through term ${student.through}`);
+  
+  try {
+    await prisma.$transaction(async tx => {
+      const profile = await tx.studentProfile.upsert({
+        where: { userId },
+        create: { userId, catalogYearId, standing: student.standing, startConfirmedAt: frozenAt },
+        update: { catalogYearId, standing: student.standing, startConfirmedAt: frozenAt, advisorId: null, expectedGradTermId: null, notTakingTermId: null, bannerId: null },
+      });
+      
+      console.log(`[Test Student Reset] Profile upserted for ${student.email}, clearing old data...`);
+      
+      await tx.transcriptEntry.deleteMany({ where: { studentId: profile.id } });
+      await tx.plannedTerm.deleteMany({ where: { studentId: profile.id } });
+      await tx.advisingAppointment.deleteMany({ where: { studentId: profile.id } });
+      await tx.advisingNote.deleteMany({ where: { studentId: profile.id } });
+      await tx.session.deleteMany({ where: { userId } });
+      if (courses.length === 0) {
+        console.log(`[Test Student Reset] No courses to add for ${student.email}`);
+        return;
+      }
 
     const terms = await tx.recommendedTerm.findMany({
       where: { catalogYearId, sequence: { lte: student.through } },
@@ -377,9 +387,19 @@ async function writeFrozen(userId: string, student: TestStudent, catalogYearId: 
       student.email !== "it.retake-f-to-pass@example.test" &&
       student.email !== "it.retake-c-to-a@example.test"
     ) {
+      console.log(`[Test Student Reset] Creating ${entries.length} transcript entries for ${student.email}`);
       await tx.transcriptEntry.createMany({ data: entries });
     }
+    
+    console.log(`[Test Student Reset] Successfully reset ${student.email}`);
   });
+  } catch (error) {
+    console.error(`[Test Student Reset] Failed to reset ${student.email}:`, error);
+    throw new TestStudentError(
+      `Failed to reset ${student.firstName} ${student.lastName}: ${error instanceof Error ? error.message : "Unknown error"}`,
+      500
+    );
+  }
 }
 
 function transcriptRow(
