@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent } from "@/components/ui/popover";
 import { toast } from "@/components/ui/toast";
 import type { PlannedTermStatus } from "@/lib/generated/prisma/client";
+import { applyAddedCourses, applyRemovedCourse, termCreditLabel, termCreditTotal } from "@/lib/plan-view";
 import { MagnifyingGlassIcon, XIcon } from "@phosphor-icons/react";
 import { useRouter } from "next/navigation";
 import { useRef, useState, useTransition } from "react";
@@ -36,6 +37,24 @@ function RequirementNames({ requirements }: { requirements: string[] }) {
 
 type PlannedRow = CatalogCourse & { plannedCourseId: string };
 
+type EditorPlan = {
+    id: string;
+    status: PlannedTermStatus;
+    registrationPin: string | null;
+    registered: boolean;
+    courses: PlannedRow[];
+};
+
+function withCourses(current: EditorPlan | null, next: { id: string | null; courses: PlannedRow[] }): EditorPlan {
+    return {
+        id: next.id ?? current?.id ?? "",
+        status: current?.status ?? "DRAFT",
+        registrationPin: current?.registrationPin ?? null,
+        registered: current?.registered ?? false,
+        courses: next.courses,
+    };
+}
+
 export default function PlanEditor({
     termId,
     termLabel,
@@ -46,13 +65,7 @@ export default function PlanEditor({
     termId: string;
     termLabel: string;
     advisorName: string | null;
-    plan: {
-        id: string;
-        status: PlannedTermStatus;
-        registrationPin: string | null;
-        registered: boolean;
-        courses: PlannedRow[];
-    } | null;
+    plan: EditorPlan | null;
     courses: CatalogCourse[];
 }) {
     const router = useRouter();
@@ -60,9 +73,13 @@ export default function PlanEditor({
     const [resultsOpen, setResultsOpen] = useState(false);
     const searchRef = useRef<HTMLDivElement>(null);
     const [pending, startTransition] = useTransition();
-    const status = plan?.status ?? "DRAFT";
+    // The open term is drawn from this state so a finished save shows before a reload.
+    const [localPlan, setLocalPlan] = useState(plan);
+    const shown = localPlan;
+    const status = shown?.status ?? "DRAFT";
     const editable = status === "DRAFT";
-    const plannedIds = new Set(plan?.courses.map((course) => course.id) ?? []);
+    const plannedIds = new Set(shown?.courses.map((course) => course.id) ?? []);
+    const creditLabel = termCreditLabel(termCreditTotal(shown?.courses ?? []));
     const needle = query.trim().toLowerCase();
     const matches = needle.length < 2
         ? []
@@ -71,13 +88,18 @@ export default function PlanEditor({
             .filter((course) => `${course.subject} ${course.number} ${course.title}`.toLowerCase().includes(needle))
             .slice(0, 8);
 
-    function run(action: () => Promise<{ success: boolean; error?: string }>, success: string) {
+    function run<T extends { success: boolean; error?: string }>(
+        action: () => Promise<T>,
+        success: string,
+        apply?: (result: T & { success: true }) => void,
+    ) {
         startTransition(async () => {
             const result = await action();
             if (!result.success) {
                 toast.add({ title: result.error ?? "That change could not be saved." });
                 return;
             }
+            apply?.(result as T & { success: true });
             toast.add({ title: success });
             setQuery("");
             setResultsOpen(false);
@@ -85,17 +107,27 @@ export default function PlanEditor({
         });
     }
 
+    function requirementsFor(courseId: string, selected: CatalogCourse) {
+        if (selected.id === courseId) {
+            return selected.requirements;
+        }
+        return courses.find((course) => course.id === courseId)?.requirements ?? [];
+    }
+
     return (
         <section>
             <header className="flex flex-wrap items-center justify-between gap-3">
-                <h2 className="text-2xl font-bold not-typeset text-balance">{termLabel}</h2>
+                <div className="flex min-w-0 flex-wrap items-baseline gap-x-3 gap-y-1">
+                    <h2 className="text-2xl font-bold not-typeset text-balance">{termLabel}</h2>
+                    <p className="text-sm text-muted-foreground tabular-nums not-typeset">{creditLabel}</p>
+                </div>
                 <Badge className="not-typeset" variant={status === "APPROVED" ? "default" : "secondary"}>
                     {status === "DRAFT" ? "Draft" : status === "SUBMITTED" ? "Submitted" : "Approved"}
                 </Badge>
             </header>
 
             <p className="mt-2 max-w-prose text-sm text-balance text-muted-foreground">
-                {plan?.registered
+                {shown?.registered
                     ? "These courses are on your transcript as in progress. You confirmed that you registered."
                     : status === "APPROVED"
                         ? "Your advisor approved this plan, so these courses are in progress. Register with the pin, then confirm that you registered."
@@ -108,10 +140,10 @@ export default function PlanEditor({
                                 : "Add the courses you want to take, then submit the plan. No advisor is assigned yet."}
             </p>
 
-            {status === "APPROVED" && plan?.registrationPin && (
+            {status === "APPROVED" && shown?.registrationPin && (
                 <p className="mt-4 inline-flex items-center gap-3 rounded-lg bg-muted px-4 py-3 not-typeset">
                     <span className="text-sm text-muted-foreground">Registration pin</span>
-                    <span className="font-mono text-lg font-semibold tracking-wide">{plan.registrationPin}</span>
+                    <span className="font-mono text-lg font-semibold tracking-wide">{shown.registrationPin}</span>
                 </p>
             )}
 
@@ -157,6 +189,20 @@ export default function PlanEditor({
                                             onClick={() => run(
                                                 () => addPlannedCourse(termId, course.id),
                                                 `${course.subject} ${course.number} added`,
+                                                (result) => {
+                                                    setLocalPlan((current) => withCourses(current, applyAddedCourses(current, {
+                                                        planId: result.planId,
+                                                        courses: result.courses.map((row) => ({
+                                                            plannedCourseId: row.plannedCourseId,
+                                                            id: row.id,
+                                                            subject: row.subject,
+                                                            number: row.number,
+                                                            title: row.title,
+                                                            credits: row.credits,
+                                                            requirements: requirementsFor(row.id, course),
+                                                        })),
+                                                    })));
+                                                },
                                             )}
                                         >
                                             <Badge className="font-mono">{course.subject} {course.number}</Badge>
@@ -174,9 +220,9 @@ export default function PlanEditor({
                 </div>
             )}
 
-            {plan && plan.courses.length > 0 ? (
+            {shown && shown.courses.length > 0 ? (
                 <div className="mt-4 min-h-[300px] space-y-4 rounded-lg border border-dashed border-border px-4 pt-3 pb-3">
-                    {plan.courses.map((course) => (
+                    {shown.courses.map((course) => (
                         <div key={course.plannedCourseId} className="flex items-center justify-between gap-3 not-typeset">
                             <p className="flex min-w-0 items-center gap-2 text-sm font-medium">
                                 <Badge className="font-mono">{course.subject} {course.number}</Badge>
@@ -197,6 +243,11 @@ export default function PlanEditor({
                                         onClick={() => run(
                                             () => removePlannedCourse(course.plannedCourseId),
                                             `${course.subject} ${course.number} removed`,
+                                            () => {
+                                                setLocalPlan((current) => current
+                                                    ? withCourses(current, applyRemovedCourse(current, course.plannedCourseId))
+                                                    : current);
+                                            },
                                         )}
                                     >
                                         <XIcon />
@@ -221,17 +272,25 @@ export default function PlanEditor({
                 {editable && (
                     <Button
                         type="button"
-                        disabled={pending || !plan || plan.courses.length === 0}
-                        onClick={() => plan && run(() => submitPlannedTerm(plan.id), "Term plan submitted")}
+                        disabled={pending || !shown || shown.courses.length === 0}
+                        onClick={() => shown && run(
+                            () => submitPlannedTerm(shown.id),
+                            "Term plan submitted",
+                            () => setLocalPlan((current) => current ? { ...current, status: "SUBMITTED" } : current),
+                        )}
                     >
                         Submit for review
                     </Button>
                 )}
-                {status === "APPROVED" && plan && !plan.registered && (
+                {status === "APPROVED" && shown && !shown.registered && (
                     <Button
                         type="button"
                         disabled={pending}
-                        onClick={() => run(() => markPlannedTermRegistered(plan.id), "Registration recorded")}
+                        onClick={() => run(
+                            () => markPlannedTermRegistered(shown.id),
+                            "Registration recorded",
+                            () => setLocalPlan((current) => current ? { ...current, registered: true } : current),
+                        )}
                     >
                         I&apos;ve registered
                     </Button>
