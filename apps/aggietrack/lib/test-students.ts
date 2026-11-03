@@ -27,14 +27,20 @@ export type FrozenCourse = {
   requiresLab: boolean;
 };
 
-const fillers: Record<string, { subject: string; number: string }> = {
-  "1|Global Awareness|false": { subject: "HIST", number: "207" },
-  "3|Social/Behavioral Sciences|false": { subject: "PSYC", number: "101" },
-  "3|Scientific Reasoning|true": { subject: "BIOL", number: "100" },
-  "4|Scientific Reasoning|false": { subject: "ASME", number: "234" },
-  "4|African American Studies|false": { subject: "LIBS", number: "202" },
-  "5|Technical Electives|false": { subject: "CST", number: "250" },
-  "6|Technical Electives|false": { subject: "CST", number: "355" },
+/** One catalog course per open handbook slot. A repeated slot in the same term takes the next course. */
+const fillers: Record<string, { subject: string; number: string }[]> = {
+  "1|Global Awareness|false": [{ subject: "HIST", number: "207" }],
+  "3|Social/Behavioral Sciences|false": [{ subject: "PSYC", number: "101" }],
+  "3|Scientific Reasoning|true": [{ subject: "BIOL", number: "100" }],
+  "4|Scientific Reasoning|false": [{ subject: "ASME", number: "234" }],
+  "4|African American Studies|false": [{ subject: "LIBS", number: "202" }],
+  "5|Technical Electives|false": [{ subject: "CST", number: "250" }],
+  "6|Technical Electives|false": [{ subject: "CST", number: "355" }],
+  "7|Management Electives|false": [{ subject: "MGMT", number: "201" }],
+  "7|Free Electives|false": [{ subject: "ENGL", number: "200" }],
+  "8|Management Electives|false": [{ subject: "MGMT", number: "221" }],
+  "8|Technical Electives|false": [{ subject: "CST", number: "305" }, { subject: "CST", number: "306" }],
+  "8|Free Electives|false": [{ subject: "ECON", number: "200" }],
 };
 
 export const testStudents: TestStudent[] = [
@@ -90,11 +96,16 @@ export function frozenCourses(student: TestStudent): FrozenCourse[] {
     for (const course of term.courses) {
       rows.push({ subject: course.subject, number: course.number, sequence: term.sequence, slot: null, requiresLab: false });
     }
+    const taken = new Map<string, number>();
     for (const value of term.placeholders ?? []) {
       const placeholder = placeholderOf(value);
       const requiresLab = placeholder.requiresLab ?? false;
-      const filler = fillers[slotKey(term.sequence, placeholder.group, requiresLab)];
+      const key = slotKey(term.sequence, placeholder.group, requiresLab);
+      const options = fillers[key];
+      const index = taken.get(key) ?? 0;
+      const filler = options?.[index];
       if (!filler) throw new Error(`No frozen course for ${placeholder.group} on term ${term.sequence}.`);
+      taken.set(key, index + 1);
       rows.push({ ...filler, sequence: term.sequence, slot: placeholder.group, requiresLab });
     }
   }

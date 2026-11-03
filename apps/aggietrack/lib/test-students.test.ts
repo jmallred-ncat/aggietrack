@@ -1,9 +1,11 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { GenEdTag, RequirementSlot, StudentStanding } from "./generated/prisma/client";
-import { courseKey } from "../prisma/seed/courses";
+import { courseKey, courses as cstCourses } from "../prisma/seed/courses";
+import { cstCatalogCourses } from "../prisma/seed/cst-catalog";
 import { info2025 } from "../prisma/seed/info-2025";
 import { gecAttributes, gecCourses } from "../prisma/seed/gec";
+import { mgmtCourses } from "../prisma/seed/mgmt";
 import { authorizeTestStudents, frozenCourses, stateAfterReset, testStudentByEmail, testStudents } from "./test-students";
 
 const secret = "test-student-secret";
@@ -151,4 +153,34 @@ test("no student has excessive C grades (max ~30% for students with >=5 graded c
   // Taylor/Casey should have few or zero C grades after variation
   
   assert.ok(true, "Seed logic ensures C grades are occasional, not default (~12.5% for Jordan, 0% for strong students)");
+});
+
+test("frozenCourses succeeds for all 7 test students with complete filler coverage", () => {
+  const catalog = [...cstCourses, ...cstCatalogCourses, ...gecCourses, ...mgmtCourses];
+  function creditsFor(subject: string, number: string) {
+    const course = catalog.find(item => item.subject === subject && item.number === number);
+    assert.ok(course, `${subject} ${number} is not in the curriculum data`);
+    return course.credits;
+  }
+
+  for (const student of testStudents) {
+    const first = frozenCourses(student);
+    const second = frozenCourses(student);
+    assert.deepEqual(second, first, `generating the frozen transcript twice should match for ${student.email}`);
+    const codes = first.map(course => `${course.subject} ${course.number}`);
+    assert.equal(new Set(codes).size, codes.length, `${student.email} reuses a catalog course`);
+    for (const course of first) creditsFor(course.subject, course.number);
+
+    if (student.email === "it.over-credits@example.test") {
+      assert.equal(first.length, 43, "Morgan Lee should have 43 courses through term 8");
+      assert.ok(codes.includes("MGMT 201"), "Term 7 Management Electives should be filled");
+      assert.ok(codes.includes("ENGL 200"), "Term 7 Free Electives should be filled");
+      assert.ok(codes.includes("MGMT 221"), "Term 8 Management Electives should be filled");
+      assert.ok(codes.includes("CST 305"), "Term 8 Technical Electives should be filled");
+      assert.ok(codes.includes("CST 306"), "The second term 8 Technical Elective should be a different course");
+      assert.ok(codes.includes("ECON 200"), "Term 8 Free Electives should be filled");
+      const totalCredits = first.reduce((sum, course) => sum + creditsFor(course.subject, course.number), 0);
+      assert.equal(totalCredits, 120, "Morgan Lee should have exactly 120 credits");
+    }
+  }
 });

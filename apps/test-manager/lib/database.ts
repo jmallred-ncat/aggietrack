@@ -3,7 +3,7 @@ import { getPrisma } from "./prisma";
 import type { PrismaClient, Prisma } from "./generated/prisma/client";
 import { blankInstruction, presentDefectPeople } from "./fields";
 import { coverage, editableSections, validateRecord, type Workspace, type Values, type Section } from "./model";
-import { computedRequirementFields, formatLinks, linkTargets, normalizeId, parseLinks, rewriteRecordValues } from "./links";
+import { computedRequirementFields, formatLinks, isRecordId, linkTargets, normalizeId, parseLinks, rewriteRecordValues } from "./links";
 import { applyRetestFields } from "./retests";
 export const sectionDefinitions = seed.sections.map(section => {
   const headers = [...section.headers];
@@ -169,10 +169,12 @@ async function assertLinks(tx: Pick<PrismaClient, "workbookRecord">, sectionName
   for (const header of fields) {
     const targets = linkTargets(sectionName, header);
     if (!targets || header === "Requirement IDs" || header === "Defect ID") continue;
-    const ids = parseLinks(clean[header] ?? "");
-    if (ids.length === 0) { if (header in clean) clean[header] = ""; continue; }
+    const tokens = parseLinks(clean[header] ?? "");
+    if (tokens.length === 0) { if (header in clean) clean[header] = ""; continue; }
+    // Affected tests can carry tags ("load", "repeat") beside test ids. Keep the tags and only require real ids to exist.
+    const ids = header === "Affected tests" ? tokens.filter(isRecordId) : tokens;
     const known = new Set((await tx.workbookRecord.findMany({ where: { section: { in: targets } }, select: { id: true } })).map(row => normalizeId(row.id)));
     for (const id of ids) if (!known.has(id)) throw new Error(`${header} ${id} does not exist.`);
-    clean[header] = formatLinks(ids);
+    clean[header] = formatLinks(tokens);
   }
 }

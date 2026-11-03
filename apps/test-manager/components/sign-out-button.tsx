@@ -4,11 +4,11 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { authClient } from "@/lib/auth-client";
 import { Button } from "@aggietrack/ui/button";
+import { toast } from "@aggietrack/ui/toast";
 
 export function SignOutButton() {
   const router = useRouter();
   const [signingOut, setSigningOut] = useState(false);
-  const [notice, setNotice] = useState("");
 
   async function signOut() {
     setSigningOut(true);
@@ -18,13 +18,10 @@ export function SignOutButton() {
       router.replace("/sign-in");
       router.refresh();
     } catch (error) {
-      setNotice(error instanceof Error ? error.message : "Unable to sign out.");
+      toast.add({ type: "error", title: error instanceof Error ? error.message : "Unable to sign out." });
       setSigningOut(false);
     }
   }
 
-  return <div>
-    {notice && <p role="alert" className="mb-3 text-sm text-destructive">{notice}</p>}
-    <Button variant="outline" disabled={signingOut} onClick={signOut}>{signingOut ? "Signing out…" : "Sign out"}</Button>
-  </div>;
+  return <Button variant="outline" disabled={signingOut} onClick={signOut}>{signingOut ? "Signing out…" : "Sign out"}</Button>;
 }

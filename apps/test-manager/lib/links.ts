@@ -47,6 +47,11 @@ export function formatLinks(ids: string[]) {
   return ids.join(", ");
 }
 
+/** Canonical record ids such as T-31 or NFR-02. Words like "load" are tags, not ids. */
+export function isRecordId(value: string) {
+  return /^(?:NFR|FR|[TDQGR])-\d+$/.test(value);
+}
+
 export const computedRequirementFields = ["Mapped test IDs", "Mapped count", "Passed count", "Coverage state"];
 
 export function linkTargets(section: string, header: string) {

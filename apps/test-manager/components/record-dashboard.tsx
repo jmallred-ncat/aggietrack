@@ -10,6 +10,7 @@ import { Field, FieldLabel } from "@aggietrack/ui/field";
 import { Input } from "@aggietrack/ui/input";
 import { Textarea } from "@aggietrack/ui/textarea";
 import { AlertDialog, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@aggietrack/ui/alert-dialog";
+import { toast } from "@aggietrack/ui/toast";
 import { ChoiceSelect } from "@/components/choice-select";
 import { DateField, displayDate } from "@/components/date-field";
 import { DefectRetests } from "@/components/defect-retests";
@@ -130,8 +131,6 @@ export function RecordDashboard({ workspace, section, row, creating = false, mem
   const [confirmArchive, setConfirmArchive] = useState(false);
   const [history, setHistory] = useState<History[]>(workspace.history.filter(item => item.section === section.name && item.recordId === row?.id));
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState("");
-  const [notice, setNotice] = useState("");
   const [defectQuery, setDefectQuery] = useState<string | null>(null);
   const [createdDefects, setCreatedDefects] = useState<LinkOption[]>([]);
   const editable = editableSections.includes(section.name);
@@ -153,8 +152,6 @@ export function RecordDashboard({ workspace, section, row, creating = false, mem
   const headerBadges = [requirementKind, archived ? "Archived" : "", draft.Status && (!writingCase || testUpdate) ? draft.Status : "", !writingCase ? draft.Priority : "", !writingCase ? draft.Severity : "", section.name === "Tests" && !writingCase ? draft.Type : ""].filter((badge): badge is string => Boolean(badge));
 
   function openMode(next: "update" | "execution") {
-    setError("");
-    setNotice("");
     setMode(next);
   }
   function returnToCase() {
@@ -165,13 +162,12 @@ export function RecordDashboard({ workspace, section, row, creating = false, mem
   async function save(event: React.FormEvent) {
     event.preventDefault();
     setSaving(true);
-    setError("");
     try {
       const recordId = draft[section.headers[0]];
       const response = await fetch("/api/workspace", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ section: section.name, id: recordId, values: draft, revision }) });
       const payload = await response.json();
       if (!response.ok) throw new Error(payload.error ?? "Unable to save.");
-      if (creating) { router.replace(recordPath(section.name, normalizeId(recordId))); router.refresh(); return; }
+      if (creating) { toast.add({ type: "success", title: "Saved." }); router.replace(recordPath(section.name, normalizeId(recordId))); router.refresh(); return; }
       const saved = (payload as Workspace).sections.find(item => item.name === section.name)?.rows.find(item => item.id === normalizeId(recordId));
       if (saved) {
         const next = prepareDraft(section, { ...blank, ...saved.values });
@@ -181,17 +177,16 @@ export function RecordDashboard({ workspace, section, row, creating = false, mem
       }
       setHistory((payload as Workspace).history.filter(item => item.section === section.name && item.recordId === normalizeId(recordId)));
       if (section.name === "Tests") setMode("case");
-      setNotice(section.name === "Tests" ? "Saved." : "Saved. This dashboard is up to date.");
+      toast.add({ type: "success", title: section.name === "Tests" ? "Saved." : "Saved. This dashboard is up to date." });
       router.refresh();
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "Unable to save.");
+      toast.add({ type: "error", title: caught instanceof Error ? caught.message : "Unable to save." });
     } finally { setSaving(false); }
   }
 
   async function archiveRecord() {
     if (!row || revision === null) return;
     setSaving(true);
-    setError("");
     try {
       const response = await fetch("/api/workspace", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ section: section.name, id: row.id, revision, archive: !archived }) });
       const payload = await response.json();
@@ -205,11 +200,11 @@ export function RecordDashboard({ workspace, section, row, creating = false, mem
         setBaseline(next);
       }
       setHistory((payload as Workspace).history.filter(item => item.section === section.name && item.recordId === row.id));
-      setNotice(archived ? "Restored. This record is active again." : "Archived. It stays out of the active lists and coverage.");
+      toast.add({ type: "success", title: archived ? "Restored. This record is active again." : "Archived. It stays out of the active lists and coverage." });
       setConfirmArchive(false);
       router.refresh();
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "Unable to update this record.");
+      toast.add({ type: "error", title: caught instanceof Error ? caught.message : "Unable to update this record." });
     } finally { setSaving(false); }
   }
 
@@ -229,7 +224,7 @@ export function RecordDashboard({ workspace, section, row, creating = false, mem
     return [...options, ...createdDefects.filter(option => !known.has(option.id))];
   }
   const definition = <div className="space-y-4">{groups.definition.filter(header => draft[header] || editable).map(header => field(header, editable))}</div>;
-  const saveBar = <>{error && <p role="alert" className="text-sm text-destructive">{error}</p>}{notice && <p role="status" className="text-sm text-muted-foreground">{notice}</p>}{editable && <Button type="submit" disabled={saving}>{saving ? "Saving…" : "Save"}</Button>}</>;
+  const saveBar = <>{editable && <Button type="submit" disabled={saving}>{saving ? "Saving…" : "Save"}</Button>}</>;
   const runTitle = section.name === "Tests" ? "Execution" : "Update";
   const linkedRetests = section.name === "Defects" ? retestTests(tests, canonicalId, draft["Test / requirement IDs"] ?? "") : [];
   const run = groups.run.length > 0 && <div className="space-y-4 rounded-xl border bg-background p-5"><h2 className="font-semibold">{runTitle}</h2>{section.name === "Tests" && <p className="text-sm leading-6 text-muted-foreground">{draft.Status && draft.Status !== "Not run" ? "Pass, Fail, and Blocked need the actual result, run date, environment, and evidence reference." : "Actual result, run date, environment, and evidence reference stay empty while the status is Not run."}</p>}{groups.run.map(header => <div key={header} className="space-y-4">{header === "Regression / closure approval" && <DefectRetests tests={linkedRetests}/>}{field(header, editable && !(section.name === "Tests" && header === "Tester"))}</div>)}{saveBar}</div>;
@@ -243,7 +238,6 @@ export function RecordDashboard({ workspace, section, row, creating = false, mem
     {section.name !== "Tests" && <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">{statValues(section.name, draft, result).map(stat => <Card key={stat.label} className="not-typeset"><CardContent><p className="flex items-center gap-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">{stat.label}{!editedLabels.has(stat.label) && <TermHelp section={section.name} label={stat.label}/>}</p><p className={stat.value.length > 28 ? "mt-1 text-base font-semibold leading-snug" : "mt-1 text-2xl font-semibold leading-none"}>{stat.value}</p></CardContent></Card>)}</div>}
     {result && <Card className="not-typeset"><CardContent><div className="flex flex-wrap items-center justify-between gap-2"><h2 className="font-semibold">Coverage</h2><p className="text-sm text-muted-foreground">{result.passed} of {result.mapped.length} mapped tests passed</p></div><progress aria-label={`${id} tests passed`} className="mt-3 h-2 w-full accent-primary" value={result.passed} max={Math.max(1, result.mapped.length)}/></CardContent></Card>}
     {section.name !== "Tests" && related.length > 0 && <section className="not-typeset"><h2 className="font-semibold">Related records</h2><div className="mt-3 grid gap-3 sm:grid-cols-2">{related.map(item => <Link key={item.href} href={item.href} className="rounded-xl border bg-background p-4 hover:bg-muted/40"><div className="flex items-center justify-between gap-2"><span className="font-semibold text-primary">{normalizeId(item.id)}</span>{item.status && <Badge variant="secondary">{item.status}</Badge>}</div>{item.detail && <p className="mt-2 line-clamp-1 text-sm leading-snug text-muted-foreground">{item.detail}</p>}</Link>)}</div></section>}
-    {caseView && notice && <p role="status" className="text-sm text-muted-foreground">{notice}</p>}
     {caseView && <TestLab draft={draft} related={related} onUpdate={() => openMode("update")} onExecute={() => openMode("execution")}/>}
     {writingCase && <form onSubmit={save} className="max-w-3xl rounded-xl border bg-background px-6 py-8 sm:px-8">
       {testUpdate && <div className="mb-6 flex justify-end"><Button type="button" variant="outline" onClick={returnToCase}>Back to the case</Button></div>}
@@ -262,7 +256,7 @@ export function RecordDashboard({ workspace, section, row, creating = false, mem
     {!caseView && !testUpdate && !testExecution && !(creating && section.name === "Tests") && (editable ? groups.run.length > 0 ? <form onSubmit={save} className="grid items-start gap-6 xl:grid-cols-[minmax(0,1.1fr)_minmax(320px,0.9fr)]">{definition}{run}</form> : <form onSubmit={save} className="space-y-4">{definition}{saveBar}</form> : <div className="space-y-4">{definition}</div>)}
     {history.length > 0 && <section className="not-typeset"><h2 className="font-semibold">History</h2><div className="mt-3 space-y-3">{history.map(item => <Card key={item.sequence} className="not-typeset"><CardContent><p className="text-sm font-semibold">{item.savedAt} · {item.values.Archived === "Yes" ? "Archived" : item.values.Archived === "No" ? "Restored" : item.values.Status || "Updated"} · {item.actorEmail || item.values.Tester || item.values.Owner || "Baseline"}</p><dl className="mt-3 grid gap-3 sm:grid-cols-2">{Object.entries(item.values).filter(([key, value]) => value && key !== "Archived").slice(0, 6).map(([key, value]) => <div key={key}><dt className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{key}</dt><dd className="mt-1 line-clamp-3 whitespace-pre-wrap text-sm leading-6">{value}</dd></div>)}</dl></CardContent></Card>)}</div></section>}
     {!creating && <div className="flex items-center gap-2 border-t pt-6"><Button type="button" variant="outline" disabled={saving} onClick={() => setConfirmArchive(true)}>{archived ? "Restore" : "Archive"}</Button><TermHelp section={section.name} label="Archive"/></div>}
-    {defectQuery !== null && <CreateDefectSheet query={defectQuery} ids={[...(workspace.sections.find(item => item.name === "Defects")?.rows.map(item => item.id) ?? []), ...createdDefects.map(item => item.id)]} headers={workspace.sections.find(item => item.name === "Defects")?.headers ?? []} testId={creating ? undefined : row?.id} finder={finder} onOpenChange={open => { if (!open) setDefectQuery(null); }} onCreated={(id, summary) => { setCreatedDefects(current => [...current, { id, label: summary, archived: false }]); setDraft(current => ({ ...current, "Defect ID": [...new Set([...parseLinks(current["Defect ID"] ?? ""), id])].join(", ") })); setDefectQuery(null); router.refresh(); }}/>}
+    {defectQuery !== null && <CreateDefectSheet query={defectQuery} ids={[...(workspace.sections.find(item => item.name === "Defects")?.rows.map(item => item.id) ?? []), ...createdDefects.map(item => item.id)]} headers={workspace.sections.find(item => item.name === "Defects")?.headers ?? []} testId={creating ? undefined : row?.id} finder={finder} onOpenChange={open => { if (!open) setDefectQuery(null); }} onCreated={(id, summary) => { setCreatedDefects(current => [...current, { id, label: summary, archived: false }]); setDraft(current => ({ ...current, "Defect ID": [...new Set([...parseLinks(current["Defect ID"] ?? ""), id])].join(", ") })); setDefectQuery(null); toast.add({ type: "success", title: `${id} created.` }); router.refresh(); }}/>}
     <AlertDialog open={leaveCase} onOpenChange={open => { if (!open) setLeaveCase(false); }}>
       <AlertDialogContent>
         <AlertDialogHeader>
@@ -271,7 +265,7 @@ export function RecordDashboard({ workspace, section, row, creating = false, mem
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel>Keep editing</AlertDialogCancel>
-          <Button type="button" onClick={() => { setDraft(baseline); setError(""); setLeaveCase(false); setMode("case"); }}>Discard changes</Button>
+          <Button type="button" onClick={() => { setDraft(baseline); setLeaveCase(false); setMode("case"); }}>Discard changes</Button>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
@@ -281,7 +275,6 @@ export function RecordDashboard({ workspace, section, row, creating = false, mem
           <AlertDialogTitle>{archived ? "Restore this record?" : "Archive this record?"}</AlertDialogTitle>
           <AlertDialogDescription>{archived ? "It returns to the active lists and counts toward coverage again." : "It leaves the active lists and coverage. The record and its history stay available here."}</AlertDialogDescription>
         </AlertDialogHeader>
-        {error && confirmArchive && <p role="alert" className="text-sm text-destructive">{error}</p>}
         <AlertDialogFooter>
           <AlertDialogCancel disabled={saving}>Cancel</AlertDialogCancel>
           <Button type="button" disabled={saving} onClick={archiveRecord}>{saving ? "Working…" : archived ? "Restore" : "Archive"}</Button>

@@ -1,20 +1,19 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { buttonVariants } from "@aggietrack/ui/button";
 import { Button } from "@aggietrack/ui/button";
+import { toast } from "@aggietrack/ui/toast";
 import { navGroups } from "@/lib/sections";
 
 export function WorkspaceFrame({ user, children }: { user: { email: string }; children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const [notice, setNotice] = useState("");
 
   async function exportWorkspace() {
     const response = await fetch("/api/workspace");
-    if (!response.ok) { setNotice("Unable to export the workspace."); return; }
+    if (!response.ok) { toast.add({ type: "error", title: "Unable to export the workspace." }); return; }
     const { members: _members, ...workspace } = await response.json();
     const url = URL.createObjectURL(new Blob([JSON.stringify(workspace, null, 2)], { type: "application/json" }));
     const anchor = document.createElement("a");
@@ -22,6 +21,7 @@ export function WorkspaceFrame({ user, children }: { user: { email: string }; ch
     anchor.download = "test-workspace.json";
     anchor.click();
     URL.revokeObjectURL(url);
+    toast.add({ type: "success", title: "Workspace exported." });
   }
 
   return <div className="flex flex-1 flex-col">
@@ -53,7 +53,6 @@ export function WorkspaceFrame({ user, children }: { user: { email: string }; ch
         </nav>
       </aside>
       <main className="min-w-0">
-        {notice && <p role="status" className="mb-3 text-sm text-muted-foreground">{notice}</p>}
         {children}
       </main>
     </div>

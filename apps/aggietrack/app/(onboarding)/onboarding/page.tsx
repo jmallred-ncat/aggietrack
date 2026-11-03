@@ -1,3 +1,4 @@
+import LogOutButton from "@/components/auth/LogOutButton";
 import { Button } from "@/components/ui/button";
 import { prisma } from "@/lib/prisma";
 import { homePathForRole } from "@/lib/roles";
@@ -32,10 +33,17 @@ export default async function OnboardingPage() {
     return (
         <div className="px-4 md:px-6 lg:px-8 flex-1 flex flex-col space-y-16 py-8 md:pt-0">
             <header className="container not-typeset mx-auto max-w-screen-lg">
-                <h1 className="text-3xl md:text-4xl font-bold leading-tight text-balance md:pt-12">Your Degree, Perfectly Planned</h1>
-                <p className="text-lg text-muted-foreground text-balance mt-2">
-                    Let's set up your student profile to start planning your degree.
-                </p>
+                <div className="flex items-start justify-between gap-4">
+                    <div>
+                        <h1 className="text-3xl md:text-4xl font-bold leading-tight text-balance md:pt-12">Your Degree, Perfectly Planned</h1>
+                        <p className="text-lg text-muted-foreground text-balance mt-2">
+                            Let's set up your student profile to start planning your degree.
+                        </p>
+                    </div>
+                    <div className="md:pt-12">
+                        <LogOutButton />
+                    </div>
+                </div>
             </header>
             <section className="flex-1 flex flex-col">
                 <StudentProfileForm user={user} />

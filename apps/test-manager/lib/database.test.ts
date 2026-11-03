@@ -26,6 +26,17 @@ test("workbook import, execution history, live coverage, and persistence", async
     const original = tests.rows.find(row => row.id === "T-01")!;
     assert.match(original.values["Test / scenario"], /Sign up/);
     assert.equal(workspace.sections.find(section => section.name === "Risks & Decisions")!.rows.find(row => row.id === "Q-01")!.values["Issue / risk"], "Sign-in rules do not match the requirement");
+    const q12 = workspace.sections.find(section => section.name === "Risks & Decisions")!.rows.find(row => row.id === "Q-12")!;
+    assert.match(q12.values["Affected tests"], /load/);
+    assert.match(q12.values["Affected tests"], /repeat/);
+    await saveRecord("Risks & Decisions", "Q-12", { ...q12.values, "Affected tests": "T31; T32 load repeat; T38" }, q12.revision, db);
+    const savedQ12 = (await readWorkspace(db)).sections.find(section => section.name === "Risks & Decisions")!.rows.find(row => row.id === "Q-12")!;
+    assert.match(savedQ12.values["Affected tests"], /T-31/);
+    assert.match(savedQ12.values["Affected tests"], /T-32/);
+    assert.match(savedQ12.values["Affected tests"], /T-38/);
+    assert.match(savedQ12.values["Affected tests"], /\bload\b/);
+    assert.match(savedQ12.values["Affected tests"], /\brepeat\b/);
+    await assert.rejects(saveRecord("Risks & Decisions", "Q-12", { ...savedQ12.values, "Affected tests": "T-31, T-99, load" }, savedQ12.revision, db), /Affected tests T-99 does not exist/);
     await assert.rejects(saveRecord("Tests", "T01", { ...original.values, Status: "Pass" }, original.revision, db), /required/);
     const pass = { ...original.values, Status: "Pass", "Actual result": "Verified persistence and isolation", Tester: "Synthetic tester", "Run date": "2026-10-12", "Evidence reference": "isolated/run-1/T01", "Run / build / environment": "Local" };
     await saveRecord("Tests", "T01", pass, original.revision, db, { id: "verified-actor", email: "tester@example.test" });
