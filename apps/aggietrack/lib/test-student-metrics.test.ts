@@ -23,7 +23,7 @@ const expected = {
   "it.late@example.test": { credits: 92, percentage: 76.7, gpa: 3.64, adjusted: 3.64, resident: 86 },
   "it.retake-f-to-pass@example.test": { credits: 29, percentage: 24.2, gpa: 3.02, adjusted: 2.76, resident: 35 },
   "it.retake-c-to-a@example.test": { credits: 32, percentage: 26.7, gpa: 3.61, adjusted: 3.61, resident: 32 },
-  "it.diverse-grades@example.test": { credits: 41, percentage: 34.2, gpa: 2.83, adjusted: 2.83, resident: 40 },
+  "it.diverse-grades@example.test": { credits: 44, percentage: 36.7, gpa: 2.83, adjusted: 2.83, resident: 40 },
   "it.over-credits@example.test": { credits: 120, percentage: 100, gpa: 3.98, adjusted: 3.98, resident: 114 },
 } as const;
 
@@ -78,6 +78,7 @@ for (const group of groups) {
 }
 
 function creditsOf(attempt: PlannedAttempt) {
+  if (attempt.entered) return attempt.entered.credits;
   const credits = catalog.get(courseKey(attempt));
   assert.ok(credits, `${attempt.subject} ${attempt.number} is missing from the catalog`);
   return credits;
@@ -166,14 +167,16 @@ function productionProgress(student: TestStudent) {
   const courses = new Map<string, ApplicableCourse>();
   const rows: ApplicableAttempt[] = attempts.map((attempt, index) => {
     const code = courseKey(attempt);
-    courses.set(code, {
-      id: code,
-      subject: attempt.subject,
-      number: attempt.number,
-      tags: tagsByCode.get(code) ?? [],
-    });
+    if (!attempt.entered) {
+      courses.set(code, {
+        id: code,
+        subject: attempt.subject,
+        number: attempt.number,
+        tags: tagsByCode.get(code) ?? [],
+      });
+    }
     return {
-      courseId: code,
+      courseId: attempt.entered ? null : code,
       subject: attempt.subject,
       number: attempt.number,
       credits: creditsOf(attempt),
@@ -232,9 +235,11 @@ test("Alex Rivera keeps JOUR 101 and one row each of P, TR, W, I, and F", () => 
   const attempts = plannedAttempts(alex);
   const jour = attempts.find(attempt => attempt.subject === "JOUR" && attempt.number === "101");
   assert.ok(jour);
-  assert.equal(jour.outsidePlan, true);
+  assert.equal(jour.outsidePlan, false);
   assert.equal(jour.grade, Grade.B);
-  assert.equal(jour.slot, null);
+  assert.equal(jour.slot, "Free Electives");
+  assert.equal(jour.sequence, 7);
+  assert.deepEqual(jour.entered, { title: "Introduction to Journalism", credits: 3 });
 
   const gradeOf = (subject: string, number: string) => {
     const rows = attempts.filter(attempt => attempt.subject === subject && attempt.number === number);
@@ -248,10 +253,10 @@ test("Alex Rivera keeps JOUR 101 and one row each of P, TR, W, I, and F", () => 
   assert.equal(gradeOf("HIST", "207"), Grade.F);
 
   const progress = productionProgress(alex);
-  assert.equal(progress.earnedCredits, 41);
-  const withJour = progress.earnedCredits;
-  const withoutOutside = handCalculation(alex).credits;
-  assert.equal(withJour, withoutOutside);
+  assert.equal(progress.earnedCredits, 44);
+  assert.equal(progress.percentage, 36.7);
+  assert.equal(handCalculation(alex).credits, 44);
+  assert.equal(handCalculation(alex).gpa, 2.83);
 });
 
 test("a later attempt exists only after F, W, or a D that does not meet the major minimum", () => {

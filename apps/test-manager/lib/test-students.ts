@@ -11,7 +11,7 @@ export const testStudentCards: TestStudentCard[] = [
   { email: "it.late@example.test", name: "Riley Brooks", place: "Information Technology 2025. Senior: 92 credits, 76.7%, GPA 3.64. Strong A/A-/B+/B, ENGL 100 and MATH 224 transfer.", role: "student" },
   { email: "it.retake-f-to-pass@example.test", name: "Taylor Morgan", place: "Information Technology 2025. Sophomore: 29 credits, 24.2%, GPA 3.02. F then B on CST 112, and a D in CST 120 that is not retaken.", role: "student" },
   { email: "it.retake-c-to-a@example.test", name: "Casey Parker", place: "Information Technology 2025. Sophomore: 32 credits, 26.7%, GPA 3.61. W then A on CST 130.", role: "student" },
-  { email: "it.diverse-grades@example.test", name: "Alex Rivera", place: "Information Technology 2025. Junior: 41 credits, 34.2%, GPA 2.83. P, TR, W, I, and F, plus JOUR 101 outside the plan.", role: "student" },
+  { email: "it.diverse-grades@example.test", name: "Alex Rivera", place: "Information Technology 2025. Junior: 44 credits, 36.7%, GPA 2.83. P, TR, W, I, and F, plus JOUR 101 typed into a free elective.", role: "student" },
   { email: "it.over-credits@example.test", name: "Morgan Lee", place: "Information Technology 2025. Senior: 120 credits, 100%, GPA 3.98. Mostly A, with A- in ENGL 101 and ECON 200. ENGL 100 and MATH 224 transfer.", role: "student" },
 ];
 

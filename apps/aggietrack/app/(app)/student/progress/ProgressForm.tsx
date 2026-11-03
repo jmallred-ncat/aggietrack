@@ -834,6 +834,10 @@ export default function ProgressForm({
                                                           (course) => course.id === slotSelection.courseId,
                                                       )
                                                     : null;
+                                            const enteredCourse =
+                                                row.kind === "slot" && !slotCourse && slotSelection?.subject && slotSelection?.number
+                                                    ? slotSelection
+                                                    : null;
 
                                             return (
                                                 <div key={row.id} className="not-typeset">
@@ -850,10 +854,12 @@ export default function ProgressForm({
                                                                 <>
                                                                     {slotCourse ? (
                                                                         <Badge className="shrink-0 font-mono">{slotCourse.subject} {slotCourse.number}</Badge>
+                                                                    ) : enteredCourse ? (
+                                                                        <Badge className="shrink-0 font-mono">{enteredCourse.subject} {enteredCourse.number}</Badge>
                                                                     ) : row.badge ? (
                                                                         <Badge variant="outline" className="shrink-0 font-mono">{row.badge}</Badge>
                                                                     ) : null}
-                                                                    <span className="min-w-0 truncate">{slotCourse?.title ?? row.title}</span>
+                                                                    <span className="min-w-0 truncate">{slotCourse?.title ?? enteredCourse?.title ?? row.title}</span>
                                                                 </>
                                                             )}
                                                         </div>

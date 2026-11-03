@@ -37,7 +37,7 @@ test("test student progress values are deterministic and documented", () => {
     "Riley Brooks: 92 credits, 76.7%",
     "Taylor Morgan: 29 credits, 24.2% (F→B counts B, D below min does not)",
     "Casey Parker: 32 credits, 26.7% (W→A counts A)",
-    "Alex Rivera: 41 credits, 34.2% (excludes W/I/F and JOUR 101)",
+    "Alex Rivera: 44 credits, 36.7% (excludes W/I/F; typed JOUR 101 fills a free elective)",
     "Morgan Lee: 120 credits, 100%",
   ];
   

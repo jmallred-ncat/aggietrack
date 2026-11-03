@@ -11,7 +11,7 @@ This document lists test students, their scenarios, and expected progress metric
 | Riley Brooks | it.late@example.test | Senior | Near graduation | 92 | 76.7% | 3.64 | 3.64 | 86 | Magna Cum Laude pace |
 | Taylor Morgan | it.retake-f-to-pass@example.test | Sophomore | F→B retake + D below-min | 29 | 24.2% | 3.02 | 2.76 | 35 | None |
 | Casey Parker | it.retake-c-to-a@example.test | Sophomore | W→A retake | 32 | 26.7% | 3.61 | 3.61 | 32 | On track for Magna Cum Laude |
-| Alex Rivera | it.diverse-grades@example.test | Junior | Diverse grades + unmapped | 41 | 34.2% | 2.83 | 2.83 | 40 | None |
+| Alex Rivera | it.diverse-grades@example.test | Junior | Diverse grades + typed elective | 44 | 36.7% | 2.83 | 2.83 | 40 | None |
 | Morgan Lee | it.over-credits@example.test | Senior | Full curriculum | 120 | 100.0% | 3.98 | 3.98 | 114 | Summa Cum Laude pace |
 
 **\*To get exact values:** Reset a student via Test Manager, log in, view Dashboard. The `computeDegreeProgress` function returns exact credits and percentage (1 decimal place) based on:
@@ -128,8 +128,8 @@ This document lists test students, their scenarios, and expected progress metric
 ### 6. Alex Rivera
 - **Email:** `it.diverse-grades@example.test`
 - **Standing:** Junior
-- **Earned Credits:** 41 (terms 1–3 are 48 credits; W, I, and F drop 7; JOUR 101 is outside the plan)
-- **Progress:** 34.2%
+- **Earned Credits:** 44 (terms 1–3 are 48 credits; W, I, and F drop 7; JOUR 101 adds 3 toward free electives)
+- **Progress:** 36.7%
 - **GPA:** **2.83** (113.2 quality points / 40 graded hours; P, TR, W, and I excluded; the F and JOUR 101's B count)
 - **Adjusted GPA:** **2.83** (same as cumulative, no repeated letter grades)
 - **Resident Hours:** 40 (letter-graded NC A&T attempts, including the F and JOUR 101)
@@ -142,12 +142,12 @@ This document lists test students, their scenarios, and expected progress metric
   - **CST 122:** I (Incomplete) - excluded from credit and GPA
   - **HIST 207:** F (Failed) - 0.0 quality points, counts in GPA, not retaken
   - **PSYC 101:** A (regular grade) - 4.0 quality points
-  - **JOUR 101:** B - **outside the degree plan** (counts in GPA, not in progress)
+  - **JOUR 101:** B - typed into the term 7 free-elective slot (not a catalog course; 3 credits count toward free electives and in GPA)
   - Other courses: mostly B (3.0 quality points)
   - All courses have explicit grades
 - **Tests:**
   - ✅ **P/TR/W/I/F grades** (P/TR/W/I excluded from GPA; F counts as 0.0)
-  - ✅ **Unmapped course** (doesn't count toward progress, but counts in GPA)
+  - ✅ **Typed free elective** (JOUR 101 is stored on the transcript, not in the catalog, and counts toward free electives)
   - ✅ **F lowers GPA** (0.0 quality points but counts in hours)
   - Special grade handling
   - Edge cases

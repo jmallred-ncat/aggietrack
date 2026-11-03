@@ -106,10 +106,22 @@ async function writeFrozen(userId: string, student: TestStudent, catalogYearId: 
     await tx.advisingAppointment.deleteMany({ where: { studentId: profile.id } });
     await tx.advisingNote.deleteMany({ where: { studentId: profile.id } });
     await tx.session.deleteMany({ where: { userId } });
+    // JOUR 101 was briefly inserted as a catalog course. A typed free elective is not one, so drop that row once this transcript no longer points at it.
+    await tx.course.deleteMany({
+      where: {
+        subject: "JOUR",
+        number: "101",
+        transcriptEntries: { none: {} },
+        plannedCourses: { none: {} },
+        requirementItems: { none: {} },
+        recommendedIn: { none: {} },
+      },
+    });
     if (planned.length === 0) return;
 
+    const sequences = [...new Set(planned.map(course => course.sequence))];
     const terms = await tx.recommendedTerm.findMany({
-      where: { catalogYearId, sequence: { lte: student.through } },
+      where: { catalogYearId, sequence: { in: sequences } },
       include: {
         courses: {
           include: {
@@ -128,14 +140,16 @@ async function writeFrozen(userId: string, student: TestStudent, catalogYearId: 
     const started = Date.UTC(2024, 7, 15);
     const entries = planned.map((course, index) => {
       const createdAt = new Date(started + index * 86_400_000);
-      if (course.outsidePlan) {
-        const catalogCourse = byCode.get(`${course.subject} ${course.number}`);
-        if (!catalogCourse) throw new TestStudentError(`${course.subject} ${course.number} is not in the catalog.`, 500);
+      if (course.entered) {
+        const slotId = enteredSlot(terms, course, usedSlots);
         return {
           studentId: profile.id,
-          courseId: catalogCourse.id,
-          recommendedTermCourseId: null,
-          credits: catalogCourse.credits,
+          courseId: null,
+          subject: course.subject,
+          number: course.number,
+          title: course.entered.title,
+          recommendedTermCourseId: slotId,
+          credits: course.entered.credits,
           grade: course.grade,
           status: course.status,
           source: course.source,
@@ -146,6 +160,9 @@ async function writeFrozen(userId: string, student: TestStudent, catalogYearId: 
       return {
         studentId: profile.id,
         courseId: placed.courseId,
+        subject: null,
+        number: null,
+        title: null,
         recommendedTermCourseId: placed.recommendedTermCourseId,
         credits: placed.credits,
         grade: course.status === TranscriptStatus.IN_PROGRESS ? null : course.grade,
@@ -156,6 +173,20 @@ async function writeFrozen(userId: string, student: TestStudent, catalogYearId: 
     });
     await tx.transcriptEntry.createMany({ data: entries });
   });
+}
+
+function enteredSlot(
+  terms: Array<{ sequence: number; courses: Array<{ id: string; requiresLab: boolean; requirementGroup: { name: string } | null }> }>,
+  course: FrozenCourse,
+  usedSlots: Set<string>,
+) {
+  const term = terms.find(item => item.sequence === course.sequence);
+  if (!term) throw new TestStudentError(`Handbook term ${course.sequence} is missing.`, 500);
+  if (!course.slot) throw new TestStudentError(`${course.subject} ${course.number} needs a free-elective slot.`, 500);
+  const slot = term.courses.find(item => item.requirementGroup?.name === course.slot && item.requiresLab === course.requiresLab && !usedSlots.has(item.id));
+  if (!slot) throw new TestStudentError(`${course.slot} is not on handbook term ${course.sequence}.`, 500);
+  usedSlots.add(slot.id);
+  return slot.id;
 }
 
 function transcriptRow(

@@ -7,6 +7,11 @@ export type PlannedAttempt = FrozenCourse & {
   source: TranscriptSource;
   /** On the transcript, but not a handbook requirement or elective slot. */
   outsidePlan: boolean;
+  /**
+   * A course the student typed into a free-elective slot. It is not a catalog row:
+   * the transcript stores the subject, number, title, and credits.
+   */
+  entered: { title: string; credits: number } | null;
 };
 
 function attempt(
@@ -20,6 +25,7 @@ function attempt(
     status,
     source: grade === Grade.TR ? TranscriptSource.TRANSFER : TranscriptSource.NCAT,
     outsidePlan: false,
+    entered: null,
   };
 }
 
@@ -129,8 +135,10 @@ const CASEY: Record<string, Grade> = {
 
 /**
  * Alex Rivera. P, TR, W, I, and F sit on handbook courses so each row is visible.
- * JOUR 101 is added separately and is not on the degree plan.
+ * JOUR 101 is a course he typed into the first free-elective slot (term 7).
+ * It is not in the catalog. Its B is 9 quality points.
  * Letter grades are 113.2 quality points / 40 hours = 2.83.
+ * Progress is 44: terms 1–3 are 48, minus W 3, I 1, and F 3, plus this 3-credit elective.
  */
 const ALEX: Record<string, Grade> = {
   "CST 120": Grade.B_PLUS,
@@ -202,13 +210,14 @@ export function plannedAttempts(student: TestStudent): PlannedAttempt[] {
         {
           subject: "JOUR",
           number: "101",
-          sequence: 3,
-          slot: null,
+          sequence: 7,
+          slot: "Free Electives",
           requiresLab: false,
           grade: Grade.B,
           status: TranscriptStatus.COMPLETED,
           source: TranscriptSource.NCAT,
-          outsidePlan: true,
+          outsidePlan: false,
+          entered: { title: "Introduction to Journalism", credits: 3 },
         },
       ];
     case "it.over-credits@example.test":

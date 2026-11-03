@@ -65,8 +65,6 @@ export const courses: CourseSeed[] = [
   { subject: "PHYS", number: "235", title: "College Physics I Lab", credits: 1, isLab: true },
   { subject: "PHYS", number: "236", title: "College Physics II Lab", credits: 1, isLab: true },
   { subject: "SPCH", number: "250", title: "Speech Fundamentals", credits: 3 },
-  // Not an Information Technology requirement. Alex Rivera's fixture uses it as a course outside the plan.
-  { subject: "JOUR", number: "101", title: "Introduction to Journalism", credits: 3 },
 ];
 
 /** Lecture/lab pairs that the 8-semester guides place in the same term. */
