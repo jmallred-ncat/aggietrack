@@ -131,9 +131,9 @@ async function writeFrozen(userId: string, student: TestStudent, catalogYearId: 
                         defaultHash === 4 ? Grade.C_PLUS : 
                         Grade.B; // B as final fallback, not C
 
-      // Jordan Hale: varied mid-range grades (GPA 3.40, Cum Laude 3.25-3.49 range)
-      // Explicit grade assignment to guarantee 3.40 GPA: 15 courses, need 153.0 quality points
-      // Distribution: 3×A (12.0), 3×A- (11.1), 5×B+ (16.5), 4×B (12.0) = 51.6 total pts / 15 courses = 3.44
+      // Jordan Hale: varied mid-range grades (GPA 3.32, Cum Laude 3.25-3.49 range)
+      // Hash-based grade assignment from gradeSequence for 17 courses in terms 1-3
+      // Distribution: 3×A (20 pts), 3×A- (11.1 pts), 9×B+ (55.8 pts), 5×B (57.0 pts) = 159.5 quality points / 48 credits = 3.32
       if (student.email === "it.mid@example.test") {
         const gradeSequence = [
           Grade.A, Grade.A, Grade.A,          // 3 A's

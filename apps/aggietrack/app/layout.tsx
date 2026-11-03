@@ -22,7 +22,7 @@ export const metadata: Metadata = {
   description: "Know exactly where you stand. AggieTrack maps the B.S. in Information Technology at North Carolina A&T.",
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html
       lang="en"
