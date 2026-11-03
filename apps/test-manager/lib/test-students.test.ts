@@ -2,8 +2,16 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { aggietrackRequest, resetAfterUse, testStudentByEmail, testStudentCards } from "./test-students";
 
-test("the testing site shows the three Information Technology students and the reset instruction", () => {
-  assert.deepEqual(testStudentCards.map(student => student.email), ["it.start@example.test", "it.mid@example.test", "it.late@example.test"]);
+test("the testing site shows the Information Technology students and the reset instruction", () => {
+  assert.deepEqual(testStudentCards.map(student => student.email), [
+    "it.start@example.test",
+    "it.mid@example.test",
+    "it.late@example.test",
+    "it.retake-f-to-pass@example.test",
+    "it.retake-c-to-a@example.test",
+    "it.diverse-grades@example.test",
+    "it.over-credits@example.test",
+  ]);
   assert.match(resetAfterUse, /after every use/);
   assert.equal(testStudentByEmail("it.late@example.test")?.name, "Riley Brooks");
   assert.equal(testStudentByEmail("someone@example.test"), null);

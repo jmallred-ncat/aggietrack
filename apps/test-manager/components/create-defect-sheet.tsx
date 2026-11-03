@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Button } from "@aggietrack/ui/button";
+import { toast } from "@aggietrack/ui/toast";
 import { Field, FieldLabel } from "@aggietrack/ui/field";
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@aggietrack/ui/sheet";
 import { Textarea } from "@aggietrack/ui/textarea";
@@ -20,12 +21,10 @@ export function CreateDefectSheet({ query, ids, headers, testId, finder, onOpenC
   const [summary, setSummary] = useState(/^(?:NFR|FR|[TDQGR])-?\d+$/i.test(query.trim()) ? "" : query.trim());
   const [severity, setSeverity] = useState("Medium");
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState("");
 
   async function create(event: React.FormEvent) {
     event.preventDefault();
     setSaving(true);
-    setError("");
     const values = Object.fromEntries(headers.map(header => [header, ""]));
     values["Defect ID"] = id;
     values.Summary = summary.trim();
@@ -39,7 +38,7 @@ export function CreateDefectSheet({ query, ids, headers, testId, finder, onOpenC
       if (!response.ok) throw new Error(payload.error ?? "Unable to create the defect.");
       onCreated(id, values.Summary);
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "Unable to create the defect.");
+      toast.add({ type: "error", title: caught instanceof Error ? caught.message : "Unable to create the defect." });
       setSaving(false);
     }
   }
@@ -67,7 +66,6 @@ export function CreateDefectSheet({ query, ids, headers, testId, finder, onOpenC
           <FieldLabel htmlFor="new-defect-severity">Severity</FieldLabel>
           <ChoiceSelect id="new-defect-severity" label="Severity" value={severity} options={severities} onChange={setSeverity} className="w-full bg-background"/>
         </Field>
-        {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
         <SheetFooter className="px-0">
           <Button type="submit" disabled={saving}>{saving ? "Creating…" : "Create defect"}</Button>
         </SheetFooter>

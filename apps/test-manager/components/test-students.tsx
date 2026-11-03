@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button } from "@aggietrack/ui/button";
 import {
   AlertDialog,
@@ -13,51 +13,48 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@aggietrack/ui/alert-dialog";
+import { toast } from "@aggietrack/ui/toast";
+import { resetAllSummary, resetTestAccounts } from "@/lib/reset-students";
 import { resetAfterUse, type TestStudentCard } from "@/lib/test-students";
+
+async function postReset(email: string) {
+  const response = await fetch("/api/test-students", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email }) });
+  const body = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(typeof body.error === "string" ? body.error : "That account could not be reset.");
+}
 
 export function TestStudents({ students, password, notice }: { students: TestStudentCard[]; password: string; notice: string }) {
   const [pending, setPending] = useState("");
   const [pendingAll, setPendingAll] = useState(false);
-  const [message, setMessage] = useState("");
-  const [error, setError] = useState(notice);
+  const [confirmAll, setConfirmAll] = useState(false);
+  const toastedNotice = useRef(false);
+
+  useEffect(() => {
+    if (!notice || toastedNotice.current) return;
+    toastedNotice.current = true;
+    toast.add({ type: "error", title: notice });
+  }, [notice]);
 
   async function reset(student: TestStudentCard) {
     setPending(student.email);
-    setError("");
-    setMessage("");
     try {
-      const response = await fetch("/api/test-students", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email: student.email }) });
-      const body = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(typeof body.error === "string" ? body.error : "That account could not be reset.");
-      setMessage(`${student.name} is back to the frozen place and signed out of AggieTrack.`);
+      await postReset(student.email);
+      toast.add({ type: "success", title: `${student.name} is back to the frozen place and signed out of AggieTrack.` });
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "That account could not be reset.");
+      toast.add({ type: "error", title: caught instanceof Error ? caught.message : "That account could not be reset." });
     } finally {
       setPending("");
     }
   }
 
   async function resetAll() {
+    setConfirmAll(false);
     setPendingAll(true);
-    setError("");
-    setMessage("");
     try {
-      const response = await fetch("/api/test-students/reset-all", { method: "POST" });
-      const body = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(typeof body.error === "string" ? body.error : "Test students could not be reset.");
-      
-      const { succeeded, failed, total } = body;
-      if (failed && failed.length > 0) {
-        const failedNames = failed.map((f: { email: string }) => {
-          const student = students.find(s => s.email === f.email);
-          return student?.name || f.email;
-        }).join(", ");
-        setMessage(`Reset ${succeeded.length} of ${total} students. Failed: ${failedNames}`);
-      } else {
-        setMessage(`Reset ${succeeded.length} of ${total} students`);
-      }
+      const result = await resetTestAccounts(studentAccounts, postReset);
+      toast.add({ type: result.failed.length > 0 ? "error" : "success", title: resetAllSummary(result) });
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "Test students could not be reset.");
+      toast.add({ type: "error", title: caught instanceof Error ? caught.message : "Test students could not be reset." });
     } finally {
       setPendingAll(false);
     }
@@ -72,7 +69,7 @@ export function TestStudents({ students, password, notice }: { students: TestStu
         <h1 className="text-2xl font-semibold">Test Accounts</h1>
         <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">These accounts sign in on AggieTrack. They are shared, so the next person does not inherit someone else&apos;s data.</p>
       </div>
-      <AlertDialog>
+      <AlertDialog open={confirmAll} onOpenChange={setConfirmAll}>
         <AlertDialogTrigger render={<Button variant="outline" disabled={pendingAll || !password} />}>
           {pendingAll ? "Resetting…" : "Reset All Students"}
         </AlertDialogTrigger>
@@ -90,8 +87,6 @@ export function TestStudents({ students, password, notice }: { students: TestStu
         </AlertDialogContent>
       </AlertDialog>
     </div>
-    {message && !error ? <p className="text-sm text-muted-foreground">{message}</p> : null}
-    {error ? <p className="text-sm text-destructive" role="alert">{error}</p> : null}
     
     <section className="space-y-4">
       <div>
@@ -107,7 +102,7 @@ export function TestStudents({ students, password, notice }: { students: TestStu
             <div><dt className="text-muted-foreground">Password</dt><dd className="font-mono">{password || "Not configured"}</dd></div>
           </dl>
           <p className="mt-4 text-sm leading-6">{resetAfterUse}</p>
-          <Button className="mt-4 w-fit" disabled={pending === student.email || !password} onClick={() => reset(student)}>{pending === student.email ? "Resetting…" : `Reset ${student.name}`}</Button>
+          <Button className="mt-4 w-fit" disabled={pending === student.email || pendingAll || !password} onClick={() => reset(student)}>{pending === student.email ? "Resetting…" : `Reset ${student.name}`}</Button>
         </section>)}
       </div>
     </section>
@@ -126,7 +121,7 @@ export function TestStudents({ students, password, notice }: { students: TestStu
             <div><dt className="text-muted-foreground">Password</dt><dd className="font-mono">{password || "Not configured"}</dd></div>
           </dl>
           <p className="mt-4 text-sm leading-6">Reset clears sessions only (no profile or transcript).</p>
-          <Button className="mt-4 w-fit" disabled={pending === advisor.email || !password} onClick={() => reset(advisor)}>{pending === advisor.email ? "Resetting…" : `Reset ${advisor.name}`}</Button>
+          <Button className="mt-4 w-fit" disabled={pending === advisor.email || pendingAll || !password} onClick={() => reset(advisor)}>{pending === advisor.email ? "Resetting…" : `Reset ${advisor.name}`}</Button>
         </section>)}
       </div>
     </section>

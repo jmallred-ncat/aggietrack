@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Combobox } from "@base-ui/react/combobox";
 import { AlertDialog, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@aggietrack/ui/alert-dialog";
+import { toast } from "@aggietrack/ui/toast";
 import { Button } from "@aggietrack/ui/button";
 import { Card, CardContent } from "@aggietrack/ui/card";
 import { Field, FieldLabel } from "@aggietrack/ui/field";
@@ -51,26 +52,23 @@ export function TeamPanel({ user, members: initialMembers }: { user: { email: st
   const [inviteEmail, setInviteEmail] = useState("");
   const [pending, setPending] = useState("");
   const [confirming, setConfirming] = useState<{ email: string; action: Exclude<MemberAction, "promote"> } | null>(null);
-  const [error, setError] = useState("");
-  const [notice, setNotice] = useState("");
   const verifiedAdmins = members.filter(member => member.emailVerified && isAdminRole(member.role)).length;
   const roles = roleChoices(members);
 
   async function act(action: MemberAction | "invite" | "resend", email = inviteEmail, name = inviteName) {
     setPending(action === "resend" ? `resend:${email}` : email || action);
-    setError("");
     try {
       const response = await fetch("/api/team", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(action === "invite" ? { action, name, email } : { action, email }) });
       const result = await response.json();
       if (!response.ok) throw new Error(result.error ?? "Unable to update the team.");
       setMembers(result.members);
       setDrafts(organizationDrafts(result.members));
-      if (action === "invite" || action === "resend") setNotice(action === "resend" ? "Invite sent again. They can sign in from the link in that email." : "Invite sent. They can sign in from the link in that email.");
+      const title = action === "resend" ? "Invite sent again. They can sign in from the link in that email." : action === "invite" ? "Invite sent. They can sign in from the link in that email." : action === "promote" ? "They are now an admin." : action === "demote" ? "They are now a member." : action === "revoke" ? "Invite revoked." : "Team member removed.";
+      toast.add({ type: "success", title });
       if (action === "invite") { setInviteName(""); setInviteEmail(""); }
-      else if (action !== "resend") setNotice(action === "promote" ? "They are now an admin." : action === "demote" ? "They are now a member." : action === "revoke" ? "Invite revoked." : "Team member removed.");
       setConfirming(null);
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "Unable to update the team.");
+      toast.add({ type: "error", title: caught instanceof Error ? caught.message : "Unable to update the team." });
     } finally { setPending(""); }
   }
 
@@ -78,16 +76,15 @@ export function TeamPanel({ user, members: initialMembers }: { user: { email: st
     const draft = drafts[email];
     if (!draft) return;
     setPending(email);
-    setError("");
     try {
       const response = await fetch("/api/team", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "organization", email, organizationRole: draft.organizationRole, responsibilities: draft.responsibilities }) });
       const result = await response.json();
       if (!response.ok) throw new Error(result.error ?? "Unable to update the team.");
       setMembers(result.members);
       setDrafts(organizationDrafts(result.members));
-      setNotice("Saved.");
+      toast.add({ type: "success", title: "Saved." });
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "Unable to update the team.");
+      toast.add({ type: "error", title: caught instanceof Error ? caught.message : "Unable to update the team." });
     } finally { setPending(""); }
   }
 
@@ -98,8 +95,6 @@ export function TeamPanel({ user, members: initialMembers }: { user: { email: st
       <h1 className="text-2xl font-semibold">Team</h1>
       <p className="mt-1 text-sm text-muted-foreground">Admins assign each person’s organization role and responsibilities.</p>
     </div>
-    {notice && <p role="status" className="mb-3 text-sm text-muted-foreground">{notice}</p>}
-    {error && !confirming && <p role="alert" className="mb-3 text-sm text-destructive">{error}</p>}
     <Card className="not-typeset">
       <CardContent className="space-y-6">
         <div>
@@ -146,13 +141,12 @@ export function TeamPanel({ user, members: initialMembers }: { user: { email: st
         </form> : <p className="text-sm text-muted-foreground">An admin can invite more people. You can still assign tests to anyone listed here.</p>}
       </CardContent>
     </Card>
-    <AlertDialog open={confirming !== null} onOpenChange={open => { if (!open && pending === "") { setConfirming(null); setError(""); } }}>
+    <AlertDialog open={confirming !== null} onOpenChange={open => { if (!open && pending === "") setConfirming(null); }}>
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>{dialog.title}</AlertDialogTitle>
           <AlertDialogDescription>{confirming ? `${confirming.email}. ${dialog.description}` : dialog.description}</AlertDialogDescription>
         </AlertDialogHeader>
-        {error && confirming && <p role="alert" className="text-sm text-destructive">{error}</p>}
         <AlertDialogFooter>
           <AlertDialogCancel disabled={pending !== ""}>Cancel</AlertDialogCancel>
           <Button disabled={pending !== "" || !confirming} onClick={() => confirming && act(confirming.action, confirming.email)}>{pending !== "" ? "Working…" : dialog.confirm}</Button>

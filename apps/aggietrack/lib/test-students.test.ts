@@ -2,8 +2,10 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { GenEdTag, RequirementSlot, StudentStanding } from "./generated/prisma/client";
 import { courseKey, courses as cstCourses } from "../prisma/seed/courses";
+import { cstCatalogCourses } from "../prisma/seed/cst-catalog";
 import { info2025 } from "../prisma/seed/info-2025";
 import { gecAttributes, gecCourses } from "../prisma/seed/gec";
+import { mgmtCourses } from "../prisma/seed/mgmt";
 import { authorizeTestStudents, frozenCourses, stateAfterReset, testStudentByEmail, testStudents } from "./test-students";
 
 const secret = "test-student-secret";
@@ -154,42 +156,31 @@ test("no student has excessive C grades (max ~30% for students with >=5 graded c
 });
 
 test("frozenCourses succeeds for all 7 test students with complete filler coverage", () => {
-  // This test ensures the fillers map has entries for ALL placeholders in the curriculum
-  // that any test student might need. If a filler is missing, frozenCourses will throw.
-  
-  // Combine all seeded courses for lookup
-  const allCourses = [...cstCourses, ...gecCourses];
-  
-  // Helper to get course credit from the seed data
-  function getCourseCredits(subject: string, number: string): number {
-    const course = allCourses.find(c => c.subject === subject && c.number === number);
-    return course?.credits ?? 3;
+  const catalog = [...cstCourses, ...cstCatalogCourses, ...gecCourses, ...mgmtCourses];
+  function creditsFor(subject: string, number: string) {
+    const course = catalog.find(item => item.subject === subject && item.number === number);
+    assert.ok(course, `${subject} ${number} is not in the curriculum data`);
+    return course.credits;
   }
-  
+
   for (const student of testStudents) {
-    const courses = frozenCourses(student);
-    
-    // Should not throw - if it does, a filler is missing from the map
-    assert.ok(Array.isArray(courses), `frozenCourses should return array for ${student.email}`);
-    
-    // Verify Morgan Lee (through term 8) gets all expected courses
+    const first = frozenCourses(student);
+    const second = frozenCourses(student);
+    assert.deepEqual(second, first, `generating the frozen transcript twice should match for ${student.email}`);
+    const codes = first.map(course => `${course.subject} ${course.number}`);
+    assert.equal(new Set(codes).size, codes.length, `${student.email} reuses a catalog course`);
+    for (const course of first) creditsFor(course.subject, course.number);
+
     if (student.email === "it.over-credits@example.test") {
-      // Terms 1-8: 6+6+5+6+5+5+5+5 = 43 courses
-      assert.equal(courses.length, 43, "Morgan Lee should have 43 courses through term 8");
-      
-      // Verify critical placeholders are filled
-      const codes = courses.map(c => `${c.subject} ${c.number}`);
-      assert.ok(codes.includes("MGMT 301"), "Term 7 Management Electives should be filled");
-      assert.ok(codes.includes("MGMT 401"), "Term 8 Management Electives should be filled");
-      assert.ok(codes.includes("CST 450"), "Term 8 Technical Electives should be filled");
-      
-      // Count total credits (using actual credit values from seed: labs=1, math/calc=4, most=3)
-      const totalCredits = courses.reduce((sum, c) => sum + getCourseCredits(c.subject, c.number), 0);
-      
+      assert.equal(first.length, 43, "Morgan Lee should have 43 courses through term 8");
+      assert.ok(codes.includes("MGMT 201"), "Term 7 Management Electives should be filled");
+      assert.ok(codes.includes("ENGL 200"), "Term 7 Free Electives should be filled");
+      assert.ok(codes.includes("MGMT 221"), "Term 8 Management Electives should be filled");
+      assert.ok(codes.includes("CST 305"), "Term 8 Technical Electives should be filled");
+      assert.ok(codes.includes("CST 306"), "The second term 8 Technical Elective should be a different course");
+      assert.ok(codes.includes("ECON 200"), "Term 8 Free Electives should be filled");
+      const totalCredits = first.reduce((sum, course) => sum + creditsFor(course.subject, course.number), 0);
       assert.equal(totalCredits, 120, "Morgan Lee should have exactly 120 credits");
     }
   }
-  
-  // If we got here without throwing, all fillers are present
-  assert.ok(true, "All 7 students have complete filler coverage");
 });
