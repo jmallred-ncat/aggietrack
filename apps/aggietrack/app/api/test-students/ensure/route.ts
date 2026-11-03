@@ -5,8 +5,13 @@ export const dynamic = "force-dynamic";
 
 export async function POST(request: Request) {
   try {
-    const students = await ensureTestStudents(request);
-    return Response.json({ students });
+    const result = await ensureTestStudents(request);
+    return Response.json({ 
+      succeeded: result.succeeded,
+      failed: result.failed,
+      // Legacy compatibility
+      students: result.succeeded 
+    });
   } catch (error) {
     const message = error instanceof TestStudentError ? error.message : "Test students could not be prepared.";
     const status = error instanceof TestStudentError ? error.status : 500;

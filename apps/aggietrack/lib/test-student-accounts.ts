@@ -411,19 +411,38 @@ export async function ensureTestStudents(request: Request) {
   const password = guardTestStudents(request);
   const catalogYearId = await infoCatalogYearId();
   
-  // Ensure student accounts
+  const succeeded: string[] = [];
+  const failed: Array<{ email: string; error: string }> = [];
+  
+  // Ensure student accounts - continue past individual failures
   for (const student of testStudents) {
-    const userId = await ensureUser(student, password, false);
-    const profile = await prisma.studentProfile.findUnique({ where: { userId }, select: { id: true } });
-    if (!profile) await writeFrozen(userId, student, catalogYearId);
+    try {
+      const userId = await ensureUser(student, password, false);
+      const profile = await prisma.studentProfile.findUnique({ where: { userId }, select: { id: true } });
+      if (!profile) await writeFrozen(userId, student, catalogYearId);
+      succeeded.push(student.email);
+    } catch (error) {
+      console.error(`Failed to ensure test student ${student.email}:`, error);
+      failed.push({ email: student.email, error: error instanceof Error ? error.message : String(error) });
+    }
   }
   
   // Ensure advisor accounts (no profile needed)
   for (const advisor of testAdvisors) {
-    await ensureUser(advisor, password, false);
+    try {
+      await ensureUser(advisor, password, false);
+      succeeded.push(advisor.email);
+    } catch (error) {
+      console.error(`Failed to ensure test advisor ${advisor.email}:`, error);
+      failed.push({ email: advisor.email, error: error instanceof Error ? error.message : String(error) });
+    }
   }
   
-  return [...testStudents.map(s => s.email), ...testAdvisors.map(a => a.email)];
+  if (failed.length > 0 && succeeded.length === 0) {
+    throw new TestStudentError(`All test accounts failed: ${failed.map(f => `${f.email} (${f.error})`).join(", ")}`, 500);
+  }
+  
+  return { succeeded, failed };
 }
 
 export async function resetTestStudent(request: Request, email: string) {

@@ -2,10 +2,22 @@
 
 import { useState } from "react";
 import { Button } from "@aggietrack/ui/button";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@aggietrack/ui/alert-dialog";
 import { resetAfterUse, type TestStudentCard } from "@/lib/test-students";
 
 export function TestStudents({ students, password, notice }: { students: TestStudentCard[]; password: string; notice: string }) {
   const [pending, setPending] = useState("");
+  const [pendingAll, setPendingAll] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState(notice);
 
@@ -25,13 +37,58 @@ export function TestStudents({ students, password, notice }: { students: TestStu
     }
   }
 
+  async function resetAll() {
+    setPendingAll(true);
+    setError("");
+    setMessage("");
+    try {
+      const response = await fetch("/api/test-students/reset-all", { method: "POST" });
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(typeof body.error === "string" ? body.error : "Test students could not be reset.");
+      
+      const { succeeded, failed, total } = body;
+      if (failed && failed.length > 0) {
+        const failedNames = failed.map((f: { email: string }) => {
+          const student = students.find(s => s.email === f.email);
+          return student?.name || f.email;
+        }).join(", ");
+        setMessage(`Reset ${succeeded.length} of ${total} students. Failed: ${failedNames}`);
+      } else {
+        setMessage(`Reset ${succeeded.length} of ${total} students`);
+      }
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Test students could not be reset.");
+    } finally {
+      setPendingAll(false);
+    }
+  }
+
   const studentAccounts = students.filter(s => s.role === "student");
   const advisorAccounts = students.filter(s => s.role === "advisor");
 
   return <div className="not-typeset space-y-8">
-    <div>
-      <h1 className="text-2xl font-semibold">Test Accounts</h1>
-      <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">These accounts sign in on AggieTrack. They are shared, so the next person does not inherit someone else&apos;s data.</p>
+    <div className="flex items-start justify-between gap-4">
+      <div>
+        <h1 className="text-2xl font-semibold">Test Accounts</h1>
+        <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">These accounts sign in on AggieTrack. They are shared, so the next person does not inherit someone else&apos;s data.</p>
+      </div>
+      <AlertDialog>
+        <AlertDialogTrigger render={<Button variant="outline" disabled={pendingAll || !password} />}>
+          {pendingAll ? "Resetting…" : "Reset All Students"}
+        </AlertDialogTrigger>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Reset all test students?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will reset all {studentAccounts.length} test student accounts to their frozen state and sign them out of AggieTrack. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={resetAll}>Reset All</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
     {message && !error ? <p className="text-sm text-muted-foreground">{message}</p> : null}
     {error ? <p className="text-sm text-destructive" role="alert">{error}</p> : null}

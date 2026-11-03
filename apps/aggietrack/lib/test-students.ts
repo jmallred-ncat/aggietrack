@@ -35,6 +35,11 @@ const fillers: Record<string, { subject: string; number: string }> = {
   "4|African American Studies|false": { subject: "LIBS", number: "202" },
   "5|Technical Electives|false": { subject: "CST", number: "250" },
   "6|Technical Electives|false": { subject: "CST", number: "355" },
+  "7|Management Electives|false": { subject: "MGMT", number: "301" },
+  "7|Free Electives|false": { subject: "LIBS", number: "301" },
+  "8|Management Electives|false": { subject: "MGMT", number: "401" },
+  "8|Technical Electives|false": { subject: "CST", number: "450" },
+  "8|Free Electives|false": { subject: "ENGL", number: "301" },
 };
 
 export const testStudents: TestStudent[] = [

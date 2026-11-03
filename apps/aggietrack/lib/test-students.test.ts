@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { GenEdTag, RequirementSlot, StudentStanding } from "./generated/prisma/client";
-import { courseKey } from "../prisma/seed/courses";
+import { courseKey, courses as cstCourses } from "../prisma/seed/courses";
 import { info2025 } from "../prisma/seed/info-2025";
 import { gecAttributes, gecCourses } from "../prisma/seed/gec";
 import { authorizeTestStudents, frozenCourses, stateAfterReset, testStudentByEmail, testStudents } from "./test-students";
@@ -151,4 +151,45 @@ test("no student has excessive C grades (max ~30% for students with >=5 graded c
   // Taylor/Casey should have few or zero C grades after variation
   
   assert.ok(true, "Seed logic ensures C grades are occasional, not default (~12.5% for Jordan, 0% for strong students)");
+});
+
+test("frozenCourses succeeds for all 7 test students with complete filler coverage", () => {
+  // This test ensures the fillers map has entries for ALL placeholders in the curriculum
+  // that any test student might need. If a filler is missing, frozenCourses will throw.
+  
+  // Combine all seeded courses for lookup
+  const allCourses = [...cstCourses, ...gecCourses];
+  
+  // Helper to get course credit from the seed data
+  function getCourseCredits(subject: string, number: string): number {
+    const course = allCourses.find(c => c.subject === subject && c.number === number);
+    return course?.credits ?? 3;
+  }
+  
+  for (const student of testStudents) {
+    const courses = frozenCourses(student);
+    
+    // Should not throw - if it does, a filler is missing from the map
+    assert.ok(Array.isArray(courses), `frozenCourses should return array for ${student.email}`);
+    
+    // Verify Morgan Lee (through term 8) gets all expected courses
+    if (student.email === "it.over-credits@example.test") {
+      // Terms 1-8: 6+6+5+6+5+5+5+5 = 43 courses
+      assert.equal(courses.length, 43, "Morgan Lee should have 43 courses through term 8");
+      
+      // Verify critical placeholders are filled
+      const codes = courses.map(c => `${c.subject} ${c.number}`);
+      assert.ok(codes.includes("MGMT 301"), "Term 7 Management Electives should be filled");
+      assert.ok(codes.includes("MGMT 401"), "Term 8 Management Electives should be filled");
+      assert.ok(codes.includes("CST 450"), "Term 8 Technical Electives should be filled");
+      
+      // Count total credits (using actual credit values from seed: labs=1, math/calc=4, most=3)
+      const totalCredits = courses.reduce((sum, c) => sum + getCourseCredits(c.subject, c.number), 0);
+      
+      assert.equal(totalCredits, 120, "Morgan Lee should have exactly 120 credits");
+    }
+  }
+  
+  // If we got here without throwing, all fillers are present
+  assert.ok(true, "All 7 students have complete filler coverage");
 });
