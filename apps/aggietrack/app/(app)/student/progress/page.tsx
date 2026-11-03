@@ -4,6 +4,7 @@ import { computeDegreeProgress } from "@/lib/degree-progress";
 import type { TranscriptSource, TranscriptStatus } from "@/lib/generated/prisma/browser";
 import { computeGpa } from "@/lib/gpa";
 import { getCurriculumRecommendations, planPosition, requirementGroupTitle, requirementSlotBadge } from "@/lib/planner";
+import { slotIsUnfilled } from "@/lib/progress-slots";
 import { hasConfirmedStart, requireStudentProfile } from "@/lib/student";
 import { getTranscript, progressStatusFromEntry, type ProgressStatus } from "@/lib/transcript";
 import { ArrowsLeftRightIcon, CheckCircleIcon, MedalIcon } from "@phosphor-icons/react/dist/ssr";
@@ -154,8 +155,9 @@ export default async function ProgressPage() {
             }
             slotAttempts[entry.recommendedTermCourseId].push(attempt);
 
-            // Only set the default slot value from the most recent entry
-            if (!defaultSlots[entry.recommendedTermCourseId] || defaultSlots[entry.recommendedTermCourseId] === emptySlot) {
+            // Slots are initialized to a copy of the blank value, so identity comparison never matches.
+            const current = defaultSlots[entry.recommendedTermCourseId];
+            if (!current || slotIsUnfilled(current)) {
                 defaultSlots[entry.recommendedTermCourseId] = entry.courseId
                     ? {
                         ...emptySlot,
@@ -184,6 +186,40 @@ export default async function ProgressPage() {
                 defaultCourses[entry.courseId] = progressStatusFromEntry(entry);
             }
         }
+    }
+
+    const outsidePlan = new Map<string, {
+        courseId: string;
+        subject: string;
+        number: string;
+        title: string;
+        credits: number;
+        attempts: TranscriptAttempt[];
+    }>();
+    for (const entry of transcript) {
+        const onNamedCourse = entry.courseId != null && entry.courseId in defaultCourses;
+        const onSlot = entry.recommendedTermCourseId != null && entry.recommendedTermCourseId in defaultSlots;
+        if (onNamedCourse || onSlot) continue;
+        const subject = entry.course?.subject ?? entry.subject ?? "";
+        const number = entry.course?.number ?? entry.number ?? "";
+        if (!subject || !number) continue;
+        const key = entry.courseId ?? `${subject} ${number}`;
+        const existing = outsidePlan.get(key) ?? {
+            courseId: entry.courseId ?? "",
+            subject,
+            number,
+            title: entry.course?.title ?? entry.title ?? `${subject} ${number}`,
+            credits: entry.credits,
+            attempts: [],
+        };
+        existing.attempts.push({
+            id: entry.id,
+            grade: entry.grade,
+            status: entry.status,
+            source: entry.source,
+            createdAt: entry.createdAt,
+        });
+        outsidePlan.set(key, existing);
     }
 
     const coursesByGroup: Record<string, ProgressSlotCourse[]> = { ...slotCourses };
@@ -247,6 +283,7 @@ export default async function ProgressPage() {
                 slotAttempts={slotAttempts}
                 slotCourses={coursesByGroup}
                 reservedCourseCodes={reservedCourseCodes}
+                outsidePlan={[...outsidePlan.values()]}
                 inProgressCourseIds={[...inProgressCourseIds]}
                 inProgressSlotIds={[...inProgressSlotIds]}
                 startConfirmed={hasConfirmedStart(profile)}

@@ -633,6 +633,15 @@ type TranscriptAttempt = {
     source: string;
 };
 
+export type OutsidePlanCourse = {
+    courseId: string;
+    subject: string;
+    number: string;
+    title: string;
+    credits: number;
+    attempts: TranscriptAttempt[];
+};
+
 export default function ProgressForm({
     years,
     defaultCourses,
@@ -641,6 +650,7 @@ export default function ProgressForm({
     slotAttempts,
     slotCourses,
     reservedCourseCodes,
+    outsidePlan,
     inProgressCourseIds,
     inProgressSlotIds,
     startConfirmed,
@@ -653,6 +663,7 @@ export default function ProgressForm({
     slotAttempts: Record<string, TranscriptAttempt[]>;
     slotCourses: Record<string, ProgressSlotCourse[]>;
     reservedCourseCodes: string[];
+    outsidePlan: OutsidePlanCourse[];
     inProgressCourseIds: string[];
     inProgressSlotIds: string[];
     startConfirmed: boolean;
@@ -816,6 +827,17 @@ export default function ProgressForm({
                                                 ? courseAttempts[row.courseId] ?? []
                                                 : slotAttempts[row.id] ?? [];
                                             const hasCompletedAttempts = attempts.some(a => a.status === "COMPLETED");
+                                            const slotSelection = row.kind === "slot" ? watchedSlots?.[row.id] : undefined;
+                                            const slotCourse =
+                                                row.kind === "slot" && slotSelection?.courseId
+                                                    ? (slotCourses[row.groupId] ?? []).find(
+                                                          (course) => course.id === slotSelection.courseId,
+                                                      )
+                                                    : null;
+                                            const enteredCourse =
+                                                row.kind === "slot" && !slotCourse && slotSelection?.subject && slotSelection?.number
+                                                    ? slotSelection
+                                                    : null;
 
                                             return (
                                                 <div key={row.id} className="not-typeset">
@@ -830,8 +852,14 @@ export default function ProgressForm({
                                                                 </>
                                                             ) : (
                                                                 <>
-                                                                    {row.badge && <Badge variant="outline" className="shrink-0 font-mono">{row.badge}</Badge>}
-                                                                    <span className="min-w-0 truncate">{row.title}</span>
+                                                                    {slotCourse ? (
+                                                                        <Badge className="shrink-0 font-mono">{slotCourse.subject} {slotCourse.number}</Badge>
+                                                                    ) : enteredCourse ? (
+                                                                        <Badge className="shrink-0 font-mono">{enteredCourse.subject} {enteredCourse.number}</Badge>
+                                                                    ) : row.badge ? (
+                                                                        <Badge variant="outline" className="shrink-0 font-mono">{row.badge}</Badge>
+                                                                    ) : null}
+                                                                    <span className="min-w-0 truncate">{slotCourse?.title ?? enteredCourse?.title ?? row.title}</span>
                                                                 </>
                                                             )}
                                                         </div>
@@ -933,6 +961,36 @@ export default function ProgressForm({
                         </div>
                     </div>
                 ))}
+                {outsidePlan.length > 0 ? (
+                    <div>
+                        <h2 className="px-4 text-lg font-semibold">Other courses</h2>
+                        <p className="mt-1 max-w-prose px-4 text-sm text-balance text-muted-foreground">
+                            These courses are on your transcript and do not fill a requirement on this degree. A letter grade still counts in your GPA.
+                        </p>
+                        <div className="mt-3 space-y-4 px-4">
+                            {outsidePlan.map((course) => (
+                                <div key={`${course.subject} ${course.number}`} className="not-typeset flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+                                    <div className="flex min-w-0 items-center gap-2 text-sm font-medium">
+                                        <Badge className="shrink-0 font-mono">{course.subject} {course.number}</Badge>
+                                        <span className="min-w-0 truncate">{course.title}</span>
+                                        <span className="shrink-0 text-muted-foreground">{course.credits} credits</span>
+                                    </div>
+                                    {course.courseId ? (
+                                        <CourseAttempts
+                                            courseId={course.courseId}
+                                            subject={course.subject}
+                                            number={course.number}
+                                            title={course.title}
+                                            credits={course.credits}
+                                            attempts={course.attempts as never}
+                                            onUpdate={() => router.refresh()}
+                                        />
+                                    ) : null}
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                ) : null}
             </section>
             <div className="sticky bottom-0 z-10 mt-auto flex items-center justify-between gap-4 border-t bg-background py-3">
                 <p className={saveState === "error" ? "text-sm text-destructive not-typeset" : "text-sm text-muted-foreground not-typeset"}>

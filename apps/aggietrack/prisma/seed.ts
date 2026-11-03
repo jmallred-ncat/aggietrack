@@ -105,6 +105,18 @@ async function seedCourses() {
     courseIds.set(courseKey(course), row.id);
   }
 
+  // An earlier seed inserted JOUR 101. It is a course a student types, so a reseed drops the catalog row when nothing still points at it.
+  await prisma.course.deleteMany({
+    where: {
+      subject: "JOUR",
+      number: "101",
+      transcriptEntries: { none: {} },
+      plannedCourses: { none: {} },
+      requirementItems: { none: {} },
+      recommendedIn: { none: {} },
+    },
+  });
+
   await replacePrerequisiteGroups(courseIds, concurrentPairs, catalogPrerequisiteGroups);
 
   return courseIds;
