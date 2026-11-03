@@ -16,6 +16,7 @@ import { useId, useRef, useState, type ReactNode } from "react";
 import { Controller, useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
 import { confirmNoPriorCoursework, saveTranscriptProgress } from "./actions";
+import { CourseAttempts } from "./CourseAttempts";
 
 const courseStatuses = [
     { value: "complete", label: "Complete", icon: CheckCircleIcon },
@@ -625,10 +626,19 @@ function formRecordsCoursework(data: {
     ));
 }
 
+type TranscriptAttempt = {
+    id: string;
+    grade: string | null;
+    status: string;
+    source: string;
+};
+
 export default function ProgressForm({
     years,
     defaultCourses,
     defaultSlots,
+    courseAttempts,
+    slotAttempts,
     slotCourses,
     reservedCourseCodes,
     inProgressCourseIds,
@@ -639,6 +649,8 @@ export default function ProgressForm({
     years: ProgressYear[];
     defaultCourses: ProgressFormValues["courses"];
     defaultSlots: ProgressFormValues["slots"];
+    courseAttempts: Record<string, TranscriptAttempt[]>;
+    slotAttempts: Record<string, TranscriptAttempt[]>;
     slotCourses: Record<string, ProgressSlotCourse[]>;
     reservedCourseCodes: string[];
     inProgressCourseIds: string[];
@@ -799,58 +811,122 @@ export default function ProgressForm({
                                 <div key={term.id}>
                                     <h3 className="rounded-lg bg-muted px-4 py-2 text-sm font-medium">{term.label}</h3>
                                     <div className="space-y-4 px-4 pt-3">
-                                        {term.rows.map((row) => (
-                                            <div key={row.id} className="flex flex-col gap-2 not-typeset sm:flex-row sm:items-center sm:justify-between">
-                                                <p className="flex min-w-0 items-center gap-2 overflow-hidden text-sm font-medium">
-                                                    {row.kind === "course" ? (
-                                                        <>
-                                                            <Badge className="font-mono">{row.subject} {row.number}</Badge>
-                                                            <span className="min-w-0 truncate">{row.title}</span>
-                                                        </>
-                                                    ) : (
-                                                        <>
-                                                            {row.badge && <Badge variant="outline" className="font-mono">{row.badge}</Badge>}
-                                                            <span className="min-w-0 truncate">{row.title}</span>
-                                                        </>
-                                                    )}
-                                                </p>
-                                                {row.kind === "course" ? (
-                                                    <Controller
-                                                        control={form.control}
-                                                        name={`courses.${row.courseId}`}
-                                                        render={({ field }) => (
-                                                            <CourseStatusField
-                                                                value={field.value ?? ""}
-                                                                inProgress={inProgressCourses.has(row.courseId)}
-                                                                onChange={field.onChange}
-                                                                onBlur={field.onBlur}
-                                                            />
-                                                        )}
-                                                    />
-                                                ) : (
-                                                    <Controller
-                                                        control={form.control}
-                                                        name={`slots.${row.id}`}
-                                                        render={({ field }) => (
-                                                            <SlotField
-                                                                courses={(slotCourses[row.groupId] ?? []).filter((course) => !row.requiresLab || course.lab)}
-                                                                label={row.title}
-                                                                value={field.value ?? emptySlotValue}
-                                                                excludedIds={claimedCourseIds(watchedSlots, row.id)}
-                                                                excludedCodes={claimedCourseCodes(watchedSlots, row.id, slotCourses)}
-                                                                reservedCodes={new Set(reservedCourseCodes)}
-                                                                allowUnlisted={row.allowUnlisted}
-                                                                minNumber={row.minNumber}
-                                                                statusError={form.formState.errors.slots?.[row.id]?.status?.message}
-                                                                inProgress={inProgressSlots.has(row.id)}
-                                                                onChange={field.onChange}
-                                                                onBlur={field.onBlur}
-                                                            />
-                                                        )}
-                                                    />
-                                                )}
-                                            </div>
-                                        ))}
+                                        {term.rows.map((row) => {
+                                            const attempts = row.kind === "course" 
+                                                ? courseAttempts[row.courseId] ?? []
+                                                : slotAttempts[row.id] ?? [];
+                                            const hasCompletedAttempts = attempts.some(a => a.status === "COMPLETED");
+
+                                            return (
+                                                <div key={row.id} className="not-typeset">
+                                                    {/* Desktop: single row with centered items */}
+                                                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+                                                        {/* Course info */}
+                                                        <div className="flex min-w-0 items-center gap-2 text-sm font-medium">
+                                                            {row.kind === "course" ? (
+                                                                <>
+                                                                    <Badge className="shrink-0 font-mono">{row.subject} {row.number}</Badge>
+                                                                    <span className="min-w-0 truncate">{row.title}</span>
+                                                                </>
+                                                            ) : (
+                                                                <>
+                                                                    {row.badge && <Badge variant="outline" className="shrink-0 font-mono">{row.badge}</Badge>}
+                                                                    <span className="min-w-0 truncate">{row.title}</span>
+                                                                </>
+                                                            )}
+                                                        </div>
+
+                                                        {/* Actions: grade select or attempts */}
+                                                        <div className="flex shrink-0 items-center justify-start sm:justify-end">
+                                                            {hasCompletedAttempts ? (
+                                                                row.kind === "course" ? (
+                                                                    <CourseAttempts
+                                                                        courseId={row.courseId}
+                                                                        subject={row.subject}
+                                                                        number={row.number}
+                                                                        title={row.title}
+                                                                        credits={3}
+                                                                        attempts={attempts as any}
+                                                                        onUpdate={() => router.refresh()}
+                                                                    />
+                                                                ) : (() => {
+                                                                    const slotValue = watchedSlots[row.id];
+                                                                    const courseData = slotValue?.courseId 
+                                                                        ? (() => {
+                                                                            const course = (slotCourses[row.groupId] ?? []).find(c => c.id === slotValue.courseId);
+                                                                            return course ? {
+                                                                                courseId: course.id,
+                                                                                subject: course.subject,
+                                                                                number: course.number,
+                                                                                title: course.title,
+                                                                                credits: course.credits,
+                                                                            } : null;
+                                                                        })()
+                                                                        : slotValue?.subject && slotValue?.number && slotValue?.title
+                                                                            ? {
+                                                                                courseId: "",
+                                                                                subject: slotValue.subject,
+                                                                                number: slotValue.number,
+                                                                                title: slotValue.title,
+                                                                                credits: Number(slotValue.credits) || 3,
+                                                                            }
+                                                                            : null;
+
+                                                                    return courseData ? (
+                                                                        <CourseAttempts
+                                                                            courseId={courseData.courseId}
+                                                                            subject={courseData.subject}
+                                                                            number={courseData.number}
+                                                                            title={courseData.title}
+                                                                            credits={courseData.credits}
+                                                                            attempts={attempts as any}
+                                                                            recommendedTermCourseId={row.id}
+                                                                            onUpdate={() => router.refresh()}
+                                                                        />
+                                                                    ) : null;
+                                                                })()
+                                                            ) : (
+                                                                row.kind === "course" ? (
+                                                                    <Controller
+                                                                        control={form.control}
+                                                                        name={`courses.${row.courseId}`}
+                                                                        render={({ field }) => (
+                                                                            <CourseStatusField
+                                                                                value={field.value ?? ""}
+                                                                                inProgress={inProgressCourses.has(row.courseId)}
+                                                                                onChange={field.onChange}
+                                                                                onBlur={field.onBlur}
+                                                                            />
+                                                                        )}
+                                                                    />
+                                                                ) : (
+                                                                    <Controller
+                                                                        control={form.control}
+                                                                        name={`slots.${row.id}`}
+                                                                        render={({ field }) => (
+                                                                            <SlotField
+                                                                                courses={(slotCourses[row.groupId] ?? []).filter((course) => !row.requiresLab || course.lab)}
+                                                                                label={row.title}
+                                                                                value={field.value ?? emptySlotValue}
+                                                                                excludedIds={claimedCourseIds(watchedSlots, row.id)}
+                                                                                excludedCodes={claimedCourseCodes(watchedSlots, row.id, slotCourses)}
+                                                                                reservedCodes={new Set(reservedCourseCodes)}
+                                                                                allowUnlisted={row.allowUnlisted}
+                                                                                minNumber={row.minNumber}
+                                                                                statusError={form.formState.errors.slots?.[row.id]?.status?.message}
+                                                                                inProgress={inProgressSlots.has(row.id)}
+                                                                                onChange={field.onChange}
+                                                                                onBlur={field.onBlur}
+                                                                            />
+                                                                        )}
+                                                                    />
+                                                                )
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
                                     </div>
                                 </div>
                             ))}
