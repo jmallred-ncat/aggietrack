@@ -1,5 +1,6 @@
 "use server";
 
+import { approveIfAssigned } from "@/lib/plan-approval-authz";
 import { prisma } from "@/lib/prisma";
 import { getSessionUser } from "@/lib/student";
 import { recordCoursesInProgress } from "@/lib/transcript";
@@ -16,47 +17,61 @@ export async function approvePlannedTerm(plannedTermId: string, registrationPin:
     if (user.role !== "ADVISOR") {
         return { success: false as const, error: "Only an advisor can approve a term plan." };
     }
+    // The advisor is the signed-in user. The client cannot supply an advisor id.
+    const advisorId = user.id;
 
     const parsed = approvalSchema.safeParse({ plannedTermId, registrationPin });
     if (!parsed.success) {
         return { success: false as const, error: "Enter a registration pin of 4 to 12 letters or numbers." };
     }
 
-    const plan = await prisma.plannedTerm.findFirst({
-        where: {
-            id: parsed.data.plannedTermId,
-            status: "SUBMITTED",
-            student: { advisorId: user.id },
-        },
-        select: {
-            id: true,
-            studentId: true,
-            termId: true,
-            courses: { select: { courseId: true, course: { select: { credits: true } } } },
-        },
-    });
-    if (!plan) {
-        return { success: false as const, error: "That term plan is not waiting for your review." };
-    }
-
-    await prisma.$transaction(async (tx) => {
-        await tx.plannedTerm.update({
-            where: { id: plan.id },
-            data: {
-                status: "APPROVED",
-                registrationPin: parsed.data.registrationPin,
-                reviewedAt: new Date(),
+    const outcome = await prisma.$transaction(async (tx) => {
+        const plan = await tx.plannedTerm.findUnique({
+            where: { id: parsed.data.plannedTermId },
+            select: {
+                id: true,
+                status: true,
+                studentId: true,
+                termId: true,
+                student: { select: { advisorId: true } },
+                courses: { select: { courseId: true, course: { select: { credits: true } } } },
             },
         });
-        await recordCoursesInProgress(tx, {
-            studentId: plan.studentId,
-            termId: plan.termId,
-            courses: plan.courses.map((row) => ({
-                courseId: row.courseId,
-                credits: row.course.credits,
-            })),
+
+        return approveIfAssigned({
+            advisorId,
+            plan,
+            persist: async (approved) => {
+                const updated = await tx.plannedTerm.updateMany({
+                    where: {
+                        id: approved.id,
+                        status: "SUBMITTED",
+                        student: { advisorId },
+                    },
+                    data: {
+                        status: "APPROVED",
+                        registrationPin: parsed.data.registrationPin,
+                        reviewedAt: new Date(),
+                    },
+                });
+                if (updated.count !== 1) {
+                    return false;
+                }
+                await recordCoursesInProgress(tx, {
+                    studentId: approved.studentId,
+                    termId: approved.termId,
+                    courses: approved.courses.map((row) => ({
+                        courseId: row.courseId,
+                        credits: row.course.credits,
+                    })),
+                });
+                return true;
+            },
         });
     });
+    if (!outcome.success) {
+        return outcome;
+    }
 
     revalidatePath("/advisor/plans");
     revalidatePath("/student/planner");

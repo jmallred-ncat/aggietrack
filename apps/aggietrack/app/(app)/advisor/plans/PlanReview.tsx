@@ -18,7 +18,7 @@ export default function PlanReview({ plannedTermId }: { plannedTermId: string })
                 startTransition(async () => {
                     const result = await approvePlannedTerm(plannedTermId, pin);
                     if (!result.success) {
-                        toast.add({ title: result.error });
+                        toast.add({ type: "error", title: result.error });
                         return;
                     }
                     toast.add({ title: "Term plan approved" });
