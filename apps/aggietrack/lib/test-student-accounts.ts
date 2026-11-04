@@ -1,9 +1,9 @@
 import { randomUUID } from "node:crypto";
 import { hashPassword } from "better-auth/crypto";
-import { TranscriptStatus, UserRole } from "./generated/prisma/client";
+import { PlannedTermStatus, TranscriptStatus, UserRole } from "./generated/prisma/client";
 import { plannedAttempts } from "./frozen-transcript";
 import { prisma } from "./prisma";
-import { authorizeTestStudents, bearerSecret, testAccountByEmail, testAdvisorByEmail, testStudentByEmail, testStudents, testAdvisors, type FrozenCourse, type TestStudent, type TestAdvisor } from "./test-students";
+import { assignedAdvisorEmail, authorizeTestStudents, bearerSecret, jordanSubmittedPlan, sarahMartinezEmail, testAccountByEmail, testAdvisorByEmail, testStudentByEmail, testStudents, testAdvisors, type FrozenCourse, type TestStudent, type TestAdvisor } from "./test-students";
 
 const frozenAt = new Date("2026-01-15T00:00:00.000Z");
 
@@ -91,13 +91,82 @@ async function ensureUser(account: TestStudent | TestAdvisor, password: string, 
   return existing.id;
 }
 
-async function writeFrozen(userId: string, student: TestStudent, catalogYearId: string) {
+const jordanEmail = "it.mid@example.test";
+
+async function sarahUserId(password: string) {
+  const sarah = testAdvisorByEmail(sarahMartinezEmail);
+  if (!sarah) throw new TestStudentError("Sarah Martinez is not a test advisor.", 500);
+  return ensureUser(sarah, password, false);
+}
+
+async function jordanPlanRecords() {
+  const plan = jordanSubmittedPlan();
+  const term = await prisma.academicTerm.findUnique({
+    where: { season_year: { season: plan.term.season, year: plan.term.year } },
+    select: { id: true },
+  });
+  if (!term) {
+    const label = plan.term.season === "FALL" ? "Fall" : "Spring";
+    throw new TestStudentError(`${label} ${plan.term.year} is not loaded.`, 500);
+  }
+  const found = await prisma.course.findMany({
+    where: { OR: plan.courses.map((course) => ({ subject: course.subject, number: course.number })) },
+    select: { id: true, subject: true, number: true },
+  });
+  const byCode = new Map(found.map((course) => [`${course.subject} ${course.number}`, course]));
+  const courseIds = plan.courses.map((course) => {
+    const row = byCode.get(`${course.subject} ${course.number}`);
+    if (!row) throw new TestStudentError(`${course.subject} ${course.number} is not in the catalog.`, 500);
+    return row.id;
+  });
+  return { termId: term.id, courseIds };
+}
+
+function submittedPlanData(studentId: string, termId: string, courseIds: string[]) {
+  const submittedAt = new Date();
+  return {
+    studentId,
+    termId,
+    status: PlannedTermStatus.SUBMITTED,
+    submittedAt,
+    courses: {
+      create: courseIds.map((courseId, index) => ({
+        courseId,
+        createdAt: new Date(submittedAt.getTime() + index),
+      })),
+    },
+  };
+}
+
+async function ensureJordanSubmittedPlan(studentId: string) {
+  const loaded = await jordanPlanRecords();
+  const existing = await prisma.plannedTerm.findMany({
+    where: { studentId },
+    include: { courses: { select: { courseId: true } } },
+  });
+  const only = existing.length === 1 ? existing[0] : null;
+  if (
+    only
+    && only.termId === loaded.termId
+    && (only.status === PlannedTermStatus.SUBMITTED || only.status === PlannedTermStatus.APPROVED)
+    && [...only.courses.map((course) => course.courseId)].sort().join() === [...loaded.courseIds].sort().join()
+  ) return;
+
+  await prisma.$transaction(async (tx) => {
+    await tx.plannedCourse.deleteMany({ where: { plannedTerm: { studentId } } });
+    await tx.plannedTerm.deleteMany({ where: { studentId } });
+    await tx.plannedTerm.create({ data: submittedPlanData(studentId, loaded.termId, loaded.courseIds) });
+  });
+}
+
+async function writeFrozen(userId: string, student: TestStudent, catalogYearId: string, advisorId: string | null) {
   const planned = plannedAttempts(student);
+  const submitted = student.email === jordanEmail ? await jordanPlanRecords() : null;
   await prisma.$transaction(async tx => {
     const profile = await tx.studentProfile.upsert({
       where: { userId },
-      create: { userId, catalogYearId, standing: student.standing, startConfirmedAt: frozenAt },
-      update: { catalogYearId, standing: student.standing, startConfirmedAt: frozenAt, advisorId: null, expectedGradTermId: null, notTakingTermId: null, bannerId: null },
+      create: { userId, catalogYearId, standing: student.standing, startConfirmedAt: frozenAt, advisorId },
+      update: { catalogYearId, standing: student.standing, startConfirmedAt: frozenAt, advisorId, expectedGradTermId: null, notTakingTermId: null, bannerId: null },
     });
     // Replace whatever is already there. A second reset of a frozen student deletes these rows, then writes the same fixture again.
     await tx.plannedCourse.deleteMany({ where: { plannedTerm: { studentId: profile.id } } });
@@ -117,7 +186,10 @@ async function writeFrozen(userId: string, student: TestStudent, catalogYearId: 
         recommendedIn: { none: {} },
       },
     });
-    if (planned.length === 0) return;
+    if (planned.length === 0) {
+      if (submitted) await tx.plannedTerm.create({ data: submittedPlanData(profile.id, submitted.termId, submitted.courseIds) });
+      return;
+    }
 
     const sequences = [...new Set(planned.map(course => course.sequence))];
     const terms = await tx.recommendedTerm.findMany({
@@ -172,6 +244,7 @@ async function writeFrozen(userId: string, student: TestStudent, catalogYearId: 
       };
     });
     await tx.transcriptEntry.createMany({ data: entries });
+    if (submitted) await tx.plannedTerm.create({ data: submittedPlanData(profile.id, submitted.termId, submitted.courseIds) });
   });
 }
 
@@ -222,28 +295,35 @@ export async function ensureTestStudents(request: Request) {
   
   const succeeded: string[] = [];
   const failed: Array<{ email: string; error: string }> = [];
-  
-  // Ensure student accounts - continue past individual failures
-  for (const student of testStudents) {
-    try {
-      const userId = await ensureUser(student, password, false);
-      const profile = await prisma.studentProfile.findUnique({ where: { userId }, select: { id: true } });
-      if (!profile) await writeFrozen(userId, student, catalogYearId);
-      succeeded.push(student.email);
-    } catch (error) {
-      console.error(`Failed to ensure test student ${student.email}:`, error);
-      failed.push({ email: student.email, error: error instanceof Error ? error.message : String(error) });
-    }
-  }
-  
-  // Ensure advisor accounts (no profile needed)
+  const advisorIds = new Map<string, string>();
+
+  // Advisors first, so Sarah exists before students are assigned to her.
   for (const advisor of testAdvisors) {
     try {
-      await ensureUser(advisor, password, false);
+      advisorIds.set(advisor.email, await ensureUser(advisor, password, false));
       succeeded.push(advisor.email);
     } catch (error) {
       console.error(`Failed to ensure test advisor ${advisor.email}:`, error);
       failed.push({ email: advisor.email, error: error instanceof Error ? error.message : String(error) });
+    }
+  }
+  
+  for (const student of testStudents) {
+    try {
+      const userId = await ensureUser(student, password, false);
+      const advisorEmail = assignedAdvisorEmail(student.email);
+      const advisorId = advisorEmail ? advisorIds.get(advisorEmail) ?? null : null;
+      if (advisorEmail && !advisorId) throw new TestStudentError("Sarah Martinez could not be prepared.", 500);
+      const profile = await prisma.studentProfile.findUnique({ where: { userId }, select: { id: true } });
+      if (!profile) await writeFrozen(userId, student, catalogYearId, advisorId);
+      else {
+        await prisma.studentProfile.update({ where: { id: profile.id }, data: { advisorId } });
+        if (student.email === jordanEmail) await ensureJordanSubmittedPlan(profile.id);
+      }
+      succeeded.push(student.email);
+    } catch (error) {
+      console.error(`Failed to ensure test student ${student.email}:`, error);
+      failed.push({ email: student.email, error: error instanceof Error ? error.message : String(error) });
     }
   }
   
@@ -261,7 +341,7 @@ export async function resetTestStudent(request: Request, email: string) {
   
   const advisor = testAdvisorByEmail(email);
   if (advisor) {
-    // Advisors just need their account refreshed, no profile or transcript
+    // Sign the advisor out and refresh the password. Assignments and Jordan's submitted plan stay.
     const userId = await ensureUser(advisor, password, true);
     await prisma.session.deleteMany({ where: { userId } });
     return { email: advisor.email, name: `${advisor.firstName} ${advisor.lastName}` };
@@ -270,7 +350,8 @@ export async function resetTestStudent(request: Request, email: string) {
   const student = testStudentByEmail(email);
   if (!student) throw new TestStudentError("That is not a test account.", 400);
   const catalogYearId = await infoCatalogYearId();
+  const advisorId = assignedAdvisorEmail(student.email) ? await sarahUserId(password) : null;
   const userId = await ensureUser(student, password, true);
-  await writeFrozen(userId, student, catalogYearId);
+  await writeFrozen(userId, student, catalogYearId, advisorId);
   return { email: student.email, name: `${student.firstName} ${student.lastName}` };
 }

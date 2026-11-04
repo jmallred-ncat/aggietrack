@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { Badge } from "@aggietrack/ui/badge";
 import { Button } from "@aggietrack/ui/button";
 import {
   AlertDialog,
@@ -116,6 +117,7 @@ export function TestStudents({ students, password, notice }: { students: TestStu
         {advisorAccounts.map(advisor => <section key={advisor.email} className="flex flex-col rounded-xl border bg-background p-4">
           <h3 className="text-lg font-semibold">{advisor.name}</h3>
           <p className="mt-1 text-sm leading-6 text-muted-foreground">{advisor.place}</p>
+          {advisor.assignment ? <Badge variant="secondary" className="mt-3 h-auto max-w-full whitespace-normal">{advisor.assignment}</Badge> : null}
           <dl className="mt-4 space-y-2 text-sm">
             <div><dt className="text-muted-foreground">Email</dt><dd className="font-mono">{advisor.email}</dd></div>
             <div><dt className="text-muted-foreground">Password</dt><dd className="font-mono">{password || "Not configured"}</dd></div>

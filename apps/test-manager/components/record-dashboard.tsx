@@ -9,6 +9,7 @@ import { Card, CardContent } from "@aggietrack/ui/card";
 import { Field, FieldLabel } from "@aggietrack/ui/field";
 import { Input } from "@aggietrack/ui/input";
 import { Textarea } from "@aggietrack/ui/textarea";
+import { Alert, AlertAction, AlertDescription } from "@aggietrack/ui/alert";
 import { AlertDialog, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@aggietrack/ui/alert-dialog";
 import { toast } from "@aggietrack/ui/toast";
 import { ChoiceSelect } from "@/components/choice-select";
@@ -20,7 +21,7 @@ import { LinkPicker, type LinkOption } from "@/components/link-picker";
 import { MultiChoice } from "@/components/multi-choice";
 import { blankInstruction, creditChoices, decisionOwners, environmentValue, environments, gecCategories, gecExclusive, joinOwners, joinPair, normalizePerson, offeredExclusive, offeredTerms, parseOwners, presentDefectPeople, riskStatuses, seedStatuses, sourcePriorities, splitPair, testTypes } from "@/lib/fields";
 import { coverage, editableSections, testStatuses, type History, type RecordRow, type Section, type Values, type Workspace } from "@/lib/model";
-import { computedRequirementFields, linkTargets, normalizeId, parseLinks } from "@/lib/links";
+import { computedRequirementFields, linkIds, linkTargets, normalizeId, parseLinks } from "@/lib/links";
 import { memberLabel, type TeamMember } from "@/lib/members";
 import { retestTests } from "@/lib/retests";
 import { recordPath, sectionByName } from "@/lib/sections";
@@ -74,7 +75,19 @@ function prepareDraft(section: Section, values: Values) {
 }
 
 function linkedIds(value: string | undefined) {
-  return parseLinks(value ?? "");
+  return linkIds(value ?? "");
+}
+
+function messageFromPayload(payload: { error?: unknown } | null, fallback: string) {
+  if (payload && typeof payload.error === "string" && payload.error.trim()) return payload.error.trim();
+  return fallback;
+}
+
+async function payloadOf(response: Response) {
+  const text = await response.text();
+  if (!text) return null;
+  try { return JSON.parse(text) as { error?: unknown } & Workspace; }
+  catch { return null; }
 }
 
 function present(headers: string[], names: string[]) {
@@ -131,6 +144,7 @@ export function RecordDashboard({ workspace, section, row, creating = false, mem
   const [confirmArchive, setConfirmArchive] = useState(false);
   const [history, setHistory] = useState<History[]>(workspace.history.filter(item => item.section === section.name && item.recordId === row?.id));
   const [saving, setSaving] = useState(false);
+  const [formError, setFormError] = useState("");
   const [defectQuery, setDefectQuery] = useState<string | null>(null);
   const [createdDefects, setCreatedDefects] = useState<LinkOption[]>([]);
   const editable = editableSections.includes(section.name);
@@ -159,39 +173,46 @@ export function RecordDashboard({ workspace, section, row, creating = false, mem
     setMode("case");
   }
 
+  function reportError(title: string, message: string) {
+    setFormError(message);
+    toast.add({ type: "error", title, description: message });
+  }
+
   async function save(event: React.FormEvent) {
     event.preventDefault();
     setSaving(true);
+    setFormError("");
     try {
       const recordId = draft[section.headers[0]];
       const response = await fetch("/api/workspace", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ section: section.name, id: recordId, values: draft, revision }) });
-      const payload = await response.json();
-      if (!response.ok) throw new Error(payload.error ?? "Unable to save.");
+      const payload = await payloadOf(response);
+      if (!response.ok || !payload) throw new Error(messageFromPayload(payload, "Could not save this record. Check the fields and try again."));
       if (creating) { toast.add({ type: "success", title: "Saved." }); router.replace(recordPath(section.name, normalizeId(recordId))); router.refresh(); return; }
-      const saved = (payload as Workspace).sections.find(item => item.name === section.name)?.rows.find(item => item.id === normalizeId(recordId));
+      const saved = payload.sections.find(item => item.name === section.name)?.rows.find(item => item.id === normalizeId(recordId));
       if (saved) {
         const next = prepareDraft(section, { ...blank, ...saved.values });
         setRevision(saved.revision);
         setDraft(next);
         setBaseline(next);
       }
-      setHistory((payload as Workspace).history.filter(item => item.section === section.name && item.recordId === normalizeId(recordId)));
+      setHistory(payload.history.filter(item => item.section === section.name && item.recordId === normalizeId(recordId)));
       if (section.name === "Tests") setMode("case");
       toast.add({ type: "success", title: section.name === "Tests" ? "Saved." : "Saved. This dashboard is up to date." });
       router.refresh();
     } catch (caught) {
-      toast.add({ type: "error", title: caught instanceof Error ? caught.message : "Unable to save." });
+      reportError("Could not save", caught instanceof Error && caught.message ? caught.message : "Could not save this record. Check the fields and try again.");
     } finally { setSaving(false); }
   }
 
   async function archiveRecord() {
     if (!row || revision === null) return;
     setSaving(true);
+    setFormError("");
     try {
       const response = await fetch("/api/workspace", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ section: section.name, id: row.id, revision, archive: !archived }) });
-      const payload = await response.json();
-      if (!response.ok) throw new Error(payload.error ?? "Unable to update this record.");
-      const saved = (payload as Workspace).sections.find(item => item.name === section.name)?.rows.find(item => item.id === row.id);
+      const payload = await payloadOf(response);
+      if (!response.ok || !payload) throw new Error(messageFromPayload(payload, "Could not update this record. Refresh and try again."));
+      const saved = payload.sections.find(item => item.name === section.name)?.rows.find(item => item.id === row.id);
       if (saved) {
         const next = prepareDraft(section, { ...blank, ...saved.values });
         setRevision(saved.revision);
@@ -199,12 +220,12 @@ export function RecordDashboard({ workspace, section, row, creating = false, mem
         setDraft(next);
         setBaseline(next);
       }
-      setHistory((payload as Workspace).history.filter(item => item.section === section.name && item.recordId === row.id));
+      setHistory(payload.history.filter(item => item.section === section.name && item.recordId === row.id));
       toast.add({ type: "success", title: archived ? "Restored. This record is active again." : "Archived. It stays out of the active lists and coverage." });
       setConfirmArchive(false);
       router.refresh();
     } catch (caught) {
-      toast.add({ type: "error", title: caught instanceof Error ? caught.message : "Unable to update this record." });
+      reportError("Could not update this record", caught instanceof Error && caught.message ? caught.message : "Could not update this record. Refresh and try again.");
     } finally { setSaving(false); }
   }
 
@@ -224,7 +245,11 @@ export function RecordDashboard({ workspace, section, row, creating = false, mem
     return [...options, ...createdDefects.filter(option => !known.has(option.id))];
   }
   const definition = <div className="space-y-4">{groups.definition.filter(header => draft[header] || editable).map(header => field(header, editable))}</div>;
-  const saveBar = <>{editable && <Button type="submit" disabled={saving}>{saving ? "Saving…" : "Save"}</Button>}</>;
+  function formAlert() {
+    if (!formError) return null;
+    return <Alert variant="destructive"><AlertDescription>{formError}</AlertDescription><AlertAction><Button type="button" variant="ghost" size="sm" onClick={() => setFormError("")}>Dismiss</Button></AlertAction></Alert>;
+  }
+  const saveBar = <>{formAlert()}{editable && <Button type="submit" disabled={saving}>{saving ? "Saving…" : "Save"}</Button>}</>;
   const runTitle = section.name === "Tests" ? "Execution" : "Update";
   const linkedRetests = section.name === "Defects" ? retestTests(tests, canonicalId, draft["Test / requirement IDs"] ?? "") : [];
   const run = groups.run.length > 0 && <div className="space-y-4 rounded-xl border bg-background p-5"><h2 className="font-semibold">{runTitle}</h2>{section.name === "Tests" && <p className="text-sm leading-6 text-muted-foreground">{draft.Status && draft.Status !== "Not run" ? "Pass, Fail, and Blocked need the actual result, run date, environment, and evidence reference." : "Actual result, run date, environment, and evidence reference stay empty while the status is Not run."}</p>}{groups.run.map(header => <div key={header} className="space-y-4">{header === "Regression / closure approval" && <DefectRetests tests={linkedRetests}/>}{field(header, editable && !(section.name === "Tests" && header === "Tester"))}</div>)}{saveBar}</div>;
@@ -275,6 +300,7 @@ export function RecordDashboard({ workspace, section, row, creating = false, mem
           <AlertDialogTitle>{archived ? "Restore this record?" : "Archive this record?"}</AlertDialogTitle>
           <AlertDialogDescription>{archived ? "It returns to the active lists and counts toward coverage again." : "It leaves the active lists and coverage. The record and its history stay available here."}</AlertDialogDescription>
         </AlertDialogHeader>
+        {formAlert()}
         <AlertDialogFooter>
           <AlertDialogCancel disabled={saving}>Cancel</AlertDialogCancel>
           <Button type="button" disabled={saving} onClick={archiveRecord}>{saving ? "Working…" : archived ? "Restore" : "Archive"}</Button>

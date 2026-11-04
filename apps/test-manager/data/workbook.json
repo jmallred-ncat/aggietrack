@@ -2349,7 +2349,7 @@
             "Source gap or constraint": "The final spec, page 11, limits prototype testing to small groups; There is no agreed limit for how much slower is too slow; The workload and the size of the data are not set",
             "Proposed control / decision": "Keep the 500-person target. Approve the D-07 workload, the amount of data, how to measure, the tolerance, and whether staging can hold it. If that environment is not available, mark the test Blocked. Do not mark it Pass.",
             "Decision owner role": "Melonie Evans",
-            "Affected tests": "T31; T32 load repeat; T38",
+            "Affected tests": "T31; T32; T38",
             "Status": "Open",
             "Approved decision / evidence": "",
             "Reviewer / date": ""

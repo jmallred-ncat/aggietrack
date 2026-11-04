@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import { readFileSync, writeFileSync } from "node:fs";
 import { get } from "@vercel/blob";
 import { put } from "@vercel/blob";
-import { applyHumanCopy, normalizeStoredIds } from "./database";
+import { applyHumanCopy, normalizeStoredIds, repairBrokenLinks } from "./database";
 import { ensureRuntimeDatabaseFile, runtimeDatabasePath, usesRuntimeDatabase } from "./database-url";
 import { getPrisma, resetPrisma } from "./prisma";
 
@@ -94,6 +94,7 @@ export async function withSharedDatabase<T>(work: () => Promise<T>) {
       await ensureLiveSchema();
       await normalizeStoredIds();
       await applyHumanCopy();
+      await repairBrokenLinks();
       try { return await work(); }
       finally { await persist(); }
     } finally { depth -= 1; }
