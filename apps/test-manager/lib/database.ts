@@ -3,7 +3,7 @@ import { getPrisma } from "./prisma";
 import type { PrismaClient, Prisma } from "./generated/prisma/client";
 import { blankInstruction, presentDefectPeople } from "./fields";
 import { coverage, editableSections, validateRecord, type Workspace, type Values, type Section } from "./model";
-import { computedRequirementFields, formatLinks, isRecordId, linkTargets, normalizeId, parseLinks, rewriteRecordValues } from "./links";
+import { computedRequirementFields, formatLinks, linkIds, linkTargets, missingLinkMessage, normalizeId, parseLinks, rewriteRecordValues, storedLinkFields } from "./links";
 import { applyRetestFields } from "./retests";
 export const sectionDefinitions = seed.sections.map(section => {
   const headers = [...section.headers];
@@ -82,9 +82,38 @@ export async function applyHumanCopy(db: PrismaClient = getPrisma()) {
   }, { timeout: 60000 });
 }
 
+const linkRepair = "drop-stray-link-words";
+
+/** Drop words that are not record ids from stored link fields. Other fields, and real ids a teammate added, stay as they are. */
+export async function repairBrokenLinks(db: PrismaClient = getPrisma()) {
+  await db.$transaction(async tx => {
+    if ((await tx.importMetadata.findUnique({ where: { key: "link-repair" } }))?.value === linkRepair) return;
+    const records = await tx.workbookRecord.findMany();
+    if (records.length === 0) return;
+    for (const row of records) {
+      const values = { ...(row.values as Values) };
+      let changed = false;
+      for (const field of storedLinkFields) {
+        const current = values[field];
+        if (!current) continue;
+        const ids = linkIds(current);
+        if (parseLinks(current).length === ids.length) continue;
+        const next = formatLinks(ids);
+        if (next === current) continue;
+        values[field] = next;
+        changed = true;
+      }
+      if (!changed) continue;
+      await tx.workbookRecord.update({ where: { section_id: { section: row.section, id: row.id } }, data: { values: values as Prisma.InputJsonValue } });
+    }
+    await tx.importMetadata.upsert({ where: { key: "link-repair" }, create: { key: "link-repair", value: linkRepair }, update: { value: linkRepair } });
+  }, { timeout: 60000 });
+}
+
 export async function readWorkspace(db: PrismaClient = getPrisma()): Promise<Workspace> {
   await normalizeStoredIds(db);
   await applyHumanCopy(db);
+  await repairBrokenLinks(db);
   const [records, history] = await db.$transaction([db.workbookRecord.findMany({ orderBy: [{ position: "asc" }, { id: "asc" }] }), db.recordHistory.findMany({ orderBy: { sequence: "desc" } })]);
   const result: Workspace = {
     source: seed.source,
@@ -169,12 +198,11 @@ async function assertLinks(tx: Pick<PrismaClient, "workbookRecord">, sectionName
   for (const header of fields) {
     const targets = linkTargets(sectionName, header);
     if (!targets || header === "Requirement IDs" || header === "Defect ID") continue;
-    const tokens = parseLinks(clean[header] ?? "");
-    if (tokens.length === 0) { if (header in clean) clean[header] = ""; continue; }
-    // Affected tests can carry tags ("load", "repeat") beside test ids. Keep the tags and only require real ids to exist.
-    const ids = header === "Affected tests" ? tokens.filter(isRecordId) : tokens;
+    const ids = linkIds(clean[header] ?? "");
+    if (ids.length === 0) { if (header in clean) clean[header] = ""; continue; }
     const known = new Set((await tx.workbookRecord.findMany({ where: { section: { in: targets } }, select: { id: true } })).map(row => normalizeId(row.id)));
-    for (const id of ids) if (!known.has(id)) throw new Error(`${header} ${id} does not exist.`);
-    clean[header] = formatLinks(tokens);
+    const missing = ids.filter(id => !known.has(id));
+    if (missing.length > 0) throw new Error(missingLinkMessage(header, missing));
+    clean[header] = formatLinks(ids);
   }
 }

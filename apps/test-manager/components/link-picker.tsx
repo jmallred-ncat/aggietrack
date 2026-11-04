@@ -2,13 +2,13 @@
 
 import { useState } from "react";
 import { Combobox } from "@base-ui/react/combobox";
-import { idForms, normalizeId, parseLinks } from "@/lib/links";
+import { idForms, linkIds, normalizeId } from "@/lib/links";
 
 export type LinkOption = { id: string; label: string; archived: boolean };
 
 export function LinkPicker({ id, label, value, options, onChange, onCreate }: { id: string; label: string; value: string; options: LinkOption[]; onChange: (value: string) => void; onCreate?: (query: string) => void }) {
   const [query, setQuery] = useState("");
-  const selected = parseLinks(value);
+  const selected = linkIds(value);
   const byId = new Map(options.map(option => [option.id, option]));
   const items = [...new Set([...options.filter(option => !option.archived || selected.includes(option.id)).map(option => option.id), ...selected])];
 
