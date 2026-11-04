@@ -1,23 +1,19 @@
 "use server";
 
 import { semesterInSession } from "@/lib/academic-term";
-import { plannerMutationPaths } from "@/lib/plan-view";
+import { refreshStudentViews } from "@/lib/refresh-student-views";
 import { academicTermLabel, courseIdsSatisfiedBefore, courseOfferedInSeason, getPlanningTerms, notOfferedInTermMessage } from "@/lib/planned-term";
 import { coursePrerequisitesSatisfied } from "@/lib/prerequisites";
 import { prisma } from "@/lib/prisma";
 import { requireStudentProfile } from "@/lib/student";
 import { recordCoursesInProgress } from "@/lib/transcript";
-import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 const idSchema = z.string().min(1);
 
 function refreshPlans() {
-    for (const path of plannerMutationPaths) {
-        revalidatePath(path);
-    }
     // The dashboard lives on the /student layout. Refresh it with the nested pages.
-    revalidatePath("/student", "layout");
+    refreshStudentViews();
 }
 
 async function semesterInSessionNow() {
@@ -44,7 +40,6 @@ export async function planCurrentSemester(termId: string) {
         }),
     ]);
     refreshPlans();
-    revalidatePath("/student");
     return { success: true as const };
 }
 
@@ -60,7 +55,6 @@ export async function declineCurrentSemester(termId: string) {
         data: { notTakingTermId: termId },
     });
     refreshPlans();
-    revalidatePath("/student");
     return { success: true as const };
 }
 

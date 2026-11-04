@@ -6,7 +6,7 @@ import { Prisma, RequirementSlot, type Grade, type TranscriptStatus } from "@/li
 import { prisma } from "@/lib/prisma";
 import { requireStudentProfile } from "@/lib/student";
 import { progressStatuses, transcriptFieldsForProgressStatus, type ProgressStatus } from "@/lib/transcript";
-import { revalidatePath } from "next/cache";
+import { refreshStudentViews } from "@/lib/refresh-student-views";
 import { z } from "zod";
 
 const statusSchema = z.enum(progressStatuses).nullable();
@@ -229,9 +229,7 @@ export async function saveTranscriptProgress(input: unknown) {
         return { success: false as const, error: "Mark the courses you have completed, or say you have no prior coursework." };
     }
 
-    revalidatePath("/student/progress");
-    revalidatePath("/student", "layout");
-    revalidatePath("/student");
+    refreshStudentViews();
     return { success: true as const, startConfirmed };
 }
 
@@ -256,9 +254,7 @@ export async function confirmNoPriorCoursework(input: unknown) {
         },
     });
 
-    revalidatePath("/student/progress");
-    revalidatePath("/student", "layout");
-    revalidatePath("/student");
+    refreshStudentViews();
     return { success: true as const };
 }
 

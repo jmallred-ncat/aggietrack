@@ -1,26 +1,10 @@
 "use client";
 
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { completionGradeChoices, completionGradeLabel, isCompletionGrade } from "@/lib/completion-menu";
 import { Grade } from "@/lib/generated/prisma/browser";
-import { gradeLabel } from "@/lib/enum-labels";
 
-const gradeOptions = [
-    Grade.A,
-    Grade.A_MINUS,
-    Grade.B_PLUS,
-    Grade.B,
-    Grade.B_MINUS,
-    Grade.C_PLUS,
-    Grade.C,
-    Grade.C_MINUS,
-    Grade.D_PLUS,
-    Grade.D,
-    Grade.F,
-    Grade.P,
-    Grade.TR,
-    Grade.W,
-    Grade.I,
-] as const;
+const gradeOptions = completionGradeChoices();
 
 export function GradeSelect({
     value,
@@ -39,22 +23,22 @@ export function GradeSelect({
         <Select
             value={value ?? undefined}
             onValueChange={(newValue) => {
-                if (newValue && Object.values(Grade).includes(newValue as Grade)) {
-                    onChange(newValue as Grade);
+                if (newValue && isCompletionGrade(newValue)) {
+                    onChange(newValue);
                 }
             }}
             disabled={disabled}
         >
             <SelectTrigger size={size} className="w-[4.5rem]">
                 <SelectValue placeholder={placeholder}>
-                    {value ? gradeLabel(value) : placeholder}
+                    {value ? completionGradeLabel(value) : placeholder}
                 </SelectValue>
             </SelectTrigger>
             <SelectContent>
                 <SelectGroup>
                     {gradeOptions.map((grade) => (
-                        <SelectItem key={grade} value={grade}>
-                            {gradeLabel(grade)}
+                        <SelectItem key={grade.value} value={grade.value}>
+                            {grade.label}
                         </SelectItem>
                     ))}
                 </SelectGroup>
