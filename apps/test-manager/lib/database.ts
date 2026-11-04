@@ -14,7 +14,7 @@ export const sectionDefinitions = seed.sections.map(section => {
 });
 
 const idFormat = "prefix-pad2";
-const copyRevision = "human-2026-11-04";
+const copyRevision = "human-2026-11-04-2";
 const voiceFields: Record<string, string[]> = {
   Tests: ["Test / scenario", "Preconditions", "Inputs / data", "Procedure", "Expected result", "Pass criterion", "Evidence to retain"],
   "Risks & Decisions": ["Issue / risk", "Source gap or constraint", "Proposed control / decision"],

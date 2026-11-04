@@ -24,9 +24,12 @@ import {
 import { Grade, type TranscriptSource, type TranscriptStatus } from "@/lib/generated/prisma/browser";
 import {
     canClearAttempt,
+    clearCompletionToast,
     completionGradeChoices,
     completionGradeLabel,
+    gradeUpdatedToast,
     isCompletionGrade,
+    runAfterConfirmCloses,
     startClearCompletion,
 } from "@/lib/completion-menu";
 import { cn } from "@/lib/utils";
@@ -71,27 +74,37 @@ export function CourseAttempts({
     const [isPending, startTransition] = useTransition();
     const [localAttempts, setLocalAttempts] = useState(attempts);
     const [confirmId, setConfirmId] = useState<string | null>(null);
+    const [openMenuId, setOpenMenuId] = useState<string | null>(null);
 
     function handleGradeChange(attemptId: string, grade: Grade) {
         const oldAttempts = [...localAttempts];
-        const label = completionGradeLabel(grade);
+        const message = gradeUpdatedToast(completionGradeLabel(grade));
 
-        setLocalAttempts((current) =>
-            current.map((attempt) => attempt.id === attemptId ? { ...attempt, grade, status: "COMPLETED" } : attempt),
+        runAfterConfirmCloses(
+            () => {
+                setOpenMenuId(null);
+                setLocalAttempts((current) =>
+                    current.map((attempt) => attempt.id === attemptId ? { ...attempt, grade, status: "COMPLETED" } : attempt),
+                );
+            },
+            () => {
+                startTransition(async () => {
+                    const result = await updateTranscriptGrade({ entryId: attemptId, grade });
+
+                    if (!result.success) {
+                        setLocalAttempts(oldAttempts);
+                        toast.error("Could not update the grade", { description: result.error });
+                        return;
+                    }
+
+                    toast.success(message.title, { description: message.description });
+                    onUpdate?.();
+                });
+            },
+            (save) => {
+                window.setTimeout(save, 0);
+            },
         );
-
-        startTransition(async () => {
-            const result = await updateTranscriptGrade({ entryId: attemptId, grade });
-
-            if (!result.success) {
-                setLocalAttempts(oldAttempts);
-                toast.error("Could not update the grade", { description: result.error });
-                return;
-            }
-
-            toast.success("Grade updated", { description: `Saved as ${label}.` });
-            onUpdate?.();
-        });
     }
 
     function handleAddAttempt(asInProgress = false) {
@@ -121,33 +134,44 @@ export function CourseAttempts({
     function handleClear(attemptId: string) {
         const previous = localAttempts;
         const next = startClearCompletion(localAttempts, attemptId);
-        setConfirmId(next.dialogOpen ? attemptId : null);
-
-        if (next.completed) {
-            setLocalAttempts(next.attempts);
-        } else {
-            onLastAttemptCleared?.();
-        }
-
-        startTransition(async () => {
-            const result = await removeTranscriptAttempt({ entryId: attemptId });
-
-            if (!result.success) {
-                if (next.completed) {
-                    setLocalAttempts(previous);
-                } else {
-                    onClearFailed?.();
-                }
-                toast.error("Could not clear this completion", { description: result.error });
-                return;
-            }
-
-            const description = next.completed
-                ? "That attempt was removed."
-                : `${subject} ${number} is not completed.`;
-            toast.success(next.completed ? "Attempt removed" : "Completion cleared", { description });
-            onUpdate?.();
+        const message = clearCompletionToast({
+            subject,
+            number,
+            anotherAttemptRemains: next.completed,
         });
+
+        runAfterConfirmCloses(
+            () => {
+                setConfirmId(null);
+                setOpenMenuId(null);
+                if (next.completed) {
+                    setLocalAttempts(next.attempts);
+                } else {
+                    onLastAttemptCleared?.();
+                }
+            },
+            () => {
+                startTransition(async () => {
+                    const result = await removeTranscriptAttempt({ entryId: attemptId });
+
+                    if (!result.success) {
+                        if (next.completed) {
+                            setLocalAttempts(previous);
+                        } else {
+                            onClearFailed?.();
+                        }
+                        toast.error("Could not clear this completion", { description: result.error });
+                        return;
+                    }
+
+                    toast.success(message.title, { description: message.description });
+                    onUpdate?.();
+                });
+            },
+            (save) => {
+                window.setTimeout(save, 0);
+            },
+        );
     }
 
     const sortedAttempts = [...localAttempts].sort((a, b) => {
@@ -185,7 +209,10 @@ export function CourseAttempts({
                             />
                         </>
                     ) : (
-                        <DropdownMenu>
+                        <DropdownMenu
+                            open={openMenuId === attempt.id}
+                            onOpenChange={(open) => setOpenMenuId(open ? attempt.id : null)}
+                        >
                             <DropdownMenuTrigger
                                 type="button"
                                 disabled={isPending}
@@ -210,7 +237,7 @@ export function CourseAttempts({
                                     }}
                                 >
                                     {gradeChoices.map((choice) => (
-                                        <DropdownMenuRadioItem key={choice.value} value={choice.value}>
+                                        <DropdownMenuRadioItem key={choice.value} value={choice.value} closeOnClick>
                                             {choice.label}
                                         </DropdownMenuRadioItem>
                                     ))}
@@ -218,7 +245,13 @@ export function CourseAttempts({
                                 {canClearAttempt(attempt) ? (
                                     <>
                                         <DropdownMenuSeparator />
-                                        <DropdownMenuItem variant="destructive" onClick={() => setConfirmId(attempt.id)}>
+                                        <DropdownMenuItem
+                                            variant="destructive"
+                                            onClick={() => {
+                                                setOpenMenuId(null);
+                                                setConfirmId(attempt.id);
+                                            }}
+                                        >
                                             Clear completion
                                         </DropdownMenuItem>
                                     </>

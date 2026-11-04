@@ -66,3 +66,60 @@ export function startClearCompletion<T extends CompletionAttempt>(
         completed: next.some((attempt) => attempt.status === "COMPLETED"),
     };
 }
+
+export function gradeUpdatedToast(label: string): { title: string; description: string } {
+    return { title: "Grade updated", description: `Saved as ${label}.` };
+}
+
+export function clearCompletionToast(input: {
+    subject: string;
+    number: string;
+    anotherAttemptRemains: boolean;
+}): { title: string; description: string } {
+    if (input.anotherAttemptRemains) {
+        return { title: "Attempt removed", description: "That attempt was removed." };
+    }
+    return {
+        title: "Completion cleared",
+        description: `${input.subject} ${input.number} is not completed.`,
+    };
+}
+
+/** Courses whose checkmark was just saved. Skips a course that was already complete. */
+export function labelsNewlyMarkedComplete(
+    rows: ReadonlyArray<{ label: string; previous?: string | null; next?: string | null }>,
+): string[] {
+    const labels: string[] = [];
+    for (const row of rows) {
+        const label = row.label.trim();
+        if (!label || row.next !== "complete" || row.previous === "complete") {
+            continue;
+        }
+        labels.push(label);
+    }
+    return labels;
+}
+
+export function markedCompleteToast(labels: readonly string[]): { title: string; description: string } | null {
+    if (labels.length === 0) {
+        return null;
+    }
+    const names = labels.length === 1
+        ? labels[0]
+        : labels.length === 2
+            ? `${labels[0]} and ${labels[1]}`
+            : `${labels.slice(0, -1).join(", ")}, and ${labels[labels.length - 1]}`;
+    return {
+        title: "Marked complete",
+        description: labels.length === 1 ? `${names} is saved.` : `${names} are saved.`,
+    };
+}
+
+/**
+ * Close the confirm on this click. Start the save on a later turn.
+ * A save started in the same click keeps the dialog open until the request finishes.
+ */
+export function runAfterConfirmCloses(close: () => void, save: () => void, schedule: (save: () => void) => void) {
+    close();
+    schedule(save);
+}

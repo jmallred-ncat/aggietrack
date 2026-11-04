@@ -7,14 +7,16 @@ import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field
 import { Input } from "@/components/ui/input";
 import { ToggleInput, ToggleInputGroup } from "@/components/ui/toggle-input";
 import type { ProgressSlotCourse } from "@/lib/catalog";
-import type { TranscriptSource, TranscriptStatus } from "@/lib/generated/prisma/browser";
+import { labelsNewlyMarkedComplete, markedCompleteToast } from "@/lib/completion-menu";
 import { courseCodeLabel, parseCourseCode } from "@/lib/course-code";
+import type { TranscriptSource, TranscriptStatus } from "@/lib/generated/prisma/browser";
 import { Combobox } from "@base-ui/react/combobox";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ArrowsLeftRightIcon, CaretDownIcon, CheckCircleIcon, XIcon } from "@phosphor-icons/react";
 import { useRouter } from "next/navigation";
-import { useId, useRef, useState, type ReactNode } from "react";
+import { useEffect, useId, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { Controller, useForm, useWatch } from "react-hook-form";
+import { toast } from "sonner";
 import { z } from "zod";
 import { confirmNoPriorCoursework, saveTranscriptProgress } from "./actions";
 import { CourseAttempts } from "./CourseAttempts";
@@ -134,15 +136,51 @@ function CourseStatusField({
     onBlur,
     disabled,
     inProgress,
+    releaseInteraction = false,
 }: {
     value?: SlotValue["status"];
     onChange?: (value: SlotValue["status"]) => void;
     onBlur?: () => void;
     disabled?: boolean;
     inProgress?: boolean;
+    /** Drop leftover focus and hover after a completion is cleared. */
+    releaseInteraction?: boolean;
 }) {
+    const rootRef = useRef<HTMLDivElement>(null);
+    const [holdPointer, setHoldPointer] = useState(releaseInteraction);
+
+    useLayoutEffect(() => {
+        if (!releaseInteraction) {
+            return;
+        }
+        const active = document.activeElement;
+        if (active instanceof HTMLElement && rootRef.current?.contains(active)) {
+            active.blur();
+        }
+    }, [releaseInteraction]);
+
+    useEffect(() => {
+        if (!releaseInteraction) {
+            return;
+        }
+        const blurInside = () => {
+            const active = document.activeElement;
+            if (active instanceof HTMLElement && rootRef.current?.contains(active)) {
+                active.blur();
+            }
+        };
+        blurInside();
+        const frame = requestAnimationFrame(blurInside);
+        const release = () => setHoldPointer(false);
+        window.addEventListener("pointermove", release, { once: true });
+        return () => {
+            cancelAnimationFrame(frame);
+            window.removeEventListener("pointermove", release);
+        };
+    }, [releaseInteraction]);
+
     return (
-        <div className="flex items-center gap-2">
+        <div ref={rootRef} className={`flex items-center gap-2${holdPointer ? " pointer-events-none" : ""}`}>
             {inProgress && !value ? (
                 <span className="text-xs text-muted-foreground">In progress</span>
             ) : null}
@@ -541,6 +579,7 @@ function SlotField({
     minNumber,
     statusError,
     inProgress,
+    releaseInteraction,
     onChange,
     onBlur,
 }: {
@@ -554,6 +593,7 @@ function SlotField({
     minNumber: number;
     statusError?: string;
     inProgress?: boolean;
+    releaseInteraction?: boolean;
     onChange: (value: SlotValue) => void;
     onBlur: () => void;
 }) {
@@ -586,6 +626,7 @@ function SlotField({
                     value={value.status}
                     disabled={!hasCourse}
                     inProgress={inProgress}
+                    releaseInteraction={releaseInteraction}
                     onChange={(status) => onChange({ ...value, status })}
                     onBlur={onBlur}
                 />
@@ -639,6 +680,57 @@ function attemptListKey(attempts: Array<{ id: string; grade: string | null; stat
     return attempts.map((attempt) => `${attempt.id}:${attempt.grade ?? ""}:${attempt.status}`).join("|");
 }
 
+function slotCourseLabel(
+    slot: { courseId?: string; subject?: string; number?: string; title?: string } | undefined,
+    courses: ProgressSlotCourse[] | undefined,
+    fallback: string,
+) {
+    if (slot?.courseId) {
+        const course = courses?.find((item) => item.id === slot.courseId);
+        if (course) {
+            return `${course.subject} ${course.number}`;
+        }
+    }
+    if (slot?.subject && slot?.number) {
+        return `${slot.subject} ${slot.number}`;
+    }
+    return slot?.title?.trim() || fallback;
+}
+
+function markedCompleteRows(
+    planYears: ProgressYear[],
+    slotCourses: Record<string, ProgressSlotCourse[]>,
+    previous: {
+        courses?: Partial<Record<string, string | undefined>>;
+        slots?: Partial<Record<string, Partial<SlotValue> | undefined>>;
+    } | undefined,
+    next: ProgressFormValues,
+) {
+    const rows: Array<{ label: string; previous?: string | null; next?: string | null }> = [];
+    for (const year of planYears) {
+        for (const term of year.terms) {
+            for (const row of term.rows) {
+                if (row.kind === "course") {
+                    rows.push({
+                        label: `${row.subject} ${row.number}`,
+                        previous: previous?.courses?.[row.courseId],
+                        next: next.courses[row.courseId],
+                    });
+                    continue;
+                }
+                const nextSlot = next.slots[row.id];
+                const previousSlot = previous?.slots?.[row.id];
+                rows.push({
+                    label: slotCourseLabel(nextSlot?.subject || nextSlot?.courseId ? nextSlot : previousSlot, slotCourses[row.groupId], row.title),
+                    previous: previousSlot?.status,
+                    next: nextSlot?.status,
+                });
+            }
+        }
+    }
+    return rows;
+}
+
 export type OutsidePlanCourse = {
     courseId: string;
     subject: string;
@@ -679,6 +771,7 @@ export default function ProgressForm({
     const inProgressSlots = new Set(inProgressSlotIds);
     const router = useRouter();
     const [clearedAttemptKeys, setClearedAttemptKeys] = useState<Record<string, string>>({});
+    const restoredDefaults = useRef<Array<{ kind: "course"; courseId: string } | { kind: "slot"; slotId: string }>>([]);
     const form = useForm<ProgressFormValues>({
         resolver: zodResolver(formSchema),
         defaultValues: { standing, courses: defaultCourses, slots: defaultSlots },
@@ -698,6 +791,17 @@ export default function ProgressForm({
             return next;
         });
     }
+
+    useLayoutEffect(() => {
+        const pending = restoredDefaults.current.splice(0);
+        for (const field of pending) {
+            if (field.kind === "course") {
+                form.resetField(`courses.${field.courseId}`, { defaultValue: "" });
+            } else {
+                form.resetField(`slots.${field.slotId}`, { defaultValue: { ...emptySlotValue } });
+            }
+        }
+    });
     const watched = useWatch({ control: form.control });
     const watchedSlots = useWatch({ control: form.control, name: "slots" });
     const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "error">(
@@ -737,9 +841,19 @@ export default function ProgressForm({
             return;
         }
 
+        const previousValues = form.formState.defaultValues;
         form.reset(parsed.data);
         setSaveError(null);
         setSaveState("saved");
+        const marked = markedCompleteToast(labelsNewlyMarkedComplete(markedCompleteRows(
+            years,
+            slotCourses,
+            previousValues,
+            parsed.data,
+        )));
+        if (marked) {
+            toast.success(marked.title, { description: marked.description });
+        }
         if (result.startConfirmed && !startKnown) {
             setStartKnown(true);
             router.push("/student");
@@ -905,10 +1019,11 @@ export default function ProgressForm({
                                                                         onLastAttemptCleared={() => {
                                                                             const previous = form.getValues(`courses.${row.courseId}`);
                                                                             pendingRestore.run = () => {
-                                                                                form.resetField(`courses.${row.courseId}`, { defaultValue: previous });
+                                                                                form.setValue(`courses.${row.courseId}`, previous ?? "");
                                                                             };
+                                                                            form.setValue(`courses.${row.courseId}`, "");
+                                                                            restoredDefaults.current.push({ kind: "course", courseId: row.courseId });
                                                                             hideClearedRow(row.id, listKey);
-                                                                            form.resetField(`courses.${row.courseId}`, { defaultValue: "" });
                                                                         }}
                                                                         onClearFailed={() => {
                                                                             pendingRestore.run();
@@ -952,10 +1067,11 @@ export default function ProgressForm({
                                                                             onLastAttemptCleared={() => {
                                                                                 const previous = form.getValues(`slots.${row.id}`) ?? emptySlotValue;
                                                                                 pendingRestore.run = () => {
-                                                                                    form.resetField(`slots.${row.id}`, { defaultValue: previous });
+                                                                                    form.setValue(`slots.${row.id}`, previous);
                                                                                 };
+                                                                                form.setValue(`slots.${row.id}`, { ...emptySlotValue });
+                                                                                restoredDefaults.current.push({ kind: "slot", slotId: row.id });
                                                                                 hideClearedRow(row.id, listKey);
-                                                                                form.resetField(`slots.${row.id}`, { defaultValue: { ...emptySlotValue } });
                                                                             }}
                                                                             onClearFailed={() => {
                                                                                 pendingRestore.run();
@@ -973,6 +1089,7 @@ export default function ProgressForm({
                                                                             <CourseStatusField
                                                                                 value={field.value ?? ""}
                                                                                 inProgress={inProgressCourses.has(row.courseId)}
+                                                                                releaseInteraction={clearedAttemptKeys[row.id] === listKey}
                                                                                 onChange={field.onChange}
                                                                                 onBlur={field.onBlur}
                                                                             />
@@ -994,6 +1111,7 @@ export default function ProgressForm({
                                                                                 minNumber={row.minNumber}
                                                                                 statusError={form.formState.errors.slots?.[row.id]?.status?.message}
                                                                                 inProgress={inProgressSlots.has(row.id)}
+                                                                                releaseInteraction={clearedAttemptKeys[row.id] === listKey}
                                                                                 onChange={field.onChange}
                                                                                 onBlur={field.onBlur}
                                                                             />
