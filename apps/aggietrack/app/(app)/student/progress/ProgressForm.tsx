@@ -7,6 +7,7 @@ import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field
 import { Input } from "@/components/ui/input";
 import { ToggleInput, ToggleInputGroup } from "@/components/ui/toggle-input";
 import type { ProgressSlotCourse } from "@/lib/catalog";
+import type { TranscriptSource, TranscriptStatus } from "@/lib/generated/prisma/browser";
 import { courseCodeLabel, parseCourseCode } from "@/lib/course-code";
 import { Combobox } from "@base-ui/react/combobox";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -629,9 +630,14 @@ function formRecordsCoursework(data: {
 type TranscriptAttempt = {
     id: string;
     grade: string | null;
-    status: string;
-    source: string;
+    status: TranscriptStatus;
+    source: TranscriptSource;
+    createdAt: Date;
 };
+
+function attemptListKey(attempts: Array<{ id: string; grade: string | null; status: string }>) {
+    return attempts.map((attempt) => `${attempt.id}:${attempt.grade ?? ""}:${attempt.status}`).join("|");
+}
 
 export type OutsidePlanCourse = {
     courseId: string;
@@ -672,10 +678,26 @@ export default function ProgressForm({
     const inProgressCourses = new Set(inProgressCourseIds);
     const inProgressSlots = new Set(inProgressSlotIds);
     const router = useRouter();
+    const [clearedAttemptKeys, setClearedAttemptKeys] = useState<Record<string, string>>({});
     const form = useForm<ProgressFormValues>({
         resolver: zodResolver(formSchema),
         defaultValues: { standing, courses: defaultCourses, slots: defaultSlots },
     });
+
+    function hideClearedRow(rowId: string, listKey: string) {
+        setClearedAttemptKeys((current) => ({ ...current, [rowId]: listKey }));
+    }
+
+    function showClearedRow(rowId: string) {
+        setClearedAttemptKeys((current) => {
+            if (!(rowId in current)) {
+                return current;
+            }
+            const next = { ...current };
+            delete next[rowId];
+            return next;
+        });
+    }
     const watched = useWatch({ control: form.control });
     const watchedSlots = useWatch({ control: form.control, name: "slots" });
     const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "error">(
@@ -823,10 +845,13 @@ export default function ProgressForm({
                                     <h3 className="rounded-lg bg-muted px-4 py-2 text-sm font-medium">{term.label}</h3>
                                     <div className="space-y-4 px-4 pt-3">
                                         {term.rows.map((row) => {
+                                            const pendingRestore = { run: () => {} };
                                             const attempts = row.kind === "course" 
                                                 ? courseAttempts[row.courseId] ?? []
                                                 : slotAttempts[row.id] ?? [];
+                                            const listKey = attemptListKey(attempts);
                                             const hasCompletedAttempts = attempts.some(a => a.status === "COMPLETED");
+                                            const showCompleted = hasCompletedAttempts && clearedAttemptKeys[row.id] !== listKey;
                                             const slotSelection = row.kind === "slot" ? watchedSlots?.[row.id] : undefined;
                                             const slotCourse =
                                                 row.kind === "slot" && slotSelection?.courseId
@@ -866,16 +891,29 @@ export default function ProgressForm({
 
                                                         {/* Actions: grade select or attempts */}
                                                         <div className="flex shrink-0 items-center justify-start sm:justify-end">
-                                                            {hasCompletedAttempts ? (
+                                                            {showCompleted ? (
                                                                 row.kind === "course" ? (
                                                                     <CourseAttempts
+                                                                        key={listKey}
                                                                         courseId={row.courseId}
                                                                         subject={row.subject}
                                                                         number={row.number}
                                                                         title={row.title}
                                                                         credits={3}
-                                                                        attempts={attempts as any}
+                                                                        attempts={attempts}
                                                                         onUpdate={() => router.refresh()}
+                                                                        onLastAttemptCleared={() => {
+                                                                            const previous = form.getValues(`courses.${row.courseId}`);
+                                                                            pendingRestore.run = () => {
+                                                                                form.resetField(`courses.${row.courseId}`, { defaultValue: previous });
+                                                                            };
+                                                                            hideClearedRow(row.id, listKey);
+                                                                            form.resetField(`courses.${row.courseId}`, { defaultValue: "" });
+                                                                        }}
+                                                                        onClearFailed={() => {
+                                                                            pendingRestore.run();
+                                                                            showClearedRow(row.id);
+                                                                        }}
                                                                     />
                                                                 ) : (() => {
                                                                     const slotValue = watchedSlots[row.id];
@@ -902,14 +940,27 @@ export default function ProgressForm({
 
                                                                     return courseData ? (
                                                                         <CourseAttempts
+                                                                            key={listKey}
                                                                             courseId={courseData.courseId}
                                                                             subject={courseData.subject}
                                                                             number={courseData.number}
                                                                             title={courseData.title}
                                                                             credits={courseData.credits}
-                                                                            attempts={attempts as any}
+                                                                            attempts={attempts}
                                                                             recommendedTermCourseId={row.id}
                                                                             onUpdate={() => router.refresh()}
+                                                                            onLastAttemptCleared={() => {
+                                                                                const previous = form.getValues(`slots.${row.id}`) ?? emptySlotValue;
+                                                                                pendingRestore.run = () => {
+                                                                                    form.resetField(`slots.${row.id}`, { defaultValue: previous });
+                                                                                };
+                                                                                hideClearedRow(row.id, listKey);
+                                                                                form.resetField(`slots.${row.id}`, { defaultValue: { ...emptySlotValue } });
+                                                                            }}
+                                                                            onClearFailed={() => {
+                                                                                pendingRestore.run();
+                                                                                showClearedRow(row.id);
+                                                                            }}
                                                                         />
                                                                     ) : null;
                                                                 })()
@@ -968,26 +1019,36 @@ export default function ProgressForm({
                             These courses are on your transcript and do not fill a requirement on this degree. A letter grade still counts in your GPA.
                         </p>
                         <div className="mt-3 space-y-4 px-4">
-                            {outsidePlan.map((course) => (
-                                <div key={`${course.subject} ${course.number}`} className="not-typeset flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
-                                    <div className="flex min-w-0 items-center gap-2 text-sm font-medium">
-                                        <Badge className="shrink-0 font-mono">{course.subject} {course.number}</Badge>
-                                        <span className="min-w-0 truncate">{course.title}</span>
-                                        <span className="shrink-0 text-muted-foreground">{course.credits} credits</span>
+                            {outsidePlan.map((course) => {
+                                const listKey = attemptListKey(course.attempts);
+                                const rowId = course.courseId || `${course.subject} ${course.number}`;
+                                if (clearedAttemptKeys[rowId] === listKey) {
+                                    return null;
+                                }
+                                return (
+                                    <div key={`${course.subject} ${course.number}`} className="not-typeset flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+                                        <div className="flex min-w-0 items-center gap-2 text-sm font-medium">
+                                            <Badge className="shrink-0 font-mono">{course.subject} {course.number}</Badge>
+                                            <span className="min-w-0 truncate">{course.title}</span>
+                                            <span className="shrink-0 text-muted-foreground">{course.credits} credits</span>
+                                        </div>
+                                        {course.courseId ? (
+                                            <CourseAttempts
+                                                key={listKey}
+                                                courseId={course.courseId}
+                                                subject={course.subject}
+                                                number={course.number}
+                                                title={course.title}
+                                                credits={course.credits}
+                                                attempts={course.attempts}
+                                                onUpdate={() => router.refresh()}
+                                                onLastAttemptCleared={() => hideClearedRow(rowId, listKey)}
+                                                onClearFailed={() => showClearedRow(rowId)}
+                                            />
+                                        ) : null}
                                     </div>
-                                    {course.courseId ? (
-                                        <CourseAttempts
-                                            courseId={course.courseId}
-                                            subject={course.subject}
-                                            number={course.number}
-                                            title={course.title}
-                                            credits={course.credits}
-                                            attempts={course.attempts as never}
-                                            onUpdate={() => router.refresh()}
-                                        />
-                                    ) : null}
-                                </div>
-                            ))}
+                                );
+                            })}
                         </div>
                     </div>
                 ) : null}

@@ -18,6 +18,22 @@ export const plannerMutationPaths = [
     "/advisor/plans",
 ] as const;
 
+export type StudentViewRefreshTarget = {
+    path: string;
+    type?: "page" | "layout";
+};
+
+/**
+ * Pages a transcript save must refresh.
+ * Same routes as a planner save, plus the student layout that holds the dashboard.
+ */
+export function studentViewRefreshTargets(): StudentViewRefreshTarget[] {
+    return [
+        ...plannerMutationPaths.map((path) => ({ path })),
+        { path: "/student", type: "layout" },
+    ];
+}
+
 export function termCreditTotal(courses: readonly { credits: number }[]) {
     return courses.reduce((total, course) => total + course.credits, 0);
 }

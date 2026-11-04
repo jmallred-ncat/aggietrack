@@ -3,7 +3,7 @@
 import { Grade, type TranscriptStatus } from "@/lib/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireStudentProfile } from "@/lib/student";
-import { revalidatePath } from "next/cache";
+import { refreshStudentViews } from "@/lib/refresh-student-views";
 import { z } from "zod";
 
 const gradeSchema = z.nativeEnum(Grade);
@@ -72,9 +72,7 @@ export async function updateTranscriptGrade(input: unknown) {
         },
     });
 
-    revalidatePath("/student/progress");
-    revalidatePath("/student", "layout");
-    revalidatePath("/student");
+    refreshStudentViews();
 
     return { success: true as const };
 }
@@ -141,9 +139,7 @@ export async function addTranscriptAttempt(input: unknown) {
         },
     });
 
-    revalidatePath("/student/progress");
-    revalidatePath("/student", "layout");
-    revalidatePath("/student");
+    refreshStudentViews();
 
     return { 
         success: true as const, 
@@ -192,9 +188,7 @@ export async function removeTranscriptAttempt(input: unknown) {
         where: { id: entryId },
     });
 
-    revalidatePath("/student/progress");
-    revalidatePath("/student", "layout");
-    revalidatePath("/student");
+    refreshStudentViews();
 
     return { success: true as const };
 }
