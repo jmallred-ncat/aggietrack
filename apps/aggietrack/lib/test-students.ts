@@ -1,5 +1,6 @@
 import { StudentStanding } from "./generated/prisma/client";
 import { timingSafeEqual } from "node:crypto";
+import { academicTerms } from "../prisma/seed/academic-terms";
 import { info2025 } from "../prisma/seed/info-2025";
 import type { PlaceholderSeed } from "../prisma/seed/curriculum";
 
@@ -63,6 +64,69 @@ export const testAdvisors: TestAdvisor[] = [
   { email: "advisor.2@example.test", firstName: "Michael", lastName: "Chen", role: "ADVISOR" },
 ];
 
+export const sarahMartinezEmail = "advisor.1@example.test";
+export const michaelChenEmail = "advisor.2@example.test";
+
+/** Avery, Jordan, and Riley. Michael Chen is not assigned to any test student. */
+export const studentsAssignedToSarah = [
+  "it.start@example.test",
+  "it.mid@example.test",
+  "it.late@example.test",
+] as const;
+
+export function assignedAdvisorEmail(studentEmail: string) {
+  const normalized = studentEmail.trim().toLowerCase();
+  return (studentsAssignedToSarah as readonly string[]).includes(normalized) ? sarahMartinezEmail : null;
+}
+
+export type FixtureCourse = { subject: string; number: string };
+
+/**
+ * Jordan Hale's submitted plan for the next fall or spring.
+ * His transcript already includes terms 1–4, and term 4 is in progress.
+ * CST 325, CST 329, and CST 339 are offered in fall and summer, so a spring plan
+ * uses the spring-offered term 5 courses plus spring term 6 major courses.
+ * CST 250 is offered in spring and summer, so a fall plan uses CST 305, the next
+ * technical elective that does not require a course Jordan has not taken.
+ */
+export const jordanSubmittedCourses: Record<"FALL" | "SPRING", FixtureCourse[]> = {
+  SPRING: [
+    { subject: "MATH", number: "224" },
+    { subject: "CST", number: "250" },
+    { subject: "CST", number: "315" },
+    { subject: "CST", number: "317" },
+  ],
+  FALL: [
+    { subject: "CST", number: "325" },
+    { subject: "CST", number: "329" },
+    { subject: "CST", number: "339" },
+    { subject: "MATH", number: "224" },
+    { subject: "CST", number: "305" },
+  ],
+};
+
+/** The next fall or spring that has not started. That is the term a student can submit for approval. */
+export function nextRegistrationTerm(now = new Date()) {
+  const upcoming = academicTerms
+    .filter((term) => (term.season === "FALL" || term.season === "SPRING") && term.startsOn.getTime() > now.getTime())
+    .sort((a, b) => a.startsOn.getTime() - b.startsOn.getTime());
+  const next = upcoming[0];
+  if (!next || (next.season !== "FALL" && next.season !== "SPRING")) {
+    throw new Error("No upcoming fall or spring term is loaded.");
+  }
+  return { season: next.season, year: next.year };
+}
+
+export function jordanSubmittedPlan(now = new Date()) {
+  const term = nextRegistrationTerm(now);
+  return { term, courses: jordanSubmittedCourses[term.season] };
+}
+
+export function plannedCoursesAfterReset(student: TestStudent, now = new Date()): FixtureCourse[] {
+  if (student.email !== "it.mid@example.test") return [];
+  return jordanSubmittedPlan(now).courses;
+}
+
 export const testAccounts = [...testStudents, ...testAdvisors] as const;
 
 export function testStudentByEmail(email: string) {
@@ -112,9 +176,9 @@ export function frozenCourses(student: TestStudent): FrozenCourse[] {
   return rows;
 }
 
-/** Reset replaces the transcript with the frozen courses and leaves no registration plan. */
-export function stateAfterReset(student: TestStudent) {
-  return { transcript: frozenCourses(student), planned: [] as const };
+/** Reset restores the frozen transcript. Jordan also gets his submitted next-term plan back. */
+export function stateAfterReset(student: TestStudent, now = new Date()) {
+  return { transcript: frozenCourses(student), planned: plannedCoursesAfterReset(student, now) };
 }
 
 export type TestStudentAccess =

@@ -3,7 +3,11 @@ export type TestStudentCard = {
   name: string;
   place: string;
   role?: "student" | "advisor";
+  assignment?: string;
 };
+
+export const assignedToSarah = "Assigned to Avery, Jordan, Riley";
+export const notAssignedToTestStudent = "Not assigned to any test student";
 
 export const testStudentCards: TestStudentCard[] = [
   { email: "it.start@example.test", name: "Avery Cole", place: "Information Technology 2025. Just started, with no prior coursework (0 credits).", role: "student" },
@@ -16,8 +20,8 @@ export const testStudentCards: TestStudentCard[] = [
 ];
 
 export const testAdvisorCards: TestStudentCard[] = [
-  { email: "advisor.1@example.test", name: "Sarah Martinez", place: "Academic advisor. Test account for reviewing student plans and providing guidance.", role: "advisor" },
-  { email: "advisor.2@example.test", name: "Michael Chen", place: "Academic advisor. Test account for advisor workflow and plan approval testing.", role: "advisor" },
+  { email: "advisor.1@example.test", name: "Sarah Martinez", place: "Academic advisor. Test account for reviewing student plans and providing guidance.", role: "advisor", assignment: assignedToSarah },
+  { email: "advisor.2@example.test", name: "Michael Chen", place: "Academic advisor. Test account for advisor workflow and plan approval testing.", role: "advisor", assignment: notAssignedToTestStudent },
 ];
 
 export const testAccountCards = [...testStudentCards, ...testAdvisorCards];

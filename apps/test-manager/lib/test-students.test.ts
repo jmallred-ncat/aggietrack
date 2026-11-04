@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { aggietrackRequest, resetAfterUse, testStudentByEmail, testStudentCards } from "./test-students";
+import { aggietrackRequest, assignedToSarah, notAssignedToTestStudent, resetAfterUse, testAdvisorCards, testStudentByEmail, testStudentCards } from "./test-students";
 
 test("the testing site shows the Information Technology students and the reset instruction", () => {
   assert.deepEqual(testStudentCards.map(student => student.email), [
@@ -15,6 +15,13 @@ test("the testing site shows the Information Technology students and the reset i
   assert.match(resetAfterUse, /after every use/);
   assert.equal(testStudentByEmail("it.late@example.test")?.name, "Riley Brooks");
   assert.equal(testStudentByEmail("someone@example.test"), null);
+});
+
+test("advisor cards name Sarah's students and leave Michael unassigned", () => {
+  assert.equal(testAdvisorCards.find(card => card.email === "advisor.1@example.test")?.assignment, assignedToSarah);
+  assert.equal(assignedToSarah, "Assigned to Avery, Jordan, Riley");
+  assert.equal(testAdvisorCards.find(card => card.email === "advisor.2@example.test")?.assignment, notAssignedToTestStudent);
+  assert.equal(notAssignedToTestStudent, "Not assigned to any test student");
 });
 
 test("reset calls AggieTrack with the secret and only the student email", async () => {
