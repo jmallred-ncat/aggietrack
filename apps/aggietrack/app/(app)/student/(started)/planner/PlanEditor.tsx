@@ -9,10 +9,12 @@ import { Popover, PopoverContent } from "@/components/ui/popover";
 import { toast } from "@/components/ui/toast";
 import { RuleViolationAlert } from "@/components/rule-violation-alert";
 import type { PlannedTermStatus } from "@/lib/generated/prisma/client";
+import { finishPlanSave, type PlanSaveResult } from "@/lib/plan-save";
 import { applyAddedCourses, applyRemovedCourse, termCreditLabel, termCreditTotal } from "@/lib/plan-view";
 import { MagnifyingGlassIcon, XIcon } from "@phosphor-icons/react";
 import { useRouter } from "next/navigation";
 import { useRef, useState, useTransition } from "react";
+import { toast as sonner } from "sonner";
 import { addPlannedCourse, markPlannedTermRegistered, removePlannedCourse, submitPlannedTerm } from "./actions";
 
 type CatalogCourse = {
@@ -77,7 +79,13 @@ export default function PlanEditor({
     const [violations, setViolations] = useState<string[]>([]);
     const [violationTitle, setViolationTitle] = useState("Requirement not met");
     // The open term is drawn from this state so a finished save shows before a reload.
+    // A refreshed plan from the server replaces that local copy.
     const [localPlan, setLocalPlan] = useState(plan);
+    const [serverPlan, setServerPlan] = useState(plan);
+    if (serverPlan !== plan) {
+        setServerPlan(plan);
+        setLocalPlan(plan);
+    }
     const shown = localPlan;
     const status = shown?.status ?? "DRAFT";
     const editable = status === "DRAFT";
@@ -113,6 +121,39 @@ export default function PlanEditor({
             if (result.violations && result.violations.length > 0) {
                 setViolationTitle(violationTitleText);
                 setViolations(result.violations);
+            } else {
+                setViolations([]);
+                toast.add({ title: success });
+            }
+            setQuery("");
+            setResultsOpen(false);
+            router.refresh();
+        });
+    }
+
+    function runCourseChange<T extends PlanSaveResult>(
+        action: () => Promise<T>,
+        success: string,
+        apply?: (result: T & { success: true }) => void,
+    ) {
+        startTransition(async () => {
+            const outcome = await finishPlanSave(action, { onLate: () => router.refresh() });
+            if (outcome.status === "violations") {
+                setViolationTitle("Requirement not met");
+                setViolations(outcome.violations);
+                return;
+            }
+            if (outcome.status === "failed") {
+                setViolations([]);
+                if (outcome.sonner) sonner.error(outcome.message);
+                else toast.add({ title: outcome.message });
+                router.refresh();
+                return;
+            }
+            apply?.(outcome.result as T & { success: true });
+            if (outcome.result.violations && outcome.result.violations.length > 0) {
+                setViolationTitle("Requirement not met");
+                setViolations(outcome.result.violations);
             } else {
                 setViolations([]);
                 toast.add({ title: success });
@@ -208,7 +249,7 @@ export default function PlanEditor({
                                             className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-muted"
                                             disabled={pending}
                                             onMouseDown={(event) => event.preventDefault()}
-                                            onClick={() => run(
+                                            onClick={() => runCourseChange(
                                                 () => addPlannedCourse(termId, course.id),
                                                 `${course.subject} ${course.number} added`,
                                                 (result) => {
@@ -262,7 +303,7 @@ export default function PlanEditor({
                                         size="icon-sm"
                                         aria-label={`Remove ${course.subject} ${course.number}`}
                                         disabled={pending}
-                                        onClick={() => run(
+                                        onClick={() => runCourseChange(
                                             () => removePlannedCourse(course.plannedCourseId),
                                             `${course.subject} ${course.number} removed`,
                                             () => {

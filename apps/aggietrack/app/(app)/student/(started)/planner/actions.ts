@@ -12,6 +12,14 @@ import {
     submitDecision,
     toRuleCourse,
 } from "@/lib/plan-rules";
+import {
+    planTransactionOptions,
+    PlannerWriteFailed,
+    plannerFailure,
+    takePlannerWriteFault,
+    waitForPlannerFault,
+    writePlannedCourses,
+} from "@/lib/planner-write";
 import { prisma } from "@/lib/prisma";
 import { requireStudentProfile } from "@/lib/student";
 import { recordCoursesInProgress } from "@/lib/transcript";
@@ -69,6 +77,30 @@ export async function declineCurrentSemester(termId: string) {
 async function planningTerm(termId: string) {
     const terms = await getPlanningTerms();
     return terms.find((term) => term.id === termId) ?? null;
+}
+
+async function nextPlannerWriteFault(studentId: string) {
+    return takePlannerWriteFault(process.env.VERCEL_ENV, studentId, {
+        read: async (id) => {
+            const row = await prisma.studentProfile.findUnique({
+                where: { id },
+                select: { plannerWriteFault: true },
+            });
+            return row?.plannerWriteFault ?? null;
+        },
+        clear: async (id, raw) => {
+            const cleared = await prisma.studentProfile.updateMany({
+                where: { id, plannerWriteFault: raw },
+                data: { plannerWriteFault: null },
+            });
+            return cleared.count === 1;
+        },
+    });
+}
+
+function caughtPlannerFailure(error: unknown) {
+    if (error instanceof PlanRejected) return error.result;
+    return plannerFailure(error);
 }
 
 const companionSchema = z.array(z.string().min(1)).max(8);
@@ -197,51 +229,63 @@ export async function addPlannedCourse(termId: string, courseId: string, compani
     }
 
     const creating = [courseId, ...extras].filter((id) => !onTranscript.has(id) && !alreadyOnPlan.has(id));
-    const saved = await prisma.$transaction(async (tx) => {
-        const plannedTerm = plan ?? await tx.plannedTerm.create({
-            data: { studentId: profile.id, termId },
-            select: { id: true },
-        });
-        const claimed = await claimDraftPlan(
-            (args) => tx.plannedTerm.updateMany(args),
-            { id: plannedTerm.id, studentId: profile.id },
-            { updatedAt: new Date() },
-        );
-        if (!claimed) return null;
-        const courses = [];
-        for (const id of creating) {
-            const row = await tx.plannedCourse.create({
-                data: { plannedTermId: plannedTerm.id, courseId: id },
-                select: {
-                    id: true,
-                    courseId: true,
-                    course: {
-                        select: { subject: true, number: true, title: true, credits: true },
-                    },
+    const fault = await nextPlannerWriteFault(profile.id);
+    await waitForPlannerFault(fault);
+    try {
+        const saved = await prisma.$transaction(async (tx) => {
+            const plannedTerm = plan ?? await tx.plannedTerm.create({
+                data: { studentId: profile.id, termId },
+                select: { id: true },
+            });
+            const claimed = await claimDraftPlan(
+                (args) => tx.plannedTerm.updateMany(args),
+                { id: plannedTerm.id, studentId: profile.id },
+                { updatedAt: new Date() },
+            );
+            if (!claimed) return null;
+            const added = await writePlannedCourses(
+                creating,
+                (id) => byId.get(id)?.isLab === true,
+                fault,
+                async (id) => {
+                    const row = await tx.plannedCourse.create({
+                        data: { plannedTermId: plannedTerm.id, courseId: id },
+                        select: {
+                            id: true,
+                            courseId: true,
+                            course: {
+                                select: { subject: true, number: true, title: true, credits: true },
+                            },
+                        },
+                    });
+                    return {
+                        plannedCourseId: row.id,
+                        id: row.courseId,
+                        subject: row.course.subject,
+                        number: row.course.number,
+                        title: row.course.title,
+                        credits: row.course.credits,
+                    };
                 },
-            });
-            courses.push({
-                plannedCourseId: row.id,
-                id: row.courseId,
-                subject: row.course.subject,
-                number: row.course.number,
-                title: row.course.title,
-                credits: row.course.credits,
-            });
+            );
+            return { planId: plannedTerm.id, courses: added };
+        }, planTransactionOptions());
+        if (!saved) {
+            return { success: false as const, error: draftLockedMessage };
         }
-        return { planId: plannedTerm.id, courses };
-    });
-    if (!saved) {
-        return { success: false as const, error: draftLockedMessage };
-    }
 
-    refreshPlans();
-    return {
-        success: true as const,
-        planId: saved.planId,
-        addedCourseIds: creating,
-        courses: saved.courses,
-    };
+        refreshPlans();
+        return {
+            success: true as const,
+            planId: saved.planId,
+            addedCourseIds: creating,
+            courses: saved.courses,
+        };
+    } catch (error) {
+        const failure = caughtPlannerFailure(error);
+        if (failure) return failure;
+        throw error;
+    }
 }
 
 export async function removePlannedCourse(plannedCourseId: string) {
@@ -261,23 +305,32 @@ export async function removePlannedCourse(plannedCourseId: string) {
         return { success: false as const, error: "That course could not be removed." };
     }
 
-    const removed = await prisma.$transaction(async (tx) => {
-        const claimed = await claimDraftPlan(
-            (args) => tx.plannedTerm.updateMany(args),
-            { id: row.plannedTermId, studentId: profile.id },
-            { updatedAt: new Date() },
-        );
-        if (!claimed) return null;
-        const violations = await violationsForRemoval(tx, profile.id, row.courseId);
-        await tx.plannedCourse.delete({ where: { id: row.id } });
-        return { violations };
-    });
-    if (!removed) {
-        return { success: false as const, error: draftLockedMessage };
-    }
+    const fault = await nextPlannerWriteFault(profile.id);
+    await waitForPlannerFault(fault);
+    try {
+        const removed = await prisma.$transaction(async (tx) => {
+            const claimed = await claimDraftPlan(
+                (args) => tx.plannedTerm.updateMany(args),
+                { id: row.plannedTermId, studentId: profile.id },
+                { updatedAt: new Date() },
+            );
+            if (!claimed) return null;
+            if (fault?.mode === "fail") throw new PlannerWriteFailed();
+            const violations = await violationsForRemoval(tx, profile.id, row.courseId);
+            await tx.plannedCourse.delete({ where: { id: row.id } });
+            return { violations };
+        }, planTransactionOptions());
+        if (!removed) {
+            return { success: false as const, error: draftLockedMessage };
+        }
 
-    refreshPlans();
-    return { success: true as const, violations: removed.violations };
+        refreshPlans();
+        return { success: true as const, violations: removed.violations };
+    } catch (error) {
+        const failure = caughtPlannerFailure(error);
+        if (failure) return failure;
+        throw error;
+    }
 }
 
 export async function submitPlannedTerm(plannedTermId: string) {
@@ -315,11 +368,12 @@ export async function submitPlannedTerm(plannedTermId: string) {
             const decision = submitDecision({ courseCount, violations });
             if (!decision.success) throw new PlanRejected(decision);
             return { success: true as const };
-        });
+        }, planTransactionOptions());
         if (outcome.success) refreshPlans();
         return outcome;
     } catch (error) {
-        if (error instanceof PlanRejected) return error.result;
+        const failure = caughtPlannerFailure(error);
+        if (failure) return failure;
         throw error;
     }
 }
@@ -342,21 +396,27 @@ export async function markPlannedTermRegistered(plannedTermId: string) {
         return { success: false as const, error: "This term plan is not ready to record." };
     }
 
-    await prisma.$transaction(async (tx) => {
-        await recordCoursesInProgress(tx, {
-            studentId: profile.id,
-            termId: plan.termId,
-            courses: plan.courses.map((row) => ({
-                courseId: row.courseId,
-                credits: row.course.credits,
-            })),
-        });
+    try {
+        await prisma.$transaction(async (tx) => {
+            await recordCoursesInProgress(tx, {
+                studentId: profile.id,
+                termId: plan.termId,
+                courses: plan.courses.map((row) => ({
+                    courseId: row.courseId,
+                    credits: row.course.credits,
+                })),
+            });
 
-        await tx.plannedTerm.update({
-            where: { id: plan.id },
-            data: { registeredAt: new Date() },
-        });
-    });
+            await tx.plannedTerm.update({
+                where: { id: plan.id },
+                data: { registeredAt: new Date() },
+            });
+        }, planTransactionOptions());
+    } catch (error) {
+        const failure = caughtPlannerFailure(error);
+        if (failure) return failure;
+        throw error;
+    }
 
     refreshPlans();
     return { success: true as const };

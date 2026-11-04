@@ -28,6 +28,33 @@ export const testAccountCards = [...testStudentCards, ...testAdvisorCards];
 
 export const resetAfterUse = "Reset this student after every use.";
 
+export const nextSaveWorks = "Next save works";
+export const nextSaveFails = "Next save fails";
+export const nextSaveWaits = "Next save waits 16 seconds";
+export const nextSaveChoices = [nextSaveWorks, nextSaveFails, nextSaveWaits];
+
+export function faultChoice(raw: string | null | undefined) {
+  if (raw === "fail") return nextSaveFails;
+  if (typeof raw === "string" && raw.startsWith("delay:")) return nextSaveWaits;
+  return nextSaveWorks;
+}
+
+export function faultRequest(choice: string): { fault: "off" | "fail" | "delay"; seconds?: number } | null {
+  if (choice === nextSaveWorks) return { fault: "off" };
+  if (choice === nextSaveFails) return { fault: "fail" };
+  if (choice === nextSaveWaits) return { fault: "delay", seconds: 16 };
+  return null;
+}
+
+export function plannerFaultMap(body: unknown) {
+  const faults: Record<string, string | null> = {};
+  if (!body || typeof body !== "object" || !("faults" in body)) return faults;
+  const value = (body as { faults?: unknown }).faults;
+  if (!value || typeof value !== "object") return faults;
+  for (const [email, fault] of Object.entries(value)) faults[email] = typeof fault === "string" ? fault : null;
+  return faults;
+}
+
 export function testStudentConfig() {
   const origin = process.env.AGGIETRACK_ORIGIN?.trim() || "http://127.0.0.1:3000";
   const password = process.env.TEST_STUDENT_PASSWORD ?? "";
@@ -40,21 +67,21 @@ export function testStudentByEmail(email: string) {
   return testAccountCards.find(account => account.email === normalized) ?? null;
 }
 
-export function aggietrackRequest(path: "/api/test-students/ensure" | "/api/test-students/reset", config: { origin: string; secret: string }, email?: string) {
+export function aggietrackRequest(path: "/api/test-students/ensure" | "/api/test-students/reset" | "/api/test-students/write-fault", config: { origin: string; secret: string }, email?: string, extra?: Record<string, unknown>) {
   return new Request(new URL(path, config.origin), {
     method: "POST",
     headers: { Authorization: `Bearer ${config.secret}`, "Content-Type": "application/json" },
-    body: JSON.stringify(email ? { email } : {}),
+    body: JSON.stringify({ ...(email ? { email } : {}), ...extra }),
     cache: "no-store",
   });
 }
 
-export async function callAggieTrack(path: "/api/test-students/ensure" | "/api/test-students/reset", email?: string) {
+export async function callAggieTrack(path: "/api/test-students/ensure" | "/api/test-students/reset" | "/api/test-students/write-fault", email?: string, extra?: Record<string, unknown>) {
   const config = testStudentConfig();
   if (!config.ready) throw new Error("Set TEST_STUDENT_PASSWORD and TEST_STUDENT_RESET_SECRET on this site and on AggieTrack. Leave them unset on the live site.");
   const student = email ? testStudentByEmail(email) : null;
   if (email && !student) throw new Error("That is not a test student.");
-  const response = await fetch(aggietrackRequest(path, config, student?.email));
+  const response = await fetch(aggietrackRequest(path, config, student?.email, extra));
   const body = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(typeof body.error === "string" ? body.error : "AggieTrack could not update the test student.");
   return body;

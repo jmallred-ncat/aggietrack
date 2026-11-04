@@ -15,8 +15,10 @@ import {
   AlertDialogTrigger,
 } from "@aggietrack/ui/alert-dialog";
 import { toast } from "@aggietrack/ui/toast";
+import { ChoiceSelect } from "@/components/choice-select";
+import { Label } from "@aggietrack/ui/label";
 import { resetAllSummary, resetTestAccounts } from "@/lib/reset-students";
-import { resetAfterUse, type TestStudentCard } from "@/lib/test-students";
+import { faultChoice, faultRequest, nextSaveChoices, nextSaveFails, nextSaveWaits, nextSaveWorks, resetAfterUse, type TestStudentCard } from "@/lib/test-students";
 
 async function postReset(email: string) {
   const response = await fetch("/api/test-students", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email }) });
@@ -24,10 +26,24 @@ async function postReset(email: string) {
   if (!response.ok) throw new Error(typeof body.error === "string" ? body.error : "That account could not be reset.");
 }
 
-export function TestStudents({ students, password, notice }: { students: TestStudentCard[]; password: string; notice: string }) {
+async function postFault(email: string, choice: string) {
+  const request = faultRequest(choice);
+  if (!request) throw new Error("Choose a failed save or a delayed save.");
+  const response = await fetch("/api/test-students", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email, ...request }),
+  });
+  const body = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(typeof body.error === "string" ? body.error : "That save setting could not be saved.");
+}
+
+export function TestStudents({ students, password, notice, faults = {} }: { students: TestStudentCard[]; password: string; notice: string; faults?: Record<string, string | null> }) {
   const [pending, setPending] = useState("");
+  const [arming, setArming] = useState("");
   const [pendingAll, setPendingAll] = useState(false);
   const [confirmAll, setConfirmAll] = useState(false);
+  const [nextSave, setNextSave] = useState<Record<string, string>>(() => Object.fromEntries(students.filter(student => student.role === "student").map(student => [student.email, faultChoice(faults[student.email])])));
   const toastedNotice = useRef(false);
 
   useEffect(() => {
@@ -36,10 +52,27 @@ export function TestStudents({ students, password, notice }: { students: TestStu
     toast.add({ type: "error", title: notice });
   }, [notice]);
 
+  async function arm(student: TestStudentCard, choice: string) {
+    const previous = nextSave[student.email] ?? nextSaveWorks;
+    setNextSave(current => ({ ...current, [student.email]: choice }));
+    setArming(student.email);
+    try {
+      await postFault(student.email, choice);
+      const detail = choice === nextSaveFails ? "will fail" : choice === nextSaveWaits ? "will wait 16 seconds" : "will save normally";
+      toast.add({ type: "success", title: `The next add or remove for ${student.name} ${detail}.` });
+    } catch (caught) {
+      setNextSave(current => ({ ...current, [student.email]: previous }));
+      toast.add({ type: "error", title: caught instanceof Error ? caught.message : "That save setting could not be saved." });
+    } finally {
+      setArming("");
+    }
+  }
+
   async function reset(student: TestStudentCard) {
     setPending(student.email);
     try {
       await postReset(student.email);
+      if (student.role === "student") setNextSave(current => ({ ...current, [student.email]: nextSaveWorks }));
       toast.add({ type: "success", title: `${student.name} is back to the frozen place and signed out of AggieTrack.` });
     } catch (caught) {
       toast.add({ type: "error", title: caught instanceof Error ? caught.message : "That account could not be reset." });
@@ -102,6 +135,11 @@ export function TestStudents({ students, password, notice }: { students: TestStu
             <div><dt className="text-muted-foreground">Email</dt><dd className="font-mono">{student.email}</dd></div>
             <div><dt className="text-muted-foreground">Password</dt><dd className="font-mono">{password || "Not configured"}</dd></div>
           </dl>
+          <div className="mt-4 space-y-2">
+            <Label htmlFor={`next-save-${student.email}`}>Next planner save</Label>
+            <ChoiceSelect id={`next-save-${student.email}`} label={`Next planner save for ${student.name}`} value={nextSave[student.email] ?? nextSaveWorks} options={nextSaveChoices} onChange={choice => { if (arming !== student.email && pending !== student.email) void arm(student, choice); }} className="w-full bg-background"/>
+            <p className="text-sm leading-6 text-muted-foreground">Set this before the save. It turns off after one add or remove. The live site ignores it.</p>
+          </div>
           <p className="mt-4 text-sm leading-6">{resetAfterUse}</p>
           <Button className="mt-4 w-fit" disabled={pending === student.email || pendingAll || !password} onClick={() => reset(student)}>{pending === student.email ? "Resetting…" : `Reset ${student.name}`}</Button>
         </section>)}
