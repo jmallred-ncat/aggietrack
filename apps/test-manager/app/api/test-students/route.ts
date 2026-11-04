@@ -17,6 +17,10 @@ export async function POST(request: Request) {
     try {
       const body = await request.json();
       const email = typeof body.email === "string" ? body.email : "";
+      if (body.fault === "fail" || body.fault === "delay" || body.fault === "off") {
+        const armed = await callAggieTrack("/api/test-students/write-fault", email, { fault: body.fault, seconds: body.seconds });
+        return Response.json(armed);
+      }
       const student = await callAggieTrack("/api/test-students/reset", email);
       return Response.json(student);
     } catch (error) {

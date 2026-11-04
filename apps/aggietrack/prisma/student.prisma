@@ -24,6 +24,9 @@ model StudentProfile {
   /// Class status the catalog uses, such as the sophomore status CST 231 requires.
   standing StudentStanding?
 
+  /// Preview only. The next planner add or remove consumes this. "fail" or "delay:<seconds>".
+  plannerWriteFault String?
+
   transcript   TranscriptEntry[]
   plannedTerms PlannedTerm[]
   appointments AdvisingAppointment[]

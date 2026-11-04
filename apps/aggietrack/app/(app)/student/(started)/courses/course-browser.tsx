@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { toast } from "@/components/ui/toast";
+import { PLAN_SAVE_FAILED } from "@/lib/plan-save";
 import { offeringViolation } from "@/lib/plan-rules";
 import type { CurriculumCourseSection } from "@/lib/catalog";
 import { GenEdTag, RequirementSlot, type Course, type TermSeason } from "@/lib/generated/prisma/browser";
@@ -17,6 +18,7 @@ import { FlaskIcon, LecternIcon, MagnifyingGlassIcon } from "@phosphor-icons/rea
 import { useDebounce } from "@uidotdev/usehooks";
 import pluralize from "pluralize";
 import { memo, useMemo, useState, useTransition } from "react";
+import { toast as sonner } from "sonner";
 import { addPlannedCourse } from "../planner/actions";
 
 type PlanningTerm = {
@@ -466,10 +468,19 @@ function AddToPlannerButton({
             return;
         }
 
+        setConfirmOpen(false);
         startTransition(async () => {
-            const result = await addPlannedCourse(term.id, course.id, companionIds);
+            let result: Awaited<ReturnType<typeof addPlannedCourse>>;
+            try {
+                result = await addPlannedCourse(term.id, course.id, companionIds);
+            } catch {
+                sonner.error(PLAN_SAVE_FAILED);
+                return;
+            }
             if (!result.success) {
-                setDialogError(result.error ?? "That course could not be added.");
+                const message = result.error?.trim() ? result.error : PLAN_SAVE_FAILED;
+                if (message === PLAN_SAVE_FAILED) sonner.error(message);
+                else toast.add({ title: message });
                 return;
             }
             const addedCodes = [

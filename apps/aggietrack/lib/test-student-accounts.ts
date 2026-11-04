@@ -3,6 +3,7 @@ import { hashPassword } from "better-auth/crypto";
 import { PlannedTermStatus, TranscriptStatus, UserRole } from "./generated/prisma/client";
 import { plannedAttempts } from "./frozen-transcript";
 import { prisma } from "./prisma";
+import { plannerWriteFaultValue } from "./planner-write";
 import { assignedAdvisorEmail, authorizeTestStudents, bearerSecret, jordanSubmittedPlan, sarahMartinezEmail, testAccountByEmail, testAdvisorByEmail, testStudentByEmail, testStudents, testAdvisors, type FrozenCourse, type TestStudent, type TestAdvisor } from "./test-students";
 
 const frozenAt = new Date("2026-01-15T00:00:00.000Z");
@@ -166,7 +167,7 @@ async function writeFrozen(userId: string, student: TestStudent, catalogYearId: 
     const profile = await tx.studentProfile.upsert({
       where: { userId },
       create: { userId, catalogYearId, standing: student.standing, startConfirmedAt: frozenAt, advisorId },
-      update: { catalogYearId, standing: student.standing, startConfirmedAt: frozenAt, advisorId, expectedGradTermId: null, notTakingTermId: null, bannerId: null },
+      update: { catalogYearId, standing: student.standing, startConfirmedAt: frozenAt, advisorId, expectedGradTermId: null, notTakingTermId: null, bannerId: null, plannerWriteFault: null },
     });
     // Replace whatever is already there. A second reset of a frozen student deletes these rows, then writes the same fixture again.
     await tx.plannedCourse.deleteMany({ where: { plannedTerm: { studentId: profile.id } } });
@@ -330,8 +331,37 @@ export async function ensureTestStudents(request: Request) {
   if (failed.length > 0 && succeeded.length === 0) {
     throw new TestStudentError(`All test accounts failed: ${failed.map(f => `${f.email} (${f.error})`).join(", ")}`, 500);
   }
-  
-  return { succeeded, failed };
+
+  const profiles = await prisma.studentProfile.findMany({
+    where: { user: { email: { in: testStudents.map((student) => student.email) } } },
+    select: { plannerWriteFault: true, user: { select: { email: true } } },
+  });
+  const faults: Record<string, string | null> = {};
+  for (const student of testStudents) faults[student.email] = null;
+  for (const profile of profiles) faults[profile.user.email] = profile.plannerWriteFault;
+
+  return { succeeded, failed, faults };
+}
+
+export async function armPlannerWriteFault(request: Request, email: string, fault: unknown, seconds: unknown) {
+  guardTestStudents(request, email, true);
+  if (process.env.VERCEL_ENV === "production") {
+    throw new TestStudentError("Test students are not available on the live site.", 403);
+  }
+  const student = testStudentByEmail(email);
+  if (!student) throw new TestStudentError("That is not a test student.", 400);
+  const stored = plannerWriteFaultValue(fault, seconds);
+  if (!stored.ok) throw new TestStudentError(stored.error, 400);
+  const profile = await prisma.studentProfile.findFirst({
+    where: { user: { email: student.email } },
+    select: { id: true },
+  });
+  if (!profile) throw new TestStudentError("That student is not ready yet.", 400);
+  await prisma.studentProfile.update({
+    where: { id: profile.id },
+    data: { plannerWriteFault: stored.value },
+  });
+  return { email: student.email, fault: stored.value };
 }
 
 export async function resetTestStudent(request: Request, email: string) {
