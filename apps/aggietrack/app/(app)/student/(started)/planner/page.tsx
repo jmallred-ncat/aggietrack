@@ -50,6 +50,7 @@ export default async function PlannerPage({
             ) : null}
             {terms.length > 0 && selected ? (
                 <PlanEditor
+                    key={selected.id}
                     termId={selected.id}
                     termLabel={academicTermLabel(selected)}
                     advisorName={advisor ? `${advisor.firstName} ${advisor.lastName}` : null}

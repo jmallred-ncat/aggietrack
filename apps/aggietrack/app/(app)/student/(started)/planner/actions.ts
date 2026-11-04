@@ -1,6 +1,7 @@
 "use server";
 
 import { semesterInSession } from "@/lib/academic-term";
+import { plannerMutationPaths } from "@/lib/plan-view";
 import { academicTermLabel, courseIdsSatisfiedBefore, courseOfferedInSeason, getPlanningTerms, notOfferedInTermMessage } from "@/lib/planned-term";
 import { coursePrerequisitesSatisfied } from "@/lib/prerequisites";
 import { prisma } from "@/lib/prisma";
@@ -12,10 +13,11 @@ import { z } from "zod";
 const idSchema = z.string().min(1);
 
 function refreshPlans() {
-    revalidatePath("/student/planner");
-    revalidatePath("/student/courses");
-    revalidatePath("/student/progress");
-    revalidatePath("/advisor/plans");
+    for (const path of plannerMutationPaths) {
+        revalidatePath(path);
+    }
+    // The dashboard lives on the /student layout. Refresh it with the nested pages.
+    revalidatePath("/student", "layout");
 }
 
 async function semesterInSessionNow() {
@@ -199,20 +201,42 @@ export async function addPlannedCourse(termId: string, courseId: string, compani
     }
 
     const creating = [courseId, ...extras].filter((id) => !onTranscript.has(id) && !alreadyOnPlan.has(id));
-    await prisma.$transaction(async (tx) => {
+    const saved = await prisma.$transaction(async (tx) => {
         const plannedTerm = plan ?? await tx.plannedTerm.create({
             data: { studentId: profile.id, termId },
             select: { id: true },
         });
+        const courses = [];
         for (const id of creating) {
-            await tx.plannedCourse.create({
+            const row = await tx.plannedCourse.create({
                 data: { plannedTermId: plannedTerm.id, courseId: id },
+                select: {
+                    id: true,
+                    courseId: true,
+                    course: {
+                        select: { subject: true, number: true, title: true, credits: true },
+                    },
+                },
+            });
+            courses.push({
+                plannedCourseId: row.id,
+                id: row.courseId,
+                subject: row.course.subject,
+                number: row.course.number,
+                title: row.course.title,
+                credits: row.course.credits,
             });
         }
+        return { planId: plannedTerm.id, courses };
     });
 
     refreshPlans();
-    return { success: true as const, addedCourseIds: creating };
+    return {
+        success: true as const,
+        planId: saved.planId,
+        addedCourseIds: creating,
+        courses: saved.courses,
+    };
 }
 
 export async function removePlannedCourse(plannedCourseId: string) {
