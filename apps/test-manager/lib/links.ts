@@ -19,11 +19,11 @@ export function idForms(value: string) {
 }
 
 const storedIdFields = ["Test ID", "Requirement ID", "Defect ID", "Fixture ID", "ID", "Course code", "Section"];
-const storedLinkFields = ["Requirement IDs", "Defect ID", "Decision dependency", "Test / requirement IDs", "Affected requirements", "Affected tests", "Decision dependencies", "Mapped test IDs"];
+export const storedLinkFields = ["Requirement IDs", "Defect ID", "Decision dependency", "Test / requirement IDs", "Affected requirements", "Affected tests", "Decision dependencies", "Mapped test IDs"];
 
 export function rewriteRecordValues(values: Record<string, string>) {
   const next = { ...values };
-  for (const field of storedLinkFields) if (next[field]) next[field] = formatLinks(parseLinks(next[field]));
+  for (const field of storedLinkFields) if (next[field]) next[field] = formatLinks(linkIds(next[field]));
   for (const field of storedIdFields) if (field in next) next[field] = normalizeId(next[field]);
   return next;
 }
@@ -47,9 +47,21 @@ export function formatLinks(ids: string[]) {
   return ids.join(", ");
 }
 
-/** Canonical record ids such as T-31 or NFR-02. Words like "load" are tags, not ids. */
+/** Canonical record ids such as T-31 or NFR-02. Words such as "load" are not ids. */
 export function isRecordId(value: string) {
   return /^(?:NFR|FR|[TDQGR])-\d+$/.test(value);
+}
+
+/** Record ids in a link field. Words beside those ids, such as "load" or "repeat", are left out. */
+export function linkIds(value: string) {
+  return parseLinks(value).filter(isRecordId);
+}
+
+export function missingLinkMessage(header: string, missing: string[]) {
+  const kind = header === "Affected tests" ? "test" : header === "Affected requirements" ? "requirement" : header === "Defect ID" ? "defect" : "record";
+  const list = missing.join(", ");
+  if (missing.length === 1) return `${header}: ${list} does not exist. Choose a ${kind} from the list.`;
+  return `${header}: ${list} do not exist. Choose a ${kind} from the list.`;
 }
 
 export const computedRequirementFields = ["Mapped test IDs", "Mapped count", "Passed count", "Coverage state"];
