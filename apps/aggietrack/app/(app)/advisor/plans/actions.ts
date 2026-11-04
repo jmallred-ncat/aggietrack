@@ -1,6 +1,8 @@
 "use server";
 
 import { approveIfAssigned } from "@/lib/plan-approval-authz";
+import { violationsForTerm } from "@/lib/plan-rule-check";
+import { approveDecision, PlanRejected } from "@/lib/plan-rules";
 import { prisma } from "@/lib/prisma";
 import { getSessionUser } from "@/lib/student";
 import { recordCoursesInProgress } from "@/lib/transcript";
@@ -12,7 +14,11 @@ const approvalSchema = z.object({
     registrationPin: z.string().trim().regex(/^[A-Za-z0-9]{4,12}$/),
 });
 
-export async function approvePlannedTerm(plannedTermId: string, registrationPin: string) {
+type ApprovalResult =
+    | { success: true }
+    | { success: false; error: string; violations?: string[] };
+
+export async function approvePlannedTerm(plannedTermId: string, registrationPin: string): Promise<ApprovalResult> {
     const user = await getSessionUser();
     if (user.role !== "ADVISOR") {
         return { success: false as const, error: "Only an advisor can approve a term plan." };
@@ -25,52 +31,61 @@ export async function approvePlannedTerm(plannedTermId: string, registrationPin:
         return { success: false as const, error: "Enter a registration pin of 4 to 12 letters or numbers." };
     }
 
-    const outcome = await prisma.$transaction(async (tx) => {
-        const plan = await tx.plannedTerm.findUnique({
-            where: { id: parsed.data.plannedTermId },
-            select: {
-                id: true,
-                status: true,
-                studentId: true,
-                termId: true,
-                student: { select: { advisorId: true } },
-                courses: { select: { courseId: true, course: { select: { credits: true } } } },
-            },
-        });
+    try {
+        const outcome = await prisma.$transaction(async (tx) => {
+            const plan = await tx.plannedTerm.findUnique({
+                where: { id: parsed.data.plannedTermId },
+                select: {
+                    id: true,
+                    status: true,
+                    studentId: true,
+                    termId: true,
+                    student: { select: { advisorId: true } },
+                    courses: { select: { courseId: true, course: { select: { credits: true } } } },
+                },
+            });
 
-        return approveIfAssigned({
-            advisorId,
-            plan,
-            persist: async (approved) => {
-                const updated = await tx.plannedTerm.updateMany({
-                    where: {
-                        id: approved.id,
-                        status: "SUBMITTED",
-                        student: { advisorId },
-                    },
-                    data: {
-                        status: "APPROVED",
-                        registrationPin: parsed.data.registrationPin,
-                        reviewedAt: new Date(),
-                    },
-                });
-                if (updated.count !== 1) {
-                    return false;
-                }
-                await recordCoursesInProgress(tx, {
-                    studentId: approved.studentId,
-                    termId: approved.termId,
-                    courses: approved.courses.map((row) => ({
-                        courseId: row.courseId,
-                        credits: row.course.credits,
-                    })),
-                });
-                return true;
-            },
+            return approveIfAssigned({
+                advisorId,
+                plan,
+                persist: async (approved) => {
+                    const violations = await violationsForTerm(tx, approved.studentId, approved.id);
+                    const decision = approveDecision(violations);
+                    if (!decision.success) throw new PlanRejected(decision);
+
+                    const updated = await tx.plannedTerm.updateMany({
+                        where: {
+                            id: approved.id,
+                            status: "SUBMITTED",
+                            student: { advisorId },
+                        },
+                        data: {
+                            status: "APPROVED",
+                            registrationPin: parsed.data.registrationPin,
+                            reviewedAt: new Date(),
+                        },
+                    });
+                    if (updated.count !== 1) {
+                        return false;
+                    }
+                    await recordCoursesInProgress(tx, {
+                        studentId: approved.studentId,
+                        termId: approved.termId,
+                        courses: approved.courses.map((row) => ({
+                            courseId: row.courseId,
+                            credits: row.course.credits,
+                        })),
+                    });
+                    return true;
+                },
+            });
         });
-    });
-    if (!outcome.success) {
-        return outcome;
+        if (!outcome.success) {
+            return outcome;
+        }
+    } catch (error) {
+        if (error instanceof PlanRejected) return error.result;
+        throw error;
     }
 
     revalidatePath("/advisor/plans");

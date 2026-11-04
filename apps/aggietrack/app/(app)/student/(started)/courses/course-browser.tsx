@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { toast } from "@/components/ui/toast";
-import { courseOfferedInSeason, notOfferedInTermMessage } from "@/lib/academic-term";
+import { offeringViolation } from "@/lib/plan-rules";
 import type { CurriculumCourseSection } from "@/lib/catalog";
 import { GenEdTag, RequirementSlot, type Course, type TermSeason } from "@/lib/generated/prisma/browser";
 import { coursePrerequisitesSatisfied } from "@/lib/prerequisites";
@@ -440,16 +440,23 @@ function AddToPlannerButton({
     const triggerLabel = addWithOverride ? "Add with override" : "Add to Plan";
 
     function offeringMessage(term: PlanningTerm, companionIds: string[]) {
-        if (!courseOfferedInSeason(course.offeredIn, term.season)) {
-            return notOfferedInTermMessage(label, term.label, course.offeredIn);
-        }
-
-        const blockedCompanion = companions.find((companion) =>
-            companionIds.includes(companion.id) && !courseOfferedInSeason(companion.offeredIn, term.season),
+        const courseMessage = offeringViolation(
+            { code: label, offeredIn: course.offeredIn },
+            term.season,
+            term.label,
         );
-        return blockedCompanion
-            ? notOfferedInTermMessage(blockedCompanion.code, term.label, blockedCompanion.offeredIn)
-            : null;
+        if (courseMessage) return courseMessage;
+
+        for (const companion of companions) {
+            if (!companionIds.includes(companion.id)) continue;
+            const message = offeringViolation(
+                { code: companion.code, offeredIn: companion.offeredIn },
+                term.season,
+                term.label,
+            );
+            if (message) return message;
+        }
+        return null;
     }
 
     function add(term: PlanningTerm, companionIds: string[]) {

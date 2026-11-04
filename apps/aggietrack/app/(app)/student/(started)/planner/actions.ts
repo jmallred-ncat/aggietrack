@@ -1,9 +1,17 @@
 "use server";
 
 import { semesterInSession } from "@/lib/academic-term";
+import { violationsForRemoval, violationsForTerm } from "@/lib/plan-rule-check";
 import { refreshStudentViews } from "@/lib/refresh-student-views";
-import { academicTermLabel, courseIdsSatisfiedBefore, courseOfferedInSeason, getPlanningTerms, notOfferedInTermMessage } from "@/lib/planned-term";
-import { coursePrerequisitesSatisfied } from "@/lib/prerequisites";
+import { academicTermLabel, courseIdsSatisfiedBefore, getPlanningTerms } from "@/lib/planned-term";
+import {
+    claimDraftPlan,
+    draftLockedMessage,
+    PlanRejected,
+    planRuleViolations,
+    submitDecision,
+    toRuleCourse,
+} from "@/lib/plan-rules";
 import { prisma } from "@/lib/prisma";
 import { requireStudentProfile } from "@/lib/student";
 import { recordCoursesInProgress } from "@/lib/transcript";
@@ -105,45 +113,42 @@ export async function addPlannedCourse(termId: string, courseId: string, compani
             id: true,
             subject: true,
             number: true,
+            isLab: true,
             offeredIn: true,
             prerequisiteGroups: {
+                orderBy: { sortOrder: "asc" },
                 select: {
                     isConcurrent: true,
-                    options: { select: { requiresId: true } },
+                    options: {
+                        select: {
+                            requires: { select: { id: true, subject: true, number: true, isLab: true } },
+                        },
+                    },
                 },
             },
         },
     });
     const byId = new Map(courses.map((item) => [item.id, item]));
     const termLabel = academicTermLabel(term);
-    const satisfied = await courseIdsSatisfiedBefore(profile.id, term.startsOn);
+    const adding: ReturnType<typeof toRuleCourse>[] = [];
     for (const id of [courseId, ...extras]) {
         const item = byId.get(id);
         if (!item) {
             return { success: false as const, error: "That course could not be added." };
         }
-        if (!courseOfferedInSeason(item.offeredIn, term.season)) {
-            return {
-                success: false as const,
-                error: notOfferedInTermMessage(`${item.subject} ${item.number}`, termLabel, item.offeredIn),
-            };
-        }
-        const prerequisitesMet = coursePrerequisitesSatisfied(
-            item.prerequisiteGroups.map((group) => ({
-                isConcurrent: group.isConcurrent,
-                optionIds: group.options.map((option) => option.requiresId),
-            })),
-            satisfied,
-        );
-        if (!prerequisitesMet) {
-            const code = `${item.subject} ${item.number}`;
-            return {
-                success: false as const,
-                error: id === courseId
-                    ? "Complete this course's prerequisites before adding it to your plan."
-                    : `Complete the prerequisites for ${code} before adding it with this course.`,
-            };
-        }
+        adding.push(toRuleCourse(item));
+    }
+    const satisfied = await courseIdsSatisfiedBefore(profile.id, term.startsOn);
+    const violations = planRuleViolations({
+        courses: adding,
+        season: term.season,
+        termLabel,
+        satisfiedCourseIds: satisfied,
+        completedCourseIds: new Set(),
+        corequisites: false,
+    });
+    if (violations.length > 0) {
+        return { success: false as const, error: violations.join(" "), violations };
     }
 
     const [transcriptRows, otherPlanRows, plan, onThisPlan] = await Promise.all([
@@ -167,7 +172,7 @@ export async function addPlannedCourse(termId: string, courseId: string, compani
         }),
         prisma.plannedTerm.findUnique({
             where: { studentId_termId: { studentId: profile.id, termId } },
-            select: { id: true, status: true },
+            select: { id: true },
         }),
         prisma.plannedCourse.findMany({
             where: {
@@ -190,9 +195,6 @@ export async function addPlannedCourse(termId: string, courseId: string, compani
     if (alreadyOnPlan.has(courseId)) {
         return { success: false as const, error: "That course is already on this term plan." };
     }
-    if (plan && plan.status !== "DRAFT") {
-        return { success: false as const, error: "This term plan has already been submitted." };
-    }
 
     const creating = [courseId, ...extras].filter((id) => !onTranscript.has(id) && !alreadyOnPlan.has(id));
     const saved = await prisma.$transaction(async (tx) => {
@@ -200,6 +202,12 @@ export async function addPlannedCourse(termId: string, courseId: string, compani
             data: { studentId: profile.id, termId },
             select: { id: true },
         });
+        const claimed = await claimDraftPlan(
+            (args) => tx.plannedTerm.updateMany(args),
+            { id: plannedTerm.id, studentId: profile.id },
+            { updatedAt: new Date() },
+        );
+        if (!claimed) return null;
         const courses = [];
         for (const id of creating) {
             const row = await tx.plannedCourse.create({
@@ -223,6 +231,9 @@ export async function addPlannedCourse(termId: string, courseId: string, compani
         }
         return { planId: plannedTerm.id, courses };
     });
+    if (!saved) {
+        return { success: false as const, error: draftLockedMessage };
+    }
 
     refreshPlans();
     return {
@@ -242,35 +253,75 @@ export async function removePlannedCourse(plannedCourseId: string) {
     const row = await prisma.plannedCourse.findFirst({
         where: {
             id: plannedCourseId,
-            plannedTerm: { studentId: profile.id, status: "DRAFT" },
+            plannedTerm: { studentId: profile.id },
         },
-        select: { id: true, plannedTermId: true },
+        select: { id: true, courseId: true, plannedTermId: true },
     });
     if (!row) {
         return { success: false as const, error: "That course could not be removed." };
     }
 
-    await prisma.plannedCourse.delete({ where: { id: row.id } });
+    const removed = await prisma.$transaction(async (tx) => {
+        const claimed = await claimDraftPlan(
+            (args) => tx.plannedTerm.updateMany(args),
+            { id: row.plannedTermId, studentId: profile.id },
+            { updatedAt: new Date() },
+        );
+        if (!claimed) return null;
+        const violations = await violationsForRemoval(tx, profile.id, row.courseId);
+        await tx.plannedCourse.delete({ where: { id: row.id } });
+        return { violations };
+    });
+    if (!removed) {
+        return { success: false as const, error: draftLockedMessage };
+    }
+
     refreshPlans();
-    return { success: true as const };
+    return { success: true as const, violations: removed.violations };
 }
 
 export async function submitPlannedTerm(plannedTermId: string) {
     const profile = await requireStudentProfile();
-    const plan = await prisma.plannedTerm.findFirst({
-        where: { id: plannedTermId, studentId: profile.id, status: "DRAFT" },
-        select: { id: true, _count: { select: { courses: true } } },
-    });
-    if (!plan || plan._count.courses === 0) {
-        return { success: false as const, error: "Add at least one course before submitting." };
+    if (!idSchema.safeParse(plannedTermId).success) {
+        return { success: false as const, error: "That term plan could not be submitted." };
     }
 
-    await prisma.plannedTerm.update({
-        where: { id: plan.id },
-        data: { status: "SUBMITTED", submittedAt: new Date() },
-    });
-    refreshPlans();
-    return { success: true as const };
+    try {
+        const outcome = await prisma.$transaction(async (tx) => {
+            const claimed = await claimDraftPlan(
+                (args) => tx.plannedTerm.updateMany(args),
+                { id: plannedTermId, studentId: profile.id },
+                { status: "SUBMITTED", submittedAt: new Date() },
+            );
+            if (!claimed) {
+                const existing = await tx.plannedTerm.findFirst({
+                    where: { id: plannedTermId, studentId: profile.id },
+                    select: { id: true },
+                });
+                return {
+                    success: false as const,
+                    error: existing ? draftLockedMessage : "That term plan could not be submitted.",
+                };
+            }
+
+            const plan = await tx.plannedTerm.findFirst({
+                where: { id: plannedTermId, studentId: profile.id },
+                select: { _count: { select: { courses: true } } },
+            });
+            const courseCount = plan?._count.courses ?? 0;
+            const violations = courseCount === 0
+                ? []
+                : await violationsForTerm(tx, profile.id, plannedTermId);
+            const decision = submitDecision({ courseCount, violations });
+            if (!decision.success) throw new PlanRejected(decision);
+            return { success: true as const };
+        });
+        if (outcome.success) refreshPlans();
+        return outcome;
+    } catch (error) {
+        if (error instanceof PlanRejected) return error.result;
+        throw error;
+    }
 }
 
 export async function markPlannedTermRegistered(plannedTermId: string) {
