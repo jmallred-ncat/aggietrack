@@ -2,6 +2,7 @@ import { betterAuth, type User } from "better-auth";
 import { createEmailVerificationToken } from "better-auth/api";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { admin } from "better-auth/plugins";
+import { SESSION_EXPIRES_IN_SECONDS, SESSION_UPDATE_AGE_SECONDS } from "./idle-timeout";
 import { ac, admin as adminRole, advisor, student } from "./permissions";
 import { prisma } from "./prisma";
 
@@ -106,6 +107,10 @@ export const auth = betterAuth({
         sendVerificationEmail: async ({ user, url }) => {
             await sendWelcomeVerification(user as MailUser, url);
         },
+    },
+    session: {
+        expiresIn: SESSION_EXPIRES_IN_SECONDS,
+        updateAge: SESSION_UPDATE_AGE_SECONDS,
     },
     user: {
         additionalFields: {

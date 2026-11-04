@@ -1,3 +1,4 @@
+import IdleTimer from "@/components/idle-timer";
 import { getSessionUser } from "@/lib/student";
 import { redirect } from "next/navigation";
 
@@ -9,6 +10,7 @@ export default async function OnboardingLayout({ children }: { children: React.R
     return (
         <div className="bg-sidebar min-h-screen p-4 flex flex-col">
             <main className="bg-background rounded-lg shadow flex-1 flex flex-col">
+                <IdleTimer />
                 {children}
             </main>
         </div >

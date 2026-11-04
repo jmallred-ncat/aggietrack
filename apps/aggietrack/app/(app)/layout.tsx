@@ -1,3 +1,4 @@
+import IdleTimer from "@/components/idle-timer";
 import { Separator } from "@/components/ui/separator";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -34,6 +35,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
                         </header>
                         <div className="min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden px-4">
                             <div className="container mx-auto flex min-h-full flex-col">
+                                <IdleTimer />
                                 {children}
                             </div>
                         </div>
