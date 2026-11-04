@@ -16,9 +16,14 @@ test("T-21 tells the tester how to change a grade and clear one completion", () 
     assert.match(procedure, /Clear completion/);
     assert.match(procedure, /dialog closes as soon as the clear starts/);
     assert.match(procedure, /not left highlighted/);
+    assert.match(procedure, /Without reloading, mark CST 130 complete and save/);
+    assert.match(procedure, /grade menu appears/);
+    assert.match(procedure, /Clear that completion again without reloading/);
     assert.match(procedure, /A- and B\+/);
     assert.match(expected, /2\.5% to 5% and back to 2\.5%/);
     assert.match(expected, /Saving the checkmark shows a toast/);
     assert.match(expected, /not highlighted/);
+    assert.match(expected, /marked complete again without a reload/);
+    assert.match(expected, /second clear also work without a reload/);
     assert.doesNotMatch(expected, /stuck at zero/);
 });

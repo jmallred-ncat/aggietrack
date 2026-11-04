@@ -7,7 +7,7 @@ import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field
 import { Input } from "@/components/ui/input";
 import { ToggleInput, ToggleInputGroup } from "@/components/ui/toggle-input";
 import type { ProgressSlotCourse } from "@/lib/catalog";
-import { labelsNewlyMarkedComplete, markedCompleteToast } from "@/lib/completion-menu";
+import { completionRowMode, labelsNewlyMarkedComplete, markedCompleteToast, saveCompletionRow } from "@/lib/completion-menu";
 import { courseCodeLabel, parseCourseCode } from "@/lib/course-code";
 import type { TranscriptSource, TranscriptStatus } from "@/lib/generated/prisma/browser";
 import { Combobox } from "@base-ui/react/combobox";
@@ -147,7 +147,6 @@ function CourseStatusField({
     releaseInteraction?: boolean;
 }) {
     const rootRef = useRef<HTMLDivElement>(null);
-    const [holdPointer, setHoldPointer] = useState(releaseInteraction);
 
     useLayoutEffect(() => {
         if (!releaseInteraction) {
@@ -171,16 +170,11 @@ function CourseStatusField({
         };
         blurInside();
         const frame = requestAnimationFrame(blurInside);
-        const release = () => setHoldPointer(false);
-        window.addEventListener("pointermove", release, { once: true });
-        return () => {
-            cancelAnimationFrame(frame);
-            window.removeEventListener("pointermove", release);
-        };
+        return () => cancelAnimationFrame(frame);
     }, [releaseInteraction]);
 
     return (
-        <div ref={rootRef} className={`flex items-center gap-2${holdPointer ? " pointer-events-none" : ""}`}>
+        <div ref={rootRef} className="flex items-center gap-2">
             {inProgress && !value ? (
                 <span className="text-xs text-muted-foreground">In progress</span>
             ) : null}
@@ -680,6 +674,17 @@ function attemptListKey(attempts: Array<{ id: string; grade: string | null; stat
     return attempts.map((attempt) => `${attempt.id}:${attempt.grade ?? ""}:${attempt.status}`).join("|");
 }
 
+function reviveAttemptMap(attempts: Record<string, Array<Omit<TranscriptAttempt, "createdAt"> & { createdAt: Date | string }>>) {
+    const revived: Record<string, TranscriptAttempt[]> = {};
+    for (const [id, rows] of Object.entries(attempts)) {
+        revived[id] = saveCompletionRow(rows).map((attempt) => ({
+            ...attempt,
+            createdAt: new Date(attempt.createdAt),
+        }));
+    }
+    return revived;
+}
+
 function slotCourseLabel(
     slot: { courseId?: string; subject?: string; number?: string; title?: string } | undefined,
     courses: ProgressSlotCourse[] | undefined,
@@ -770,20 +775,51 @@ export default function ProgressForm({
     const inProgressCourses = new Set(inProgressCourseIds);
     const inProgressSlots = new Set(inProgressSlotIds);
     const router = useRouter();
-    const [clearedAttemptKeys, setClearedAttemptKeys] = useState<Record<string, string>>({});
-    const restoredDefaults = useRef<Array<{ kind: "course"; courseId: string } | { kind: "slot"; slotId: string }>>([]);
+    const [attemptOverrides, setAttemptOverrides] = useState<{
+        courses: Record<string, TranscriptAttempt[]>;
+        slots: Record<string, TranscriptAttempt[]>;
+    }>({ courses: {}, slots: {} });
+    const [releasedRows, setReleasedRows] = useState<Record<string, true>>({});
+    const restoredDefaults = useRef<Array<{ kind: "course"; courseId: string } | { kind: "slot"; slotId: string; value: SlotValue }>>([]);
     const form = useForm<ProgressFormValues>({
         resolver: zodResolver(formSchema),
         defaultValues: { standing, courses: defaultCourses, slots: defaultSlots },
     });
 
-    function hideClearedRow(rowId: string, listKey: string) {
-        setClearedAttemptKeys((current) => ({ ...current, [rowId]: listKey }));
+    function attemptsFor(
+        kind: "courses" | "slots",
+        id: string,
+        server: TranscriptAttempt[],
+    ) {
+        const override = attemptOverrides[kind][id];
+        return override ?? server;
     }
 
-    function showClearedRow(rowId: string) {
-        setClearedAttemptKeys((current) => {
-            if (!(rowId in current)) {
+    function replaceAttempts(kind: "courses" | "slots", id: string, attempts: TranscriptAttempt[]) {
+        setAttemptOverrides((current) => ({
+            ...current,
+            [kind]: { ...current[kind], [id]: saveCompletionRow(attempts) },
+        }));
+    }
+
+    function forgetAttempts(kind: "courses" | "slots", id: string) {
+        setAttemptOverrides((current) => {
+            if (!(id in current[kind])) {
+                return current;
+            }
+            const next = { ...current[kind] };
+            delete next[id];
+            return { ...current, [kind]: next };
+        });
+    }
+
+    function rememberRelease(rowId: string) {
+        setReleasedRows((current) => current[rowId] ? current : { ...current, [rowId]: true });
+    }
+
+    function forgetRelease(rowId: string) {
+        setReleasedRows((current) => {
+            if (!current[rowId]) {
                 return current;
             }
             const next = { ...current };
@@ -798,7 +834,7 @@ export default function ProgressForm({
             if (field.kind === "course") {
                 form.resetField(`courses.${field.courseId}`, { defaultValue: "" });
             } else {
-                form.resetField(`slots.${field.slotId}`, { defaultValue: { ...emptySlotValue } });
+                form.resetField(`slots.${field.slotId}`, { defaultValue: field.value });
             }
         }
     });
@@ -843,6 +879,16 @@ export default function ProgressForm({
 
         const previousValues = form.formState.defaultValues;
         form.reset(parsed.data);
+        setAttemptOverrides((current) => ({
+            courses: {
+                ...current.courses,
+                ...reviveAttemptMap(result.courseAttempts),
+            },
+            slots: {
+                ...current.slots,
+                ...reviveAttemptMap(result.slotAttempts),
+            },
+        }));
         setSaveError(null);
         setSaveState("saved");
         const marked = markedCompleteToast(labelsNewlyMarkedComplete(markedCompleteRows(
@@ -859,6 +905,7 @@ export default function ProgressForm({
             router.push("/student");
             return;
         }
+        router.refresh();
     }
 
     async function onNoPriorCoursework() {
@@ -960,12 +1007,15 @@ export default function ProgressForm({
                                     <div className="space-y-4 px-4 pt-3">
                                         {term.rows.map((row) => {
                                             const pendingRestore = { run: () => {} };
-                                            const attempts = row.kind === "course" 
-                                                ? courseAttempts[row.courseId] ?? []
-                                                : slotAttempts[row.id] ?? [];
+                                            const attemptKind = row.kind === "course" ? "courses" : "slots";
+                                            const attemptId = row.kind === "course" ? row.courseId : row.id;
+                                            const attempts = attemptsFor(
+                                                attemptKind,
+                                                attemptId,
+                                                row.kind === "course" ? courseAttempts[row.courseId] ?? [] : slotAttempts[row.id] ?? [],
+                                            );
                                             const listKey = attemptListKey(attempts);
-                                            const hasCompletedAttempts = attempts.some(a => a.status === "COMPLETED");
-                                            const showCompleted = hasCompletedAttempts && clearedAttemptKeys[row.id] !== listKey;
+                                            const showCompleted = completionRowMode({ attempts }) === "menu";
                                             const slotSelection = row.kind === "slot" ? watchedSlots?.[row.id] : undefined;
                                             const slotCourse =
                                                 row.kind === "slot" && slotSelection?.courseId
@@ -1016,18 +1066,21 @@ export default function ProgressForm({
                                                                         credits={3}
                                                                         attempts={attempts}
                                                                         onUpdate={() => router.refresh()}
+                                                                        onAttemptsChange={(next) => replaceAttempts("courses", row.courseId, next)}
                                                                         onLastAttemptCleared={() => {
                                                                             const previous = form.getValues(`courses.${row.courseId}`);
                                                                             pendingRestore.run = () => {
                                                                                 form.setValue(`courses.${row.courseId}`, previous ?? "");
+                                                                                forgetAttempts("courses", row.courseId);
                                                                             };
                                                                             form.setValue(`courses.${row.courseId}`, "");
                                                                             restoredDefaults.current.push({ kind: "course", courseId: row.courseId });
-                                                                            hideClearedRow(row.id, listKey);
+                                                                            replaceAttempts("courses", row.courseId, []);
+                                                                            rememberRelease(row.id);
                                                                         }}
                                                                         onClearFailed={() => {
                                                                             pendingRestore.run();
-                                                                            showClearedRow(row.id);
+                                                                            forgetRelease(row.id);
                                                                         }}
                                                                     />
                                                                 ) : (() => {
@@ -1064,18 +1117,22 @@ export default function ProgressForm({
                                                                             attempts={attempts}
                                                                             recommendedTermCourseId={row.id}
                                                                             onUpdate={() => router.refresh()}
+                                                                            onAttemptsChange={(next) => replaceAttempts("slots", row.id, next)}
                                                                             onLastAttemptCleared={() => {
                                                                                 const previous = form.getValues(`slots.${row.id}`) ?? emptySlotValue;
+                                                                                const cleared = { ...previous, status: "" as const };
                                                                                 pendingRestore.run = () => {
                                                                                     form.setValue(`slots.${row.id}`, previous);
+                                                                                    forgetAttempts("slots", row.id);
                                                                                 };
-                                                                                form.setValue(`slots.${row.id}`, { ...emptySlotValue });
-                                                                                restoredDefaults.current.push({ kind: "slot", slotId: row.id });
-                                                                                hideClearedRow(row.id, listKey);
+                                                                                form.setValue(`slots.${row.id}`, cleared);
+                                                                                restoredDefaults.current.push({ kind: "slot", slotId: row.id, value: cleared });
+                                                                                replaceAttempts("slots", row.id, []);
+                                                                                rememberRelease(row.id);
                                                                             }}
                                                                             onClearFailed={() => {
                                                                                 pendingRestore.run();
-                                                                                showClearedRow(row.id);
+                                                                                forgetRelease(row.id);
                                                                             }}
                                                                         />
                                                                     ) : null;
@@ -1089,7 +1146,7 @@ export default function ProgressForm({
                                                                             <CourseStatusField
                                                                                 value={field.value ?? ""}
                                                                                 inProgress={inProgressCourses.has(row.courseId)}
-                                                                                releaseInteraction={clearedAttemptKeys[row.id] === listKey}
+                                                                                releaseInteraction={releasedRows[row.id] === true}
                                                                                 onChange={field.onChange}
                                                                                 onBlur={field.onBlur}
                                                                             />
@@ -1111,7 +1168,7 @@ export default function ProgressForm({
                                                                                 minNumber={row.minNumber}
                                                                                 statusError={form.formState.errors.slots?.[row.id]?.status?.message}
                                                                                 inProgress={inProgressSlots.has(row.id)}
-                                                                                releaseInteraction={clearedAttemptKeys[row.id] === listKey}
+                                                                                releaseInteraction={releasedRows[row.id] === true}
                                                                                 onChange={field.onChange}
                                                                                 onBlur={field.onBlur}
                                                                             />
@@ -1138,9 +1195,11 @@ export default function ProgressForm({
                         </p>
                         <div className="mt-3 space-y-4 px-4">
                             {outsidePlan.map((course) => {
-                                const listKey = attemptListKey(course.attempts);
-                                const rowId = course.courseId || `${course.subject} ${course.number}`;
-                                if (clearedAttemptKeys[rowId] === listKey) {
+                                const attempts = course.courseId
+                                    ? attemptsFor("courses", course.courseId, course.attempts)
+                                    : course.attempts;
+                                const listKey = attemptListKey(attempts);
+                                if (attempts.length === 0) {
                                     return null;
                                 }
                                 return (
@@ -1158,10 +1217,11 @@ export default function ProgressForm({
                                                 number={course.number}
                                                 title={course.title}
                                                 credits={course.credits}
-                                                attempts={course.attempts}
+                                                attempts={attempts}
                                                 onUpdate={() => router.refresh()}
-                                                onLastAttemptCleared={() => hideClearedRow(rowId, listKey)}
-                                                onClearFailed={() => showClearedRow(rowId)}
+                                                onAttemptsChange={(next) => replaceAttempts("courses", course.courseId, next)}
+                                                onLastAttemptCleared={() => replaceAttempts("courses", course.courseId, [])}
+                                                onClearFailed={() => forgetAttempts("courses", course.courseId)}
                                             />
                                         ) : null}
                                     </div>

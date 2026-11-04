@@ -67,6 +67,49 @@ export function startClearCompletion<T extends CompletionAttempt>(
     };
 }
 
+export type CompletionRow = {
+    attempts: Array<{ id: string; grade: string | null; status: string }>;
+    status: "" | "complete" | "transfer";
+};
+
+/** The grade menu is showing only while a completed attempt is on the row. */
+export function completionRowMode(row: Pick<CompletionRow, "attempts">): "menu" | "checkmark" {
+    return row.attempts.some((attempt) => attempt.status === "COMPLETED") ? "menu" : "checkmark";
+}
+
+/** Drop a cleared attempt. The last one returns the row to an empty checkmark. */
+export function clearCompletionRow<T extends CompletionAttempt>(
+    attempts: readonly T[],
+    attemptId: string,
+): { attempts: T[]; status: "" | "complete" } {
+    const next = startClearCompletion(attempts, attemptId);
+    if (next.completed) {
+        return { attempts: next.attempts, status: "complete" };
+    }
+    return { attempts: [], status: "" };
+}
+
+/** The checkmark is chosen. The grade menu waits until that save returns an attempt. */
+export function markCompletionRow<T>(row: { attempts: readonly T[]; status: string }): { attempts: T[]; status: "complete" } {
+    return { attempts: [...row.attempts], status: "complete" };
+}
+
+/** Attempts just written for this course. They replace whatever the row was showing. */
+export function saveCompletionRow<T>(attempts: readonly T[]): T[] {
+    return [...attempts];
+}
+
+/** A grade picked from the open menu, without leaving the row. */
+export function gradeCompletionRow<T extends { id: string; grade: string | null; status: string }>(
+    attempts: readonly T[],
+    attemptId: string,
+    grade: string,
+): T[] {
+    return attempts.map((attempt) => (
+        attempt.id === attemptId ? { ...attempt, grade, status: "COMPLETED" } : attempt
+    ));
+}
+
 export function gradeUpdatedToast(label: string): { title: string; description: string } {
     return { title: "Grade updated", description: `Saved as ${label}.` };
 }

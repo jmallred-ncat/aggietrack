@@ -7,10 +7,16 @@ import {
     completionGradeChoices,
     completionGradeLabel,
     gradeUpdatedToast,
+    clearCompletionRow,
+    completionRowMode,
+    gradeCompletionRow,
     labelsNewlyMarkedComplete,
+    markCompletionRow,
     markedCompleteToast,
     runAfterConfirmCloses,
+    saveCompletionRow,
     startClearCompletion,
+    type CompletionRow,
 } from "./completion-menu";
 import { studentViewRefreshTargets } from "./plan-view";
 
@@ -105,6 +111,43 @@ test("the first checkmark save names the course in a toast", () => {
     assert.equal(one?.description, "CST 130 is saved.");
     assert.equal(two?.description, "CST 130 and MATH 110 are saved.");
     assert.equal(`${one?.title} ${one?.description}`.includes("COMPLETED"), false);
+});
+
+test("clear, mark complete, and pick a grade stay on the same row", () => {
+    let row: CompletionRow = {
+        attempts: [{ id: "first", grade: Grade.C, status: "COMPLETED" }],
+        status: "complete",
+    };
+    assert.equal(completionRowMode(row), "menu");
+
+    const cleared = clearCompletionRow(row.attempts, "first");
+    row = { attempts: cleared.attempts, status: cleared.status };
+    assert.equal(completionRowMode(row), "checkmark");
+    assert.equal(row.status, "");
+    assert.deepEqual(row.attempts, []);
+
+    row = { ...markCompletionRow(row), status: "complete" };
+    assert.equal(row.status, "complete");
+    assert.equal(completionRowMode(row), "checkmark");
+
+    row = { ...row, attempts: saveCompletionRow([{ id: "second", grade: null, status: "COMPLETED" }]) };
+    assert.equal(completionRowMode(row), "menu");
+    assert.equal(completionGradeLabel(row.attempts[0]?.grade ?? null), "Grade");
+
+    row = { ...row, attempts: gradeCompletionRow(row.attempts, "second", Grade.C) };
+    assert.equal(completionRowMode(row), "menu");
+    assert.equal(completionGradeLabel(row.attempts[0]?.grade ?? null), "C");
+
+    const again = clearCompletionRow(row.attempts, "second");
+    row = { attempts: again.attempts, status: again.status };
+    assert.equal(completionRowMode(row), "checkmark");
+    assert.equal(row.status, "");
+
+    row = { ...markCompletionRow(row), attempts: saveCompletionRow([{ id: "third", grade: null, status: "COMPLETED" }]) };
+    row = { ...row, attempts: gradeCompletionRow(row.attempts, "third", Grade.B_PLUS) };
+    assert.equal(completionRowMode(row), "menu");
+    assert.equal(row.attempts[0]?.grade, Grade.B_PLUS);
+    assert.equal(completionGradeLabel(row.attempts[0]?.grade ?? null), "B+");
 });
 
 test("a confirm closes before the save is scheduled", () => {

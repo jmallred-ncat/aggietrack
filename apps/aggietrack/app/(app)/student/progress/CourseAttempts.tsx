@@ -24,13 +24,14 @@ import {
 import { Grade, type TranscriptSource, type TranscriptStatus } from "@/lib/generated/prisma/browser";
 import {
     canClearAttempt,
+    clearCompletionRow,
     clearCompletionToast,
     completionGradeChoices,
     completionGradeLabel,
+    gradeCompletionRow,
     gradeUpdatedToast,
     isCompletionGrade,
     runAfterConfirmCloses,
-    startClearCompletion,
 } from "@/lib/completion-menu";
 import { cn } from "@/lib/utils";
 import { CaretDownIcon, PlusIcon } from "@phosphor-icons/react";
@@ -57,6 +58,7 @@ export function CourseAttempts({
     attempts,
     recommendedTermCourseId,
     onUpdate,
+    onAttemptsChange,
     onLastAttemptCleared,
     onClearFailed,
 }: {
@@ -68,6 +70,8 @@ export function CourseAttempts({
     attempts: Attempt[];
     recommendedTermCourseId?: string | null;
     onUpdate?: () => void;
+    /** Keep the parent row on these attempts so a refresh is not required. */
+    onAttemptsChange?: (attempts: Attempt[]) => void;
     onLastAttemptCleared?: () => void;
     onClearFailed?: () => void;
 }) {
@@ -78,14 +82,14 @@ export function CourseAttempts({
 
     function handleGradeChange(attemptId: string, grade: Grade) {
         const oldAttempts = [...localAttempts];
+        const nextAttempts = gradeCompletionRow(localAttempts, attemptId, grade);
         const message = gradeUpdatedToast(completionGradeLabel(grade));
 
         runAfterConfirmCloses(
             () => {
                 setOpenMenuId(null);
-                setLocalAttempts((current) =>
-                    current.map((attempt) => attempt.id === attemptId ? { ...attempt, grade, status: "COMPLETED" } : attempt),
-                );
+                setLocalAttempts(nextAttempts);
+                onAttemptsChange?.(nextAttempts);
             },
             () => {
                 startTransition(async () => {
@@ -93,6 +97,7 @@ export function CourseAttempts({
 
                     if (!result.success) {
                         setLocalAttempts(oldAttempts);
+                        onAttemptsChange?.(oldAttempts);
                         toast.error("Could not update the grade", { description: result.error });
                         return;
                     }
@@ -126,26 +131,30 @@ export function CourseAttempts({
             }
 
             toast.success(asInProgress ? "Marked as in progress" : "Attempt added");
-            setLocalAttempts((current) => [...current, result.entry]);
+            const nextAttempts = [...localAttempts, { ...result.entry, createdAt: new Date(result.entry.createdAt) }];
+            setLocalAttempts(nextAttempts);
+            onAttemptsChange?.(nextAttempts);
             onUpdate?.();
         });
     }
 
     function handleClear(attemptId: string) {
         const previous = localAttempts;
-        const next = startClearCompletion(localAttempts, attemptId);
+        const next = clearCompletionRow(localAttempts, attemptId);
+        const menuStays = next.status === "complete";
         const message = clearCompletionToast({
             subject,
             number,
-            anotherAttemptRemains: next.completed,
+            anotherAttemptRemains: menuStays,
         });
 
         runAfterConfirmCloses(
             () => {
                 setConfirmId(null);
                 setOpenMenuId(null);
-                if (next.completed) {
+                if (menuStays) {
                     setLocalAttempts(next.attempts);
+                    onAttemptsChange?.(next.attempts);
                 } else {
                     onLastAttemptCleared?.();
                 }
@@ -155,8 +164,9 @@ export function CourseAttempts({
                     const result = await removeTranscriptAttempt({ entryId: attemptId });
 
                     if (!result.success) {
-                        if (next.completed) {
+                        if (menuStays) {
                             setLocalAttempts(previous);
+                            onAttemptsChange?.(previous);
                         } else {
                             onClearFailed?.();
                         }
