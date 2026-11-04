@@ -149,6 +149,15 @@ export async function saveTranscriptProgress(input: unknown) {
     }
 
     let startConfirmed = profile.startConfirmedAt != null;
+    const attemptSelect = { id: true, grade: true, status: true, source: true, createdAt: true } as const;
+    let savedCourseAttempts: Record<string, Array<{
+        id: string;
+        grade: Grade | null;
+        status: TranscriptStatus;
+        source: Prisma.TranscriptEntryGetPayload<{ select: typeof attemptSelect }>["source"];
+        createdAt: Date;
+    }>> = {};
+    let savedSlotAttempts: typeof savedCourseAttempts = {};
     await prisma.$transaction(async (tx) => {
         for (const entry of courses) {
             const credits = creditsByCourse.get(entry.courseId);
@@ -223,6 +232,24 @@ export async function saveTranscriptProgress(input: unknown) {
                 ...(startConfirmed && !profile.startConfirmedAt ? { startConfirmedAt: new Date() } : {}),
             },
         });
+
+        const saved = await tx.transcriptEntry.findMany({
+            where: { studentId: profile.id },
+            orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+            select: { ...attemptSelect, courseId: true, recommendedTermCourseId: true },
+        });
+        savedCourseAttempts = {};
+        for (const course of courses) {
+            savedCourseAttempts[course.courseId] = saved
+                .filter((row) => row.courseId === course.courseId && row.recommendedTermCourseId == null)
+                .map(({ id, grade, status, source, createdAt }) => ({ id, grade, status, source, createdAt }));
+        }
+        savedSlotAttempts = {};
+        for (const slot of resolvedSlots) {
+            savedSlotAttempts[slot.recommendedTermCourseId] = saved
+                .filter((row) => row.recommendedTermCourseId === slot.recommendedTermCourseId)
+                .map(({ id, grade, status, source, createdAt }) => ({ id, grade, status, source, createdAt }));
+        }
     });
 
     if (confirmStart && !startConfirmed) {
@@ -230,7 +257,12 @@ export async function saveTranscriptProgress(input: unknown) {
     }
 
     refreshStudentViews();
-    return { success: true as const, startConfirmed };
+    return {
+        success: true as const,
+        startConfirmed,
+        courseAttempts: savedCourseAttempts,
+        slotAttempts: savedSlotAttempts,
+    };
 }
 
 export async function confirmNoPriorCoursework(input: unknown) {
