@@ -77,11 +77,18 @@ test("frozen courses stay inside the handbook terms and match each slot", () => 
   assert.equal(lateCodes.has(courseKey({ subject: "CST", number: "499" })), false);
 });
 
-test("reset drops planned courses and returns only the frozen transcript", () => {
+test("reset keeps the frozen transcript and restores Jordan's submitted plan", () => {
+  const now = new Date("2026-11-04T15:00:00.000Z");
   const mid = testStudents[1]!;
-  const next = stateAfterReset(mid);
-  assert.deepEqual(next.planned, []);
+  const next = stateAfterReset(mid, now);
+  assert.deepEqual(next.planned, [
+    { subject: "MATH", number: "224" },
+    { subject: "CST", number: "250" },
+    { subject: "CST", number: "315" },
+    { subject: "CST", number: "317" },
+  ]);
   assert.deepEqual(next.transcript, frozenCourses(mid));
+  assert.deepEqual(stateAfterReset(testStudents[0]!, now).planned, []);
   assert.equal(next.transcript.some(course => course.subject === "CST" && course.number === "130" && course.sequence > mid.through), false);
   assert.equal(next.transcript.some(course => course.subject === "CST" && course.number === "499"), false);
 });
