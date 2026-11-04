@@ -1,24 +1,33 @@
 import { cache } from "react";
 import { academicTermLabel, semesterInSession } from "./academic-term";
-import type { AcademicTerm, TermSeason } from "./generated/prisma/client";
+import type { AcademicTerm, Prisma, TermSeason } from "./generated/prisma/client";
 import { selectPlannableCourses } from "./plannable-courses";
 import { prisma } from "./prisma";
 import { requireStudentProfile } from "./student";
 
 export { academicTermLabel, courseOfferedInSeason, notOfferedInTermMessage, offeredSeasonsLabel } from "./academic-term";
 
-/** Completed and in-progress transcript courses, plus courses planned for an earlier term. */
-export async function courseIdsSatisfiedBefore(studentId: string, termStartsOn: Date) {
+type PlanningReader = Pick<Prisma.TransactionClient, "transcriptEntry" | "plannedCourse">;
+
+/**
+ * Transcript courses that already count, plus courses planned for an earlier term.
+ * Completed courses are the ones that can stand in for a lab's corequisite.
+ */
+export async function courseStandingBefore(
+    studentId: string,
+    termStartsOn: Date,
+    db: PlanningReader = prisma,
+) {
     const [entries, planned] = await Promise.all([
-        prisma.transcriptEntry.findMany({
+        db.transcriptEntry.findMany({
             where: {
                 studentId,
                 courseId: { not: null },
                 status: { in: ["IN_PROGRESS", "COMPLETED"] },
             },
-            select: { courseId: true },
+            select: { courseId: true, status: true },
         }),
-        prisma.plannedCourse.findMany({
+        db.plannedCourse.findMany({
             where: {
                 plannedTerm: {
                     studentId,
@@ -29,10 +38,25 @@ export async function courseIdsSatisfiedBefore(studentId: string, termStartsOn: 
         }),
     ]);
 
-    return new Set([
-        ...entries.flatMap((entry) => entry.courseId ? [entry.courseId] : []),
-        ...planned.map((row) => row.courseId),
-    ]);
+    const satisfied = new Set<string>();
+    const completed = new Set<string>();
+    for (const entry of entries) {
+        if (!entry.courseId) continue;
+        satisfied.add(entry.courseId);
+        if (entry.status === "COMPLETED") completed.add(entry.courseId);
+    }
+    for (const row of planned) satisfied.add(row.courseId);
+    return { satisfied, completed };
+}
+
+/** Completed and in-progress transcript courses, plus courses planned for an earlier term. */
+export async function courseIdsSatisfiedBefore(
+    studentId: string,
+    termStartsOn: Date,
+    db: PlanningReader = prisma,
+) {
+    const { satisfied } = await courseStandingBefore(studentId, termStartsOn, db);
+    return satisfied;
 }
 
 const courseSelect = {

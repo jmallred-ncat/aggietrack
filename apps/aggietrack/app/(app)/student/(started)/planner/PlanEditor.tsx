@@ -7,6 +7,7 @@ import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/in
 import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent } from "@/components/ui/popover";
 import { toast } from "@/components/ui/toast";
+import { RuleViolationAlert } from "@/components/rule-violation-alert";
 import type { PlannedTermStatus } from "@/lib/generated/prisma/client";
 import { applyAddedCourses, applyRemovedCourse, termCreditLabel, termCreditTotal } from "@/lib/plan-view";
 import { MagnifyingGlassIcon, XIcon } from "@phosphor-icons/react";
@@ -73,6 +74,8 @@ export default function PlanEditor({
     const [resultsOpen, setResultsOpen] = useState(false);
     const searchRef = useRef<HTMLDivElement>(null);
     const [pending, startTransition] = useTransition();
+    const [violations, setViolations] = useState<string[]>([]);
+    const [violationTitle, setViolationTitle] = useState("Requirement not met");
     // The open term is drawn from this state so a finished save shows before a reload.
     const [localPlan, setLocalPlan] = useState(plan);
     const shown = localPlan;
@@ -88,19 +91,32 @@ export default function PlanEditor({
             .filter((course) => `${course.subject} ${course.number} ${course.title}`.toLowerCase().includes(needle))
             .slice(0, 8);
 
-    function run<T extends { success: boolean; error?: string }>(
+    function run<T extends { success: boolean; error?: string; violations?: string[] }>(
         action: () => Promise<T>,
         success: string,
         apply?: (result: T & { success: true }) => void,
+        violationTitleText = "Requirement not met",
     ) {
         startTransition(async () => {
             const result = await action();
             if (!result.success) {
+                if (result.violations && result.violations.length > 0) {
+                    setViolationTitle(violationTitleText);
+                    setViolations(result.violations);
+                    return;
+                }
+                setViolations([]);
                 toast.add({ title: result.error ?? "That change could not be saved." });
                 return;
             }
             apply?.(result as T & { success: true });
-            toast.add({ title: success });
+            if (result.violations && result.violations.length > 0) {
+                setViolationTitle(violationTitleText);
+                setViolations(result.violations);
+            } else {
+                setViolations([]);
+                toast.add({ title: success });
+            }
             setQuery("");
             setResultsOpen(false);
             router.refresh();
@@ -139,6 +155,12 @@ export default function PlanEditor({
                                 ? `Add the courses you want to take, then submit the plan for ${advisorName} to review.`
                                 : "Add the courses you want to take, then submit the plan. No advisor is assigned yet."}
             </p>
+
+            <RuleViolationAlert
+                title={violationTitle}
+                violations={violations}
+                onDismiss={() => setViolations([])}
+            />
 
             {status === "APPROVED" && shown?.registrationPin && (
                 <p className="mt-4 inline-flex items-center gap-3 rounded-lg bg-muted px-4 py-3 not-typeset">
@@ -277,6 +299,7 @@ export default function PlanEditor({
                             () => submitPlannedTerm(shown.id),
                             "Term plan submitted",
                             () => setLocalPlan((current) => current ? { ...current, status: "SUBMITTED" } : current),
+                            "This plan cannot be submitted",
                         )}
                     >
                         Submit for review
