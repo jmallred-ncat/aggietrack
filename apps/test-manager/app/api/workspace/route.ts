@@ -1,6 +1,8 @@
 import { readWorkspace, saveRecord, setArchived } from "@/lib/database";
 import { getWorkspaceSession } from "@/lib/auth";
+import { normalizeId } from "@/lib/links";
 import { memberLabel } from "@/lib/members";
+import { attachExecutionScreenshots, listScreenshotViews } from "@/lib/screenshots";
 import { listTeam } from "@/lib/team";
 import { withSharedDatabase } from "@/lib/shared-database";
 export const runtime = "nodejs";
@@ -33,8 +35,9 @@ async function post(request: Request) {
       if (typeof input.section !== "string" || typeof input.id !== "string" || !(input.revision === null || Number.isInteger(input.revision))) throw new Error("Invalid request.");
       if (input.section === "Tests" && input.values && typeof input.values === "object" && input.values.Status !== "Not run") input.values.Tester = memberLabel(session.user);
       await saveRecord(input.section, input.id, input.values, input.revision, undefined, actor, members.filter(member => member.emailVerified).map(memberLabel));
+      if (input.execution === true && input.section === "Tests") await attachExecutionScreenshots(normalizeId(input.id));
     }
-    return Response.json({ ...await readWorkspace(), members });
+    return Response.json({ ...await readWorkspace(), members, screenshots: await listScreenshotViews() });
   } catch (error) {
     return Response.json({ error: error instanceof Error ? error.message : "Unable to save." }, { status: 400 });
   }

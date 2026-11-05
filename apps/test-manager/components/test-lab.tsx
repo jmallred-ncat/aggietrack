@@ -3,11 +3,13 @@ import { Button } from "@aggietrack/ui/button";
 import { displayDate } from "@/components/date-field";
 import { parseItems, parseSteps } from "@/lib/fields";
 import { normalizeId, parseLinks } from "@/lib/links";
+import { ScreenshotThumbs } from "@/components/execution-screenshots";
+import type { ScreenshotView } from "@/lib/screenshot-rules";
 import type { Values } from "@/lib/model";
 
 type Related = { href: string; id: string; detail: string; status?: string };
 
-export function TestLab({ draft, related, onUpdate, onExecute }: { draft: Values; related: Related[]; onUpdate: () => void; onExecute: () => void }) {
+export function TestLab({ draft, related, screenshots = [], onUpdate, onExecute }: { draft: Values; related: Related[]; screenshots?: ScreenshotView[]; onUpdate: () => void; onExecute: () => void }) {
   const tried = (draft.Status || "Not run") !== "Not run";
   const requirements = linked(draft["Requirement IDs"], related);
   const decisions = linked(draft["Decision dependency"], related);
@@ -38,7 +40,8 @@ export function TestLab({ draft, related, onUpdate, onExecute }: { draft: Values
         {draft["Evidence reference"] && <p>Evidence reference: {draft["Evidence reference"]}</p>}
         {defects.length > 0 && <ul className="space-y-1">{defects.map(item => <li key={item.href}><RecordLink item={item}/></li>)}</ul>}
       </div>}
-      {!tried && <p className="mt-3 text-sm leading-6">No execution recorded.</p>}
+      {screenshots.length > 0 && <div className="mt-3"><ScreenshotThumbs shots={screenshots}/></div>}
+      {!tried && screenshots.length === 0 && <p className="mt-3 text-sm leading-6">No execution recorded.</p>}
       {missingProcedure && <p className="mt-3 text-sm leading-6">Add a procedure with Update case before recording an execution.</p>}
       {openDecisions.length > 0 && <p className="mt-3 text-sm leading-6">Settle {openDecisions.map(item => normalizeId(item.id)).join(", ")} before recording an execution.</p>}
       {!missingProcedure && openDecisions.length === 0 && <Button type="button" className="mt-4" onClick={onExecute}>{tried ? "Update execution" : "Record execution"}</Button>}

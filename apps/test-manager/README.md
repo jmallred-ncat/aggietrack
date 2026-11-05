@@ -22,7 +22,7 @@ Root shortcuts: `pnpm setup:test-manager` and `pnpm dev:test-manager`. This app 
 ## Workflows
 
 - Overview shows verdict counts, requirement coverage, and unresolved decisions.
-- Tests supports search, status/priority filters, new cases, assignment, and execution updates. Assignee is a verified team member. Executed cases require an actual result, date, evidence reference, and run/build/environment. The server fills Tester from the account that records the result. Defect references must point to existing defects.
+- Tests supports search, status/priority filters, new cases, assignment, and execution updates. Assignee is a verified team member. Executed cases require an actual result, date, evidence reference, and run/build/environment. The server fills Tester from the account that records the result. Defect references must point to existing defects. An execution can also keep PNG, JPG, or WebP screenshots, up to 5 MB each. The evidence reference text field stays. Screenshots are stored in the private Vercel Blob store and are served only to a signed-in Test Manager user.
 - Requirements computes mappings and pass totals from the current test records, including new cases. Open a requirement to navigate to its mapped tests.
 - Defects supports new defects, ownership, severity, fix/retest fields, and closure approval. Closure requires retest evidence and approval.
 - Risks and decisions retains static G findings separately from Q acceptance decisions. Updates retain the original workbook record and subsequent revisions.
@@ -53,7 +53,7 @@ Each saved change records the authenticated user's ID and email in history. Test
 
 The local dev/start commands bind to loopback; configure the host explicitly for remote access. Auth routes use this app's configured origin, database, and secret only. The former `TEST_MANAGER_PASSWORD` setting is obsolete.
 
-Locally, SQLite is a file in this app. On Vercel the same file is kept in a private blob and loaded before each request, so sessions and records survive a new instance. Back up the database with SQLite-aware tooling or stop the server before copying the database and its WAL files. The JSON export preserves application content but is not a Prisma migration or database backup.
+Locally, SQLite is a file in this app. On Vercel the same file is kept in a private blob and loaded before each request, so sessions and records survive a new instance. Execution screenshots use that same private Blob store (`access: "private"`). `BLOB_READ_WRITE_TOKEN` is already set on the hosted test-manager project for Production, Preview, and Development. Copy that existing token into this app's `.env` to upload screenshots locally. Image bytes are not public: a signed-in session is required, and the browser loads them from this app rather than from a Blob URL. Back up the database with SQLite-aware tooling or stop the server before copying the database and its WAL files. The JSON export preserves application content but is not a Prisma migration or database backup.
 
 ## Source import
 

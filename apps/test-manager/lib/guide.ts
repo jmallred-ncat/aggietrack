@@ -67,6 +67,7 @@ export const guideGroups: GuideGroup[] = [
       { term: "Actual result", plain: "What you actually saw when you tried it.", labels: [{ section: "Tests", label: "Actual result" }, { section: "Defects", label: "Actual result" }] },
       { term: "Defect ID", plain: "A problem found from this case. You can link one that already exists, or create one." },
       { term: "Evidence reference", plain: "Where to find the proof for this attempt, such as a file name or a link." },
+      { term: "Screenshots", plain: "Pictures of what you saw. Use PNG, JPG, or WebP, up to 5 MB each. They stay with this execution." },
       { term: "Environment", plain: "Where you tried it. Local is a machine of your own. Preview is a shared test site. Production is the live site." },
     ],
   },
