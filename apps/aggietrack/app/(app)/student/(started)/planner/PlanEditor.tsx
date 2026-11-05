@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent } from "@/components/ui/popover";
 import { toast } from "@/components/ui/toast";
 import { RuleViolationAlert } from "@/components/rule-violation-alert";
+import { courseMatchesSearch } from "@/lib/course-search";
 import type { PlannedTermStatus } from "@/lib/generated/prisma/client";
 import { finishPlanSave, type PlanSaveResult } from "@/lib/plan-save";
 import { applyAddedCourses, applyRemovedCourse, termCreditLabel, termCreditTotal } from "@/lib/plan-view";
@@ -96,7 +97,7 @@ export default function PlanEditor({
         ? []
         : courses
             .filter((course) => !plannedIds.has(course.id))
-            .filter((course) => `${course.subject} ${course.number} ${course.title}`.toLowerCase().includes(needle))
+            .filter((course) => courseMatchesSearch(course, needle))
             .slice(0, 8);
 
     function run<T extends { success: boolean; error?: string; violations?: string[] }>(

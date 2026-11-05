@@ -1,6 +1,6 @@
 import { courseOfferedInSeason, notOfferedInTermMessage } from "./academic-term";
 import type { TermSeason } from "./generated/prisma/client";
-import { coursePrerequisitesSatisfied } from "./prerequisites";
+import { advisorReviewViolation, coursePrerequisitesNeedAdvisorReview, coursePrerequisitesSatisfied } from "./prerequisites";
 
 export type RuleOption = {
     id: string;
@@ -19,6 +19,8 @@ export type RuleCourse = {
     isLab: boolean;
     offeredIn: readonly TermSeason[];
     groups: RuleGroup[];
+    /** The catalog text could not be turned into a course, score, or standing rule. */
+    prerequisitesNeedAdvisorReview?: boolean;
 };
 
 export type PlanCheck = {
@@ -44,6 +46,7 @@ type StoredCourse = {
     offeredIn: readonly TermSeason[];
     prerequisiteGroups: {
         isConcurrent: boolean;
+        note: string | null;
         options: {
             requires: { id: string; subject: string; number: string; isLab: boolean };
         }[];
@@ -91,6 +94,13 @@ export function toRuleCourse(course: StoredCourse): RuleCourse {
                 isLab: option.requires.isLab,
             })),
         })),
+        prerequisitesNeedAdvisorReview: coursePrerequisitesNeedAdvisorReview(
+            course.prerequisiteGroups.map((group) => ({
+                isConcurrent: group.isConcurrent,
+                optionCount: group.options.length,
+                note: group.note,
+            })),
+        ),
     };
 }
 
@@ -134,6 +144,9 @@ export function planRuleViolations(input: PlanCheck) {
     const checkCorequisites = input.corequisites !== false;
 
     for (const course of input.courses) {
+        if (course.prerequisitesNeedAdvisorReview) {
+            pushUnique(messages, advisorReviewViolation(course.code));
+        }
         pushUnique(messages, offeringViolation(course, input.season, input.termLabel));
 
         for (const group of course.groups) {

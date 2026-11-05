@@ -18,6 +18,7 @@ import {
   type RuleCourse,
   type RuleGroup,
 } from "./plan-rules";
+import { advisorReviewViolation, coursePrerequisitesNeedAdvisorReview } from "./prerequisites";
 import {
   jordanSubmittedPlan,
   plannedCoursesAfterReset,
@@ -39,7 +40,7 @@ for (const course of [...cstCatalogCourses, ...gecCourses, ...mgmtCourses, ...ha
   });
 }
 
-const groups = new Map<string, RuleGroup[]>();
+const groups = new Map<string, Array<RuleGroup & { note: string | null }>>();
 
 function displayCode(course: CourseRef) {
   return `${course.subject} ${course.number}`;
@@ -61,7 +62,7 @@ function addGroup(course: CourseRef, isConcurrent: boolean, options: CourseRef[]
     return current === signature;
   });
   if (existing) return;
-  list.push({ isConcurrent, options: optionRows });
+  list.push({ isConcurrent, options: optionRows, note });
   groups.set(key, list);
 }
 
@@ -87,7 +88,14 @@ function ruleCourse(course: CourseRef): RuleCourse {
     code: displayCode(course),
     isLab: info.isLab,
     offeredIn: info.offeredIn,
-    groups: groups.get(key) ?? [],
+    groups: (groups.get(key) ?? []).map(({ isConcurrent, options }) => ({ isConcurrent, options })),
+    prerequisitesNeedAdvisorReview: coursePrerequisitesNeedAdvisorReview(
+      (groups.get(key) ?? []).map((group) => ({
+        isConcurrent: group.isConcurrent,
+        optionCount: group.options.length,
+        note: group.note,
+      })),
+    ),
   };
 }
 
@@ -266,6 +274,33 @@ test("removing a course a later course or lab depends on reports the violation",
     completedCourseIds: satisfied,
   });
   assert.deepEqual(lectureOnly, []);
+});
+
+test("CST 300 cannot be added while its prerequisite text is unresolved", () => {
+  const course = ruleCourse({ subject: "CST", number: "300" });
+  assert.equal(course.prerequisitesNeedAdvisorReview, true);
+  assert.ok(course.groups.every((group) => group.options.length === 0));
+
+  const violations = planRuleViolations({
+    courses: [course],
+    season: TermSeason.SPRING,
+    termLabel: "Spring 2027",
+    satisfiedCourseIds: new Set(),
+    completedCourseIds: new Set(),
+  });
+  assert.ok(violations.includes(advisorReviewViolation("CST 300")));
+  assert.ok(violations.every((message) => !/critical path|prerequisites,/i.test(message)));
+  assertHuman(violations);
+
+  const standing = ruleCourse({ subject: "CST", number: "317" });
+  assert.equal(standing.prerequisitesNeedAdvisorReview, false);
+  assert.deepEqual(planRuleViolations({
+    courses: [standing],
+    season: TermSeason.SPRING,
+    termLabel: "Spring 2027",
+    satisfiedCourseIds: new Set(),
+    completedCourseIds: new Set(),
+  }), []);
 });
 
 test("seeded test student plans, including Jordan's spring plan, pass validation", () => {

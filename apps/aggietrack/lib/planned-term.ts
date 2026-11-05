@@ -2,6 +2,7 @@ import { cache } from "react";
 import { academicTermLabel, semesterInSession } from "./academic-term";
 import type { AcademicTerm, Prisma, TermSeason } from "./generated/prisma/client";
 import { selectPlannableCourses } from "./plannable-courses";
+import { coursePrerequisitesNeedAdvisorReview } from "./prerequisites";
 import { prisma } from "./prisma";
 import { requireStudentProfile } from "./student";
 
@@ -273,6 +274,7 @@ export async function getPlannableCourses(term: { id: string; season: TermSeason
                 prerequisiteGroups: {
                     select: {
                         isConcurrent: true,
+                        note: true,
                         options: { select: { requiresId: true } },
                     },
                 },
@@ -295,6 +297,13 @@ export async function getPlannableCourses(term: { id: string; season: TermSeason
     return selectPlannableCourses(
         courses.map((course) => ({
             ...course,
+            prerequisitesNeedAdvisorReview: coursePrerequisitesNeedAdvisorReview(
+                course.prerequisiteGroups.map((group) => ({
+                    isConcurrent: group.isConcurrent,
+                    optionCount: group.options.length,
+                    note: group.note,
+                })),
+            ),
             prerequisiteGroups: course.prerequisiteGroups.map((group) => ({
                 isConcurrent: group.isConcurrent,
                 optionIds: group.options.map((option) => option.requiresId),
