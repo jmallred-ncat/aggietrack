@@ -25,8 +25,10 @@ import { computedRequirementFields, linkIds, linkTargets, normalizeId, parseLink
 import { memberLabel, type TeamMember } from "@/lib/members";
 import { retestTests } from "@/lib/retests";
 import { recordPath, sectionByName } from "@/lib/sections";
+import { ScreenshotField, ScreenshotThumbs } from "@/components/execution-screenshots";
 import { TermHelp } from "@/components/term-help";
 import { TestLab } from "@/components/test-lab";
+import { formExecutionShots, savedExecutionShots, type ScreenshotView } from "@/lib/screenshot-rules";
 
 const choiceLists: Record<string, string[]> = { Priority: ["High", "Medium", "Low"], Severity: ["Critical", "High", "Medium", "Low"] };
 const shortText = new Set(["Test ID", "Defect ID", "Retest ID", "Test / scenario", "Evidence reference", "Summary", "Fix build", "Issue / risk", "Source location"]);
@@ -86,7 +88,7 @@ function messageFromPayload(payload: { error?: unknown } | null, fallback: strin
 async function payloadOf(response: Response) {
   const text = await response.text();
   if (!text) return null;
-  try { return JSON.parse(text) as { error?: unknown } & Workspace; }
+  try { return JSON.parse(text) as { error?: unknown; screenshots?: ScreenshotView[] } & Workspace; }
   catch { return null; }
 }
 
@@ -114,7 +116,7 @@ function groupsFor(section: Section, creating: boolean) {
   return { definition: headers.filter(header => !hidden.has(header) && header !== ""), run: [] as string[] };
 }
 
-export function RecordDashboard({ workspace, section, row, creating = false, members, finder = "" }: { workspace: Workspace; section: Section; row: RecordRow | null; creating?: boolean; members: TeamMember[]; finder?: string }) {
+export function RecordDashboard({ workspace, section, row, creating = false, members, finder = "", screenshots: initialScreenshots = [] }: { workspace: Workspace; section: Section; row: RecordRow | null; creating?: boolean; members: TeamMember[]; finder?: string; screenshots?: ScreenshotView[] }) {
   const router = useRouter();
   const tests = workspace.sections.find(item => item.name === "Tests")!.rows;
   const blank = Object.fromEntries(section.headers.map(header => [header, ""])) as Values;
@@ -143,6 +145,7 @@ export function RecordDashboard({ workspace, section, row, creating = false, mem
   const [archived, setArchived] = useState(row?.archived ?? false);
   const [confirmArchive, setConfirmArchive] = useState(false);
   const [history, setHistory] = useState<History[]>(workspace.history.filter(item => item.section === section.name && item.recordId === row?.id));
+  const [screenshots, setScreenshots] = useState(initialScreenshots);
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState("");
   const [defectQuery, setDefectQuery] = useState<string | null>(null);
@@ -184,7 +187,7 @@ export function RecordDashboard({ workspace, section, row, creating = false, mem
     setFormError("");
     try {
       const recordId = draft[section.headers[0]];
-      const response = await fetch("/api/workspace", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ section: section.name, id: recordId, values: draft, revision }) });
+      const response = await fetch("/api/workspace", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ section: section.name, id: recordId, values: draft, revision, execution: testExecution }) });
       const payload = await payloadOf(response);
       if (!response.ok || !payload) throw new Error(messageFromPayload(payload, "Could not save this record. Check the fields and try again."));
       if (creating) { toast.add({ type: "success", title: "Saved." }); router.replace(recordPath(section.name, normalizeId(recordId))); router.refresh(); return; }
@@ -196,6 +199,7 @@ export function RecordDashboard({ workspace, section, row, creating = false, mem
         setBaseline(next);
       }
       setHistory(payload.history.filter(item => item.section === section.name && item.recordId === normalizeId(recordId)));
+      if (payload.screenshots) setScreenshots(payload.screenshots);
       if (section.name === "Tests") setMode("case");
       toast.add({ type: "success", title: section.name === "Tests" ? "Saved." : "Saved. This dashboard is up to date." });
       router.refresh();
@@ -221,6 +225,7 @@ export function RecordDashboard({ workspace, section, row, creating = false, mem
         setBaseline(next);
       }
       setHistory(payload.history.filter(item => item.section === section.name && item.recordId === row.id));
+      if (payload.screenshots) setScreenshots(payload.screenshots);
       toast.add({ type: "success", title: archived ? "Restored. This record is active again." : "Archived. It stays out of the active lists and coverage." });
       setConfirmArchive(false);
       router.refresh();
@@ -263,7 +268,7 @@ export function RecordDashboard({ workspace, section, row, creating = false, mem
     {section.name !== "Tests" && <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">{statValues(section.name, draft, result).map(stat => <Card key={stat.label} className="not-typeset"><CardContent><p className="flex items-center gap-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">{stat.label}{!editedLabels.has(stat.label) && <TermHelp section={section.name} label={stat.label}/>}</p><p className={stat.value.length > 28 ? "mt-1 text-base font-semibold leading-snug" : "mt-1 text-2xl font-semibold leading-none"}>{stat.value}</p></CardContent></Card>)}</div>}
     {result && <Card className="not-typeset"><CardContent><div className="flex flex-wrap items-center justify-between gap-2"><h2 className="font-semibold">Coverage</h2><p className="text-sm text-muted-foreground">{result.passed} of {result.mapped.length} mapped tests passed</p></div><progress aria-label={`${id} tests passed`} className="mt-3 h-2 w-full accent-primary" value={result.passed} max={Math.max(1, result.mapped.length)}/></CardContent></Card>}
     {section.name !== "Tests" && related.length > 0 && <section className="not-typeset"><h2 className="font-semibold">Related records</h2><div className="mt-3 grid gap-3 sm:grid-cols-2">{related.map(item => <Link key={item.href} href={item.href} className="rounded-xl border bg-background p-4 hover:bg-muted/40"><div className="flex items-center justify-between gap-2"><span className="font-semibold text-primary">{normalizeId(item.id)}</span>{item.status && <Badge variant="secondary">{item.status}</Badge>}</div>{item.detail && <p className="mt-2 line-clamp-1 text-sm leading-snug text-muted-foreground">{item.detail}</p>}</Link>)}</div></section>}
-    {caseView && <TestLab draft={draft} related={related} onUpdate={() => openMode("update")} onExecute={() => openMode("execution")}/>}
+    {caseView && <TestLab draft={draft} related={related} screenshots={savedExecutionShots(screenshots, canonicalId)} onUpdate={() => openMode("update")} onExecute={() => openMode("execution")}/>}
     {writingCase && <form onSubmit={save} className="max-w-3xl rounded-xl border bg-background px-6 py-8 sm:px-8">
       {testUpdate && <div className="mb-6 flex justify-end"><Button type="button" variant="outline" onClick={returnToCase}>Back to the case</Button></div>}
       {groups.definition.includes("Test / scenario") && field("Test / scenario", true, true)}
@@ -277,9 +282,12 @@ export function RecordDashboard({ workspace, section, row, creating = false, mem
       <div className="mt-8 flex flex-col gap-3 border-t pt-6 [&_button]:ml-auto">{saveBar}</div>
     </form>}
     {testExecution && <div className="flex flex-wrap items-start justify-between gap-3"><p className="max-w-2xl text-sm leading-6 text-muted-foreground">An execution is the latest try of the case. Pass, Fail, and Blocked need the actual result, run date, environment, and evidence reference.</p><Button type="button" variant="outline" onClick={returnToCase}>Back to the case</Button></div>}
-    {testExecution && <form onSubmit={save} className="max-w-xl space-y-4">{groups.run.map(header => field(header, header !== "Tester"))}{saveBar}</form>}
+    {testExecution && <form onSubmit={save} className="max-w-xl space-y-4">{groups.run.map(header => field(header, header !== "Tester"))}<ScreenshotField testId={canonicalId} shots={formExecutionShots(screenshots, canonicalId)} disabled={saving} onAdded={shot => setScreenshots(current => current.some(item => item.id === shot.id) ? current : [...current, shot])}/>{saveBar}</form>}
     {!caseView && !testUpdate && !testExecution && !(creating && section.name === "Tests") && (editable ? groups.run.length > 0 ? <form onSubmit={save} className="grid items-start gap-6 xl:grid-cols-[minmax(0,1.1fr)_minmax(320px,0.9fr)]">{definition}{run}</form> : <form onSubmit={save} className="space-y-4">{definition}{saveBar}</form> : <div className="space-y-4">{definition}</div>)}
-    {history.length > 0 && <section className="not-typeset"><h2 className="font-semibold">History</h2><div className="mt-3 space-y-3">{history.map(item => <Card key={item.sequence} className="not-typeset"><CardContent><p className="text-sm font-semibold">{item.savedAt} · {item.values.Archived === "Yes" ? "Archived" : item.values.Archived === "No" ? "Restored" : item.values.Status || "Updated"} · {item.actorEmail || item.values.Tester || item.values.Owner || "Baseline"}</p><dl className="mt-3 grid gap-3 sm:grid-cols-2">{Object.entries(item.values).filter(([key, value]) => value && key !== "Archived").slice(0, 6).map(([key, value]) => <div key={key}><dt className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{key}</dt><dd className="mt-1 line-clamp-3 whitespace-pre-wrap text-sm leading-6">{value}</dd></div>)}</dl></CardContent></Card>)}</div></section>}
+    {history.length > 0 && <section className="not-typeset"><h2 className="font-semibold">History</h2><div className="mt-3 space-y-3">{history.map(item => {
+      const shots = screenshots.filter(shot => shot.testId === item.recordId && shot.historySequence === item.sequence);
+      return <Card key={item.sequence} className="not-typeset"><CardContent><p className="text-sm font-semibold">{item.savedAt} · {item.values.Archived === "Yes" ? "Archived" : item.values.Archived === "No" ? "Restored" : item.values.Status || "Updated"} · {item.actorEmail || item.values.Tester || item.values.Owner || "Baseline"}</p><dl className="mt-3 grid gap-3 sm:grid-cols-2">{Object.entries(item.values).filter(([key, value]) => value && key !== "Archived").slice(0, 6).map(([key, value]) => <div key={key}><dt className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{key}</dt><dd className="mt-1 line-clamp-3 whitespace-pre-wrap text-sm leading-6">{value}</dd></div>)}</dl>{shots.length > 0 && <div className="mt-3"><ScreenshotThumbs shots={shots}/></div>}</CardContent></Card>;
+    })}</div></section>}
     {!creating && <div className="flex items-center gap-2 border-t pt-6"><Button type="button" variant="outline" disabled={saving} onClick={() => setConfirmArchive(true)}>{archived ? "Restore" : "Archive"}</Button><TermHelp section={section.name} label="Archive"/></div>}
     {defectQuery !== null && <CreateDefectSheet query={defectQuery} ids={[...(workspace.sections.find(item => item.name === "Defects")?.rows.map(item => item.id) ?? []), ...createdDefects.map(item => item.id)]} headers={workspace.sections.find(item => item.name === "Defects")?.headers ?? []} testId={creating ? undefined : row?.id} finder={finder} onOpenChange={open => { if (!open) setDefectQuery(null); }} onCreated={(id, summary) => { setCreatedDefects(current => [...current, { id, label: summary, archived: false }]); setDraft(current => ({ ...current, "Defect ID": [...new Set([...parseLinks(current["Defect ID"] ?? ""), id])].join(", ") })); setDefectQuery(null); toast.add({ type: "success", title: `${id} created.` }); router.refresh(); }}/>}
     <AlertDialog open={leaveCase} onOpenChange={open => { if (!open) setLeaveCase(false); }}>

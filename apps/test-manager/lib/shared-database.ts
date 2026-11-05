@@ -56,6 +56,19 @@ async function ensureLiveSchema() {
   await addColumn(`ALTER TABLE "user" ADD COLUMN "organizationRole" TEXT NOT NULL DEFAULT ''`);
   await addColumn(`ALTER TABLE "user" ADD COLUMN "responsibilities" TEXT NOT NULL DEFAULT ''`);
   await addColumn(`ALTER TABLE "session" ADD COLUMN "impersonatedBy" TEXT`);
+  await getPrisma().$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "ExecutionScreenshot" (
+    "id" TEXT NOT NULL PRIMARY KEY,
+    "testId" TEXT NOT NULL,
+    "historySequence" INTEGER,
+    "pathname" TEXT NOT NULL,
+    "fileName" TEXT NOT NULL,
+    "contentType" TEXT NOT NULL,
+    "byteSize" INTEGER NOT NULL,
+    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "uploadedById" TEXT NOT NULL,
+    "uploadedByEmail" TEXT NOT NULL
+  )`);
+  await getPrisma().$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "ExecutionScreenshot_testId_historySequence_idx" ON "ExecutionScreenshot"("testId", "historySequence")`);
 }
 
 async function pull() {

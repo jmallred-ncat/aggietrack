@@ -30,5 +30,5 @@ export async function RecordScreen({ name, id, creating = false }: { name: strin
   const row = creating || !id ? null : section.rows.find(item => item.id === id) ?? section.rows.find(item => normalizeId(item.id) === normalizeId(id)) ?? null;
   if (!creating && !row) notFound();
   if (!creating && row && id && row.id !== id) redirect(recordPath(name, row.id));
-  return <RecordDashboard key={creating ? "new" : row!.id} workspace={data.workspace} section={section} row={row} creating={creating} members={data.members} finder={memberLabel(data.user)}/>;
+  return <RecordDashboard key={creating ? "new" : row!.id} workspace={data.workspace} section={section} row={row} creating={creating} members={data.members} finder={memberLabel(data.user)} screenshots={data.screenshots}/>;
 }

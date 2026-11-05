@@ -90,3 +90,16 @@ model ImportMetadata {
   key   String @id
   value String
 }
+model ExecutionScreenshot {
+  id              String   @id
+  testId          String
+  historySequence Int?
+  pathname        String
+  fileName        String
+  contentType     String
+  byteSize        Int
+  createdAt       DateTime @default(now())
+  uploadedById    String
+  uploadedByEmail String
+  @@index([testId, historySequence])
+}
