@@ -6,7 +6,7 @@ import { join, resolve } from "node:path";
 import { createPrisma } from "./prisma";
 import { importBaseline, saveRecord } from "./database";
 import { attachExecutionScreenshots, checkScreenshot, openScreenshot, prepareScreenshotUpload, registerScreenshot, ScreenshotError, type BlobReader } from "./screenshots";
-import { formExecutionShots, imageKind, ownsScreenshotPath, savedExecutionShots, screenshotPathname, type ScreenshotView } from "./screenshot-rules";
+import { currentExecutionShots, formExecutionShots, historyExecutionShots, imageKind, ownsScreenshotPath, pendingHistorySequence, savedExecutionShots, screenshotPathname, type ScreenshotView } from "./screenshot-rules";
 
 const png = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 0]);
 const jpeg = Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0, 0, 0, 0]);
@@ -56,6 +56,25 @@ test("screenshot rules accept png, jpeg, and webp and keep paths inside the test
   ];
   assert.deepEqual(savedExecutionShots(saved, "T-01").map(shot => shot.id), ["a"]);
   assert.deepEqual(formExecutionShots(saved, "T-01").map(shot => shot.id), ["a", "b"]);
+  const runs: ScreenshotView[] = [
+    { id: "saved", testId: "T-36", historySequence: 8, fileName: "restore.png", kind: "PNG" },
+    { id: "pending", testId: "T36", historySequence: null, fileName: "compare.png", kind: "PNG" },
+    { id: "older", testId: "T-36", historySequence: 3, fileName: "first.png", kind: "PNG" },
+    { id: "other", testId: "T-02", historySequence: null, fileName: "nope.png", kind: "PNG" },
+  ];
+  assert.deepEqual(currentExecutionShots(runs, "T-36").map(shot => shot.id), ["saved", "pending"]);
+  assert.deepEqual(savedExecutionShots(runs, "T36").map(shot => shot.id), ["saved"]);
+  assert.deepEqual(historyExecutionShots(runs, "T-36", 3).map(shot => shot.id), ["older"]);
+  assert.deepEqual(historyExecutionShots(runs, "T36", 8, true).map(shot => shot.id), ["saved", "pending"]);
+  const entries = [
+    { sequence: 3, status: "Fail" },
+    { sequence: 8, status: "Pass" },
+    { sequence: 9, status: "Pass", archived: "Yes" },
+    { sequence: 10, status: "Pass" },
+  ];
+  assert.equal(pendingHistorySequence(entries), 10);
+  assert.equal(pendingHistorySequence([{ sequence: 2, status: "Not run" }, { sequence: 4, archived: "No" }]), 2);
+  assert.equal(pendingHistorySequence([]), null);
 });
 
 test("execution screenshots stay private to the test and attach to history", async () => {

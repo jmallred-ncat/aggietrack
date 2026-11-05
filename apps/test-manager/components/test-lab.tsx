@@ -38,9 +38,10 @@ export function TestLab({ draft, related, screenshots = [], onUpdate, onExecute 
         <p>{[draft.Status, where].filter(Boolean).join(" · ")}</p>
         {draft["Actual result"] && <p className="whitespace-pre-wrap">{draft["Actual result"]}</p>}
         {draft["Evidence reference"] && <p>Evidence reference: {draft["Evidence reference"]}</p>}
+        {screenshots.length > 0 && <ScreenshotThumbs shots={screenshots}/>}
         {defects.length > 0 && <ul className="space-y-1">{defects.map(item => <li key={item.href}><RecordLink item={item}/></li>)}</ul>}
       </div>}
-      {screenshots.length > 0 && <div className="mt-3"><ScreenshotThumbs shots={screenshots}/></div>}
+      {!tried && screenshots.length > 0 && <div className="mt-3"><ScreenshotThumbs shots={screenshots}/></div>}
       {!tried && screenshots.length === 0 && <p className="mt-3 text-sm leading-6">No execution recorded.</p>}
       {missingProcedure && <p className="mt-3 text-sm leading-6">Add a procedure with Update case before recording an execution.</p>}
       {openDecisions.length > 0 && <p className="mt-3 text-sm leading-6">Settle {openDecisions.map(item => normalizeId(item.id)).join(", ")} before recording an execution.</p>}

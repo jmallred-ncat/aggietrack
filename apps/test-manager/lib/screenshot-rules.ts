@@ -1,3 +1,5 @@
+import { normalizeId } from "./links";
+
 export const maxScreenshotBytes = 5 * 1024 * 1024;
 export const maxScreenshotsPerExecution = 20;
 export const screenshotKinds = ["PNG", "JPEG", "WebP"] as const;
@@ -57,20 +59,42 @@ export function ownsScreenshotPath(pathname: string, testId: string) {
   return rest.length > 0 && rest.length <= 180 && !rest.includes("..") && /^[A-Za-z0-9._-]+$/.test(rest);
 }
 
+function forTest(shots: ScreenshotView[], testId: string) {
+  const id = normalizeId(testId);
+  return shots.filter(shot => normalizeId(shot.testId) === id);
+}
+
 export function latestScreenshotSequence(shots: ScreenshotView[], testId: string) {
-  const sequences = shots.flatMap(shot => shot.testId === testId && shot.historySequence !== null ? [shot.historySequence] : []);
+  const sequences = forTest(shots, testId).flatMap(shot => shot.historySequence === null ? [] : [shot.historySequence]);
   return sequences.length === 0 ? null : Math.max(...sequences);
 }
 
 export function savedExecutionShots(shots: ScreenshotView[], testId: string) {
   const sequence = latestScreenshotSequence(shots, testId);
   if (sequence === null) return [];
-  return shots.filter(shot => shot.testId === testId && shot.historySequence === sequence);
+  return forTest(shots, testId).filter(shot => shot.historySequence === sequence);
+}
+
+export function currentExecutionShots(shots: ScreenshotView[], testId: string) {
+  const sequence = latestScreenshotSequence(shots, testId);
+  return forTest(shots, testId).filter(shot => shot.historySequence === null || shot.historySequence === sequence);
 }
 
 export function formExecutionShots(shots: ScreenshotView[], testId: string) {
-  const sequence = latestScreenshotSequence(shots, testId);
-  return shots.filter(shot => shot.testId === testId && (shot.historySequence === null || shot.historySequence === sequence));
+  return currentExecutionShots(shots, testId);
+}
+
+const executedStatuses = new Set(["Pass", "Fail", "Blocked"]);
+
+export function pendingHistorySequence(entries: { sequence: number; status?: string; archived?: string }[]) {
+  const open = entries.filter(entry => entry.archived !== "Yes" && entry.archived !== "No");
+  const executed = open.filter(entry => entry.status !== undefined && executedStatuses.has(entry.status));
+  const pool = executed.length > 0 ? executed : open;
+  return pool.length === 0 ? null : Math.max(...pool.map(entry => entry.sequence));
+}
+
+export function historyExecutionShots(shots: ScreenshotView[], testId: string, sequence: number, includePending = false) {
+  return forTest(shots, testId).filter(shot => shot.historySequence === sequence || (includePending && shot.historySequence === null));
 }
 
 export function screenshotStorageConfigured() {
