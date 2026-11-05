@@ -1,17 +1,20 @@
 "use client";
 
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ButtonGroup } from "@/components/ui/button-group";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { toast } from "@/components/ui/toast";
+import type { CurriculumCourseSection } from "@/lib/catalog";
+import { CATALOG_BROWSER_LABEL, courseMatchesSearch } from "@/lib/course-search";
+import { GenEdTag, RequirementSlot, type TermSeason } from "@/lib/generated/prisma/browser";
 import { PLAN_SAVE_FAILED } from "@/lib/plan-save";
 import { offeringViolation } from "@/lib/plan-rules";
-import type { CurriculumCourseSection } from "@/lib/catalog";
-import { GenEdTag, RequirementSlot, type Course, type TermSeason } from "@/lib/generated/prisma/browser";
-import { coursePrerequisitesSatisfied } from "@/lib/prerequisites";
+import { ADVISOR_REVIEW_PREREQUISITES, coursePrerequisitesNeedAdvisorReview, coursePrerequisitesSatisfied } from "@/lib/prerequisites";
 import type { StudentProfileWithCatalog } from "@/lib/student";
 import { cn } from "@/lib/utils";
 import { FlaskIcon, LecternIcon, MagnifyingGlassIcon } from "@phosphor-icons/react";
@@ -39,18 +42,6 @@ type PlanPlacement = {
     termLabel: string;
     locked: boolean;
 };
-
-function courseMatchesSearch(course: Course, search: string) {
-    const values = [
-        course.subject,
-        course.number,
-        `${course.subject} ${course.number}`,
-        course.title,
-        course.description,
-    ];
-
-    return values.some((value) => value?.toLowerCase().includes(search));
-}
 
 export function CourseBrowser({
     profile,
@@ -102,8 +93,8 @@ export function CourseBrowser({
     return <div>
         <header className="not-typeset py-6 space-y-2">
             <Badge>{program.department.name}</Badge>
-            <h1 className="text-4xl font-bold not-typeset text-balance max-w-prose w-full -mb-1.5">{program.degree.abbreviation} in {program.name} Courses</h1>
-            <span>{profile.catalogYear.year} Catalog Year</span>
+            <h1 className="text-4xl font-bold not-typeset text-balance max-w-prose w-full -mb-1.5">{CATALOG_BROWSER_LABEL}</h1>
+            <span>{program.degree.abbreviation} in {program.name} · {profile.catalogYear.year} catalog</span>
             <p className="text-sm text-muted-foreground mt-2 max-w-prose w-full text-balance">
                 Quickly search, filter, and browse courses in your degree program. Enter a course code, title, or requirement name to find relevant courses, see which requirements they satisfy, and discover course details instantly.
             </p>
@@ -111,18 +102,19 @@ export function CourseBrowser({
         </header>
 
         <div className="sticky top-0 z-20 -mx-4 mt-4 bg-background/95 px-4 py-3 backdrop-blur supports-[backdrop-filter]:bg-background/80">
-            <div className="relative">
+            <Label htmlFor="catalog-course-search" className="text-sm font-medium">Search for a course</Label>
+            <div className="relative mt-2">
                 <MagnifyingGlassIcon
                     aria-hidden="true"
                     className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
                 />
                 <Input
+                    id="catalog-course-search"
                     type="search"
                     value={query}
                     onChange={(event) => setQuery(event.target.value)}
                     placeholder="Search by course code, title, or requirement…"
                     className="pl-9"
-                    aria-label="Search curriculum courses"
                 />
             </div>
 
@@ -293,6 +285,13 @@ const CourseCard = memo(function CourseCard({
 }) {
     const prerequisites = requirementGroups(course, false);
     const corequisites = requirementGroups(course, true);
+    const needsAdvisorReview = coursePrerequisitesNeedAdvisorReview(
+        course.prerequisiteGroups.map((group) => ({
+            isConcurrent: group.isConcurrent,
+            optionCount: group.options.length,
+            note: group.note,
+        })),
+    );
     const hasRequirements = prerequisites.length > 0 || corequisites.length > 0;
     const prerequisiteGroups = course.prerequisiteGroups.map((group) => ({
         isConcurrent: group.isConcurrent,
@@ -329,6 +328,7 @@ const CourseCard = memo(function CourseCard({
             terms={eligibleTerms}
             placement={placement}
             blockedByPrerequisites={blockedByPrerequisites}
+            needsAdvisorReview={needsAdvisorReview}
             companions={companionsToAdd}
             completedCorequisites={completedCorequisites}
             addWithOverride={addWithOverride}
@@ -360,6 +360,7 @@ const CourseCard = memo(function CourseCard({
             </CardHeader>
             <CardContent className="flex-1 mt-2">
                 <p className="line-clamp-2 text-sm text-muted-foreground">{course.description}</p>
+                {needsAdvisorReview && <AdvisorReviewNotice className="mt-3" />}
             </CardContent>
         </div>
         <CardFooter className="flex items-center justify-between gap-2">
@@ -396,7 +397,7 @@ const CourseCard = memo(function CourseCard({
                             </li>
                             <li>{convertCourseOfferedIn(course.offeredIn)}</li>
                         </ul>
-                        <RequirementGroups title="Prerequisites" groups={prerequisites} />
+                        <RequirementGroups title="Prerequisites" groups={prerequisites} needsAdvisorReview={needsAdvisorReview} />
                         <RequirementGroups title="Corequisites" groups={corequisites} />
                         <p className="mt-3">{course.description}</p>
                     </div>
@@ -418,6 +419,7 @@ function AddToPlannerButton({
     terms,
     placement,
     blockedByPrerequisites,
+    needsAdvisorReview,
     companions,
     completedCorequisites,
     addWithOverride,
@@ -426,6 +428,7 @@ function AddToPlannerButton({
     terms: PlanningTerm[];
     placement: PlanPlacement | null;
     blockedByPrerequisites: boolean;
+    needsAdvisorReview: boolean;
     companions: CompanionCourse[];
     completedCorequisites: CompanionCourse[];
     addWithOverride: boolean;
@@ -479,7 +482,7 @@ function AddToPlannerButton({
             }
             if (!result.success) {
                 const message = result.error?.trim() ? result.error : PLAN_SAVE_FAILED;
-                if (message === PLAN_SAVE_FAILED) sonner.error(message);
+                if (message === PLAN_SAVE_FAILED || message.toLowerCase().includes("advisor review")) sonner.error(message);
                 else toast.add({ title: message });
                 return;
             }
@@ -503,14 +506,20 @@ function AddToPlannerButton({
         );
     }
 
-    if (blockedByPrerequisites || terms.length === 0) {
+    if (needsAdvisorReview || blockedByPrerequisites || terms.length === 0) {
         return (
             <Button
                 variant="secondary"
                 className="w-full flex-1"
                 size="sm"
                 disabled
-                aria-label={blockedByPrerequisites ? `Prerequisites for ${label} have not been completed` : "Add to Plan"}
+                aria-label={
+                    needsAdvisorReview
+                        ? ADVISOR_REVIEW_PREREQUISITES
+                        : blockedByPrerequisites
+                            ? `Prerequisites for ${label} have not been completed`
+                            : "Add to Plan"
+                }
             >
                 Add to Plan
             </Button>
@@ -640,12 +649,22 @@ function AddToPlannerButton({
     );
 }
 
+function AdvisorReviewNotice({ className }: { className?: string }) {
+    return (
+        <Alert className={className}>
+            <AlertDescription>{ADVISOR_REVIEW_PREREQUISITES}</AlertDescription>
+        </Alert>
+    );
+}
+
 function RequirementGroups({
     title,
     groups,
+    needsAdvisorReview = false,
 }: {
     title: string;
     groups: PrerequisiteGroup[];
+    needsAdvisorReview?: boolean;
 }) {
     if (groups.length === 0) {
         return null;
@@ -654,31 +673,35 @@ function RequirementGroups({
     return (
         <div className="mt-4">
             <h3 className="text-sm font-semibold">{title}</h3>
-            {groups.length > 1 && (
-                <p className="mt-1 text-sm text-muted-foreground">All of the following</p>
-            )}
-            <ul className="mt-1 space-y-2 text-sm">
-                {groups.map((group) => (
-                    <li key={group.id}>
-                        {group.options.length > 1 && (
-                            <p className="text-foreground/75 leading-none font-medium mb-1 text-xs">Satisfy one of the following:</p>
-                        )}
-                        {group.options.length > 0 && (
-                            <ul className="space-y-1 list-inside list-disc">
-                                {group.options.map((option) => (
-                                    <li key={option.requires.id}>
-                                        <span className="font-mono text-sm tracking-tighter">{option.requires.subject}{" "}{option.requires.number}</span>{" "}&mdash;{" "}
-                                        <span className="text-sm"> {option.requires.title}</span>
-                                    </li>
-                                ))}
-                            </ul>
-                        )}
-                        {group.note && (
-                            <p className="text-muted-foreground">{group.note}</p>
-                        )}
-                    </li>
-                ))}
-            </ul>
+            {needsAdvisorReview
+                ? <AdvisorReviewNotice className="mt-2" />
+                : <>
+                    {groups.length > 1 && (
+                        <p className="mt-1 text-sm text-muted-foreground">All of the following</p>
+                    )}
+                    <ul className="mt-1 space-y-2 text-sm">
+                        {groups.map((group) => (
+                            <li key={group.id}>
+                                {group.options.length > 1 && (
+                                    <p className="text-foreground/75 leading-none font-medium mb-1 text-xs">Satisfy one of the following:</p>
+                                )}
+                                {group.options.length > 0 && (
+                                    <ul className="space-y-1 list-inside list-disc">
+                                        {group.options.map((option) => (
+                                            <li key={option.requires.id}>
+                                                <span className="font-mono text-sm tracking-tighter">{option.requires.subject}{" "}{option.requires.number}</span>{" "}&mdash;{" "}
+                                                <span className="text-sm"> {option.requires.title}</span>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                )}
+                                {group.note && (
+                                    <p className="text-muted-foreground">{group.note}</p>
+                                )}
+                            </li>
+                        ))}
+                    </ul>
+                </>}
         </div>
     );
 }

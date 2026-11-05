@@ -151,6 +151,7 @@ export async function addPlannedCourse(termId: string, courseId: string, compani
                 orderBy: { sortOrder: "asc" },
                 select: {
                     isConcurrent: true,
+                    note: true,
                     options: {
                         select: {
                             requires: { select: { id: true, subject: true, number: true, isLab: true } },

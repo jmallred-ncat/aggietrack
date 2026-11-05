@@ -13,6 +13,8 @@ export type PlannableCourse = {
         isConcurrent: boolean;
         optionIds: string[];
     }[];
+    /** Catalog text that could not be checked. The planner search leaves the course out. */
+    prerequisitesNeedAdvisorReview?: boolean;
 };
 
 /**
@@ -34,6 +36,9 @@ export function selectPlannableCourses(
             return true;
         }
         if (satisfiedCourseIds.has(course.id) || onAnotherPlan.has(course.id)) {
+            return false;
+        }
+        if (course.prerequisitesNeedAdvisorReview) {
             return false;
         }
         if (!courseOfferedInSeason(course.offeredIn, season)) {

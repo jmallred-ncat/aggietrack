@@ -1,6 +1,7 @@
 "use client";
 
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbSeparator } from "@/components/ui/breadcrumb";
+import { CATALOG_BROWSER_LABEL } from "@/lib/course-search";
 import { cn } from "@/lib/utils";
 import { useSelectedLayoutSegments } from "next/navigation";
 import { Fragment } from "react/jsx-runtime";
@@ -13,7 +14,7 @@ const labels: Record<string, string> = {
     plans: "Plans",
     appointments: "Appointments",
     progress: "Progress",
-    courses: "Courses",
+    courses: CATALOG_BROWSER_LABEL,
     planner: "Planner",
     advising: "Advising",
     profile: "Profile",
