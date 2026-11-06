@@ -11,6 +11,7 @@ export type PlannableCourse = {
     offeredIn: TermSeason[];
     prerequisiteGroups: {
         isConcurrent: boolean;
+        fromCatalog?: boolean;
         optionIds: string[];
     }[];
     /** Catalog text that could not be checked. The planner search leaves the course out. */
@@ -51,7 +52,7 @@ export function selectPlannableCourses(
         const next = new Set(stack);
         next.add(course.id);
         return course.prerequisiteGroups.every((group) => {
-            if (!group.isConcurrent || group.optionIds.length === 0) {
+            if (!group.isConcurrent || group.fromCatalog !== true || group.optionIds.length === 0) {
                 return true;
             }
             return group.optionIds.some((id) => {

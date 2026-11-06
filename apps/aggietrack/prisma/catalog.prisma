@@ -61,6 +61,9 @@ model PrerequisiteGroup {
   courseId     String
   course       Course               @relation(fields: [courseId], references: [id], onDelete: Cascade)
   isConcurrent Boolean              @default(false)
+  /// True when the catalog corequisite text lists this direction.
+  /// A reverse link stored so the pair can be added together is false.
+  fromCatalog  Boolean              @default(false)
   sortOrder    Int                  @default(0)
   /// Catalog text that completed courses cannot prove: scores, standing, consent, or "or higher".
   note         String?

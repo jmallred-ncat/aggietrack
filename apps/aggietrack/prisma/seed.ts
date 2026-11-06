@@ -25,6 +25,7 @@ import {
   mgmtCatalogGroups,
   mgmtElectives,
 } from "./seed/mgmt";
+import { catalogCorequisiteEdge, catalogCorequisiteEdges } from "./seed/catalog-corequisites";
 import type { PrerequisiteGroupSeed } from "./seed/prerequisite-text";
 
 /** CST Undergraduate Handbook (August 2025) is the only published curriculum in the seed. */
@@ -131,14 +132,16 @@ async function replacePrerequisiteGroups(
 
   const sortByCourse = new Map<string, number>();
   const seen = new Set<string>();
+  const catalogEdges = catalogCorequisiteEdges(groups);
 
   async function createGroup(
     courseId: string,
     isConcurrent: boolean,
     optionIds: string[],
     note: string | null,
+    fromCatalog: boolean,
   ) {
-    const key = `${courseId}|${isConcurrent}|${[...optionIds].sort().join(",")}|${note ?? ""}`;
+    const key = `${courseId}|${isConcurrent}|${fromCatalog}|${[...optionIds].sort().join(",")}|${note ?? ""}`;
     if (seen.has(key) || (optionIds.length === 0 && !note)) {
       return;
     }
@@ -151,6 +154,7 @@ async function replacePrerequisiteGroups(
       data: {
         courseId,
         isConcurrent,
+        fromCatalog,
         sortOrder,
         note,
         options: {
@@ -167,8 +171,8 @@ async function replacePrerequisiteGroups(
       throw new Error(`Missing concurrent pair ${courseKey(lecture)} / ${courseKey(lab)}`);
     }
 
-    await createGroup(lectureId, true, [labId], null);
-    await createGroup(labId, true, [lectureId], null);
+    await createGroup(lectureId, true, [labId], null, catalogEdges.has(catalogCorequisiteEdge(lecture, lab)));
+    await createGroup(labId, true, [lectureId], null, catalogEdges.has(catalogCorequisiteEdge(lab, lecture)));
   }
 
   for (const group of groups) {
@@ -189,7 +193,7 @@ async function replacePrerequisiteGroups(
       continue;
     }
 
-    await createGroup(courseId, group.isConcurrent, optionIds, group.note);
+    await createGroup(courseId, group.isConcurrent, optionIds, group.note, group.isConcurrent);
   }
 }
 

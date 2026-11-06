@@ -1,6 +1,6 @@
 import { cache } from "react";
 import { academicTermLabel, semesterInSession } from "./academic-term";
-import type { AcademicTerm, Prisma, TermSeason } from "./generated/prisma/client";
+import type { AcademicTerm, Prisma, TermSeason, TranscriptSource } from "./generated/prisma/client";
 import { selectPlannableCourses } from "./plannable-courses";
 import { coursePrerequisitesNeedAdvisorReview } from "./prerequisites";
 import { prisma } from "./prisma";
@@ -26,7 +26,7 @@ export async function courseStandingBefore(
                 courseId: { not: null },
                 status: { in: ["IN_PROGRESS", "COMPLETED"] },
             },
-            select: { courseId: true, status: true },
+            select: { courseId: true, status: true, source: true },
         }),
         db.plannedCourse.findMany({
             where: {
@@ -41,13 +41,17 @@ export async function courseStandingBefore(
 
     const satisfied = new Set<string>();
     const completed = new Set<string>();
+    const completedSources = new Map<string, TranscriptSource>();
     for (const entry of entries) {
         if (!entry.courseId) continue;
         satisfied.add(entry.courseId);
-        if (entry.status === "COMPLETED") completed.add(entry.courseId);
+        if (entry.status !== "COMPLETED") continue;
+        completed.add(entry.courseId);
+        const current = completedSources.get(entry.courseId);
+        if (!current || current === "TRANSFER") completedSources.set(entry.courseId, entry.source);
     }
     for (const row of planned) satisfied.add(row.courseId);
-    return { satisfied, completed };
+    return { satisfied, completed, completedSources };
 }
 
 /** Completed and in-progress transcript courses, plus courses planned for an earlier term. */
@@ -250,7 +254,30 @@ export async function getStudentPlannedTerm(termId: string) {
         },
         include: {
             courses: {
-                include: { course: { select: courseSelect } },
+                include: {
+                    course: {
+                        select: {
+                            ...courseSelect,
+                            isLab: true,
+                            offeredIn: true,
+                            prerequisiteGroups: {
+                                orderBy: { sortOrder: "asc" as const },
+                                select: {
+                                    isConcurrent: true,
+                                    fromCatalog: true,
+                                    note: true,
+                                    options: {
+                                        select: {
+                                            requires: {
+                                                select: { id: true, subject: true, number: true, isLab: true },
+                                            },
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                    },
+                },
                 orderBy: { createdAt: "asc" },
             },
         },
@@ -274,6 +301,7 @@ export async function getPlannableCourses(term: { id: string; season: TermSeason
                 prerequisiteGroups: {
                     select: {
                         isConcurrent: true,
+                        fromCatalog: true,
                         note: true,
                         options: { select: { requiresId: true } },
                     },
@@ -306,6 +334,7 @@ export async function getPlannableCourses(term: { id: string; season: TermSeason
             ),
             prerequisiteGroups: course.prerequisiteGroups.map((group) => ({
                 isConcurrent: group.isConcurrent,
+                fromCatalog: group.fromCatalog,
                 optionIds: group.options.map((option) => option.requiresId),
             })),
         })),

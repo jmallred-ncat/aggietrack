@@ -19,6 +19,7 @@ const ruleCourseSelect = {
         orderBy: { sortOrder: "asc" as const },
         select: {
             isConcurrent: true,
+            fromCatalog: true,
             note: true,
             options: {
                 select: {

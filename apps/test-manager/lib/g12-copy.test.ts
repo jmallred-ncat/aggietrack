@@ -23,6 +23,7 @@ test("T-11, T-15, T-41, and T-55 describe the plan-rule recheck", () => {
   assert.match(t15.Procedure, /Remove CST 112 and leave CST 122/);
   assert.match(t15["Expected result"], /CST 122 must be taken with CST 112/);
   assert.match(t15["Expected result"], /Removing the lab and leaving the lecture is allowed/);
+  assert.match(t15["Expected result"], /refused in either direction/);
   assert.doesNotMatch(t15["Expected result"], /submission does not check the pair/);
 
   assert.match(t41["Expected result"], /second tab is rejected/);

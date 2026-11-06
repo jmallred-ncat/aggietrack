@@ -3,13 +3,14 @@
 import { semesterInSession } from "@/lib/academic-term";
 import { violationsForRemoval, violationsForTerm } from "@/lib/plan-rule-check";
 import { refreshStudentViews } from "@/lib/refresh-student-views";
-import { academicTermLabel, courseIdsSatisfiedBefore, getPlanningTerms } from "@/lib/planned-term";
+import { planCourseSave } from "@/lib/plan-add";
+import { academicTermLabel, courseStandingBefore, getPlanningTerms } from "@/lib/planned-term";
 import {
     claimDraftPlan,
     draftLockedMessage,
     PlanRejected,
-    planRuleViolations,
     submitDecision,
+    requiresCourseOverride,
     toRuleCourse,
 } from "@/lib/plan-rules";
 import {
@@ -113,93 +114,46 @@ export async function addPlannedCourse(termId: string, courseId: string, compani
     }
 
     const term = await planningTerm(termId);
-    const course = await prisma.course.findUnique({
-        where: { id: courseId },
-        select: {
-            id: true,
-            prerequisiteGroups: {
-                select: {
-                    isConcurrent: true,
-                    options: { select: { requiresId: true } },
-                },
-            },
-        },
-    });
-    if (!term || !course) {
+    if (!term) {
         return { success: false as const, error: "That course could not be added." };
     }
 
-    const allowedCompanions = new Set(
-        course.prerequisiteGroups
-            .filter((group) => group.isConcurrent)
-            .flatMap((group) => group.options.map((option) => option.requiresId)),
-    );
-    const extras = [...new Set(companions.data)].filter((id) => id !== courseId);
-    if (extras.some((id) => !allowedCompanions.has(id))) {
-        return { success: false as const, error: "That course could not be added with its corequisite." };
-    }
-
-    const courses = await prisma.course.findMany({
-        where: { id: { in: [courseId, ...extras] } },
-        select: {
-            id: true,
-            subject: true,
-            number: true,
-            isLab: true,
-            offeredIn: true,
-            prerequisiteGroups: {
-                orderBy: { sortOrder: "asc" },
-                select: {
-                    isConcurrent: true,
-                    note: true,
-                    options: {
-                        select: {
-                            requires: { select: { id: true, subject: true, number: true, isLab: true } },
+    const lookupIds = [courseId, ...new Set(companions.data)];
+    const [courseRows, standing, plannedRows, transcriptRows, plan] = await Promise.all([
+        prisma.course.findMany({
+            where: { id: { in: lookupIds } },
+            select: {
+                id: true,
+                subject: true,
+                number: true,
+                credits: true,
+                isLab: true,
+                offeredIn: true,
+                prerequisiteGroups: {
+                    orderBy: { sortOrder: "asc" },
+                    select: {
+                        isConcurrent: true,
+                        fromCatalog: true,
+                        note: true,
+                        options: {
+                            select: {
+                                requires: { select: { id: true, subject: true, number: true, isLab: true } },
+                            },
                         },
                     },
                 },
             },
-        },
-    });
-    const byId = new Map(courses.map((item) => [item.id, item]));
-    const termLabel = academicTermLabel(term);
-    const adding: ReturnType<typeof toRuleCourse>[] = [];
-    for (const id of [courseId, ...extras]) {
-        const item = byId.get(id);
-        if (!item) {
-            return { success: false as const, error: "That course could not be added." };
-        }
-        adding.push(toRuleCourse(item));
-    }
-    const satisfied = await courseIdsSatisfiedBefore(profile.id, term.startsOn);
-    const violations = planRuleViolations({
-        courses: adding,
-        season: term.season,
-        termLabel,
-        satisfiedCourseIds: satisfied,
-        completedCourseIds: new Set(),
-        corequisites: false,
-    });
-    if (violations.length > 0) {
-        return { success: false as const, error: violations.join(" "), violations };
-    }
-
-    const [transcriptRows, otherPlanRows, plan, onThisPlan] = await Promise.all([
+        }),
+        courseStandingBefore(profile.id, term.startsOn),
+        prisma.plannedCourse.findMany({
+            where: { plannedTerm: { studentId: profile.id } },
+            select: { courseId: true, plannedTerm: { select: { termId: true } } },
+        }),
         prisma.transcriptEntry.findMany({
             where: {
                 studentId: profile.id,
-                courseId: { in: [courseId, ...extras] },
+                courseId: { in: lookupIds },
                 status: { in: ["IN_PROGRESS", "COMPLETED"] },
-            },
-            select: { courseId: true },
-        }),
-        prisma.plannedCourse.findMany({
-            where: {
-                courseId: { in: [courseId, ...extras] },
-                plannedTerm: {
-                    studentId: profile.id,
-                    termId: { not: termId },
-                },
             },
             select: { courseId: true },
         }),
@@ -207,29 +161,49 @@ export async function addPlannedCourse(termId: string, courseId: string, compani
             where: { studentId_termId: { studentId: profile.id, termId } },
             select: { id: true },
         }),
-        prisma.plannedCourse.findMany({
-            where: {
-                courseId: { in: [courseId, ...extras] },
-                plannedTerm: { studentId: profile.id, termId },
-            },
-            select: { courseId: true },
-        }),
     ]);
 
-    const onTranscript = new Set(transcriptRows.flatMap((row) => row.courseId ? [row.courseId] : []));
-    const onAnotherPlan = new Set(otherPlanRows.map((row) => row.courseId));
-    const alreadyOnPlan = new Set(onThisPlan.map((row) => row.courseId));
-    if (onTranscript.has(courseId)) {
-        return { success: false as const, error: "That course is already on your transcript." };
-    }
-    if (onAnotherPlan.has(courseId) || extras.some((id) => onAnotherPlan.has(id))) {
-        return { success: false as const, error: "That course is already on another term plan." };
-    }
-    if (alreadyOnPlan.has(courseId)) {
-        return { success: false as const, error: "That course is already on this term plan." };
+    const byId = new Map(courseRows.map((item) => [item.id, item]));
+    const primary = byId.get(courseId);
+    const allowedCompanionIds = new Set(
+        (primary?.prerequisiteGroups ?? [])
+            .filter((group) => group.isConcurrent)
+            .flatMap((group) => group.options.map((option) => option.requires.id)),
+    );
+    const sameTermCourseIds = new Set<string>();
+    const otherTermCourseIds = new Set<string>();
+    for (const row of plannedRows) {
+        if (row.plannedTerm.termId === termId) sameTermCourseIds.add(row.courseId);
+        else otherTermCourseIds.add(row.courseId);
     }
 
-    const creating = [courseId, ...extras].filter((id) => !onTranscript.has(id) && !alreadyOnPlan.has(id));
+    const rules = new Map(courseRows.map((item) => [item.id, toRuleCourse(item)]));
+    const decision = planCourseSave({
+        courseId,
+        companionIds: companions.data,
+        allowedCompanionIds,
+        courses: courseRows.map((item) => ({
+            id: item.id,
+            credits: item.credits,
+            isLab: item.isLab,
+            rule: rules.get(item.id)!,
+        })),
+        season: term.season,
+        termLabel: academicTermLabel(term),
+        satisfiedCourseIds: standing.satisfied,
+        completedCourseIds: standing.completed,
+        sameTermCourseIds,
+        otherTermCourseIds,
+        onTranscriptIds: new Set(transcriptRows.flatMap((row) => row.courseId ? [row.courseId] : [])),
+    });
+    if (!decision.success) {
+        return {
+            success: false as const,
+            error: decision.error,
+            ...(decision.violations ? { violations: decision.violations } : {}),
+        };
+    }
+
     const fault = await nextPlannerWriteFault(profile.id);
     await waitForPlannerFault(fault);
     try {
@@ -245,7 +219,7 @@ export async function addPlannedCourse(termId: string, courseId: string, compani
             );
             if (!claimed) return null;
             const added = await writePlannedCourses(
-                creating,
+                decision.creatingIds,
                 (id) => byId.get(id)?.isLab === true,
                 fault,
                 async (id) => {
@@ -269,7 +243,19 @@ export async function addPlannedCourse(termId: string, courseId: string, compani
                     };
                 },
             );
-            return { planId: plannedTerm.id, courses: added };
+            const placedIds = new Set<string>([...sameTermCourseIds, ...decision.creatingIds]);
+            return {
+                planId: plannedTerm.id,
+                courses: added.map((row) => {
+                    const rule = rules.get(row.id);
+                    return {
+                        ...row,
+                        requiresCourseOverride: rule
+                            ? requiresCourseOverride(rule, placedIds, standing.completedSources)
+                            : false,
+                    };
+                }),
+            };
         }, planTransactionOptions());
         if (!saved) {
             return { success: false as const, error: draftLockedMessage };
@@ -279,7 +265,7 @@ export async function addPlannedCourse(termId: string, courseId: string, compani
         return {
             success: true as const,
             planId: saved.planId,
-            addedCourseIds: creating,
+            addedCourseIds: decision.creatingIds,
             courses: saved.courses,
         };
     } catch (error) {

@@ -1,3 +1,5 @@
+import { isPairViolation } from "./plan-rules";
+
 /** Client deadline for a planner add or remove. The server transaction is shorter than this. */
 export const PLAN_SAVE_DEADLINE_MS = 15_000;
 
@@ -24,6 +26,14 @@ export function withPlanSaveDeadline<T>(work: Promise<T>, ms = PLAN_SAVE_DEADLIN
             },
         );
     });
+}
+
+/** Pair sentences use a sonner toast. Other rule sentences stay on the alert. */
+export function announcePlanViolations(messages: readonly string[]) {
+    return {
+        sonner: messages.filter((message) => isPairViolation(message)),
+        alert: messages.filter((message) => !isPairViolation(message)),
+    };
 }
 
 export type PlanSaveResult = {
