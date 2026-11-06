@@ -32,11 +32,12 @@ export default function DashboardBreadcrumbs() {
                 {segments.map((segment, i) => {
                     const href = `/${segments.slice(0, i + 1).join("/")}`;
                     const isLast = i === segments.length - 1;
+                    const label = labels[segment] ?? (segments[i - 1] === "plans" ? "Plan" : "Details");
 
                     return (
                         <Fragment key={href}>
                             <BreadcrumbItem>
-                                <BreadcrumbLink href={href} className={cn(isLast && "text-foreground pointer-events-none")}>{labels[segment] ?? segment}</BreadcrumbLink>
+                                <BreadcrumbLink href={href} className={cn(isLast && "text-foreground pointer-events-none")}>{label}</BreadcrumbLink>
                             </BreadcrumbItem>
                             {!isLast && (
                                 <BreadcrumbSeparator />

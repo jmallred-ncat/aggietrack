@@ -217,17 +217,18 @@ test("approve with a broken corequisite or offering is rejected", () => {
 });
 
 test("a second tab cannot write after the plan is submitted", async () => {
-  let status: "DRAFT" | "SUBMITTED" = "DRAFT";
+  let status: "DRAFT" | "SUBMITTED" | "RETURNED" = "DRAFT";
   const courses = ["CST 130"];
 
   const updateMany = async (args: {
-    where: { id: string; studentId: string; status: "DRAFT" };
-    data: { status?: "SUBMITTED"; updatedAt?: Date };
+    where: { id: string; studentId: string; status: { in: Array<"DRAFT" | "RETURNED"> }; revision?: number };
+    data: { status?: "SUBMITTED"; updatedAt?: Date; revision?: { increment: number } };
   }) => {
-    assert.equal(args.where.status, "DRAFT");
+    assert.deepEqual(args.where.status, { in: ["DRAFT", "RETURNED"] });
+    assert.equal(args.data.revision?.increment, 1);
     assert.equal(args.where.id, "plan-1");
     assert.equal(args.where.studentId, "student-1");
-    if (status !== "DRAFT") return { count: 0 };
+    if (status !== "DRAFT" && status !== "RETURNED") return { count: 0 };
     if (args.data.status === "SUBMITTED") status = "SUBMITTED";
     return { count: 1 };
   };
@@ -249,6 +250,29 @@ test("a second tab cannot write after the plan is submitted", async () => {
 
   assert.equal(secondWrite, false);
   assert.deepEqual(courses, ["CST 130"]);
+});
+
+test("a returned plan can still be edited until it is submitted again", async () => {
+  let status: "RETURNED" | "SUBMITTED" = "RETURNED";
+  const updateMany = async (args: {
+    where: { status: { in: Array<"DRAFT" | "RETURNED"> }; revision?: number };
+    data: { status?: "SUBMITTED"; revision?: { increment: number } };
+  }) => {
+    if (args.where.revision != null && args.where.revision !== 2) return { count: 0 };
+    if (status !== "RETURNED") return { count: 0 };
+    if (args.data.status === "SUBMITTED") status = "SUBMITTED";
+    return { count: 1 };
+  };
+  const edited = await claimDraftPlan(updateMany, { id: "plan-1", studentId: "student-1", revision: 2 }, { updatedAt: new Date() });
+  assert.equal(edited, true);
+  const resubmitted = await claimDraftPlan(
+    updateMany,
+    { id: "plan-1", studentId: "student-1", revision: 2 },
+    { status: "SUBMITTED", submittedAt: new Date() },
+  );
+  assert.equal(resubmitted, true);
+  const after = await claimDraftPlan(updateMany, { id: "plan-1", studentId: "student-1", revision: 3 }, { updatedAt: new Date() });
+  assert.equal(after, false);
 });
 
 test("removing a course a later course or lab depends on reports the violation", () => {

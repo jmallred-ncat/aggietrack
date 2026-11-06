@@ -112,7 +112,7 @@ export function CourseAttempts({
         );
     }
 
-    function handleAddAttempt(asInProgress = false) {
+    function handleAddAttempt() {
         startTransition(async () => {
             const result = await addTranscriptAttempt({
                 courseId,
@@ -120,8 +120,8 @@ export function CourseAttempts({
                 number: null,
                 title: null,
                 credits,
-                grade: asInProgress ? null : Grade.C,
-                status: asInProgress ? "IN_PROGRESS" : "COMPLETED",
+                grade: Grade.C,
+                status: "COMPLETED",
                 recommendedTermCourseId: recommendedTermCourseId ?? null,
             });
 
@@ -130,7 +130,7 @@ export function CourseAttempts({
                 return;
             }
 
-            toast.success(asInProgress ? "Marked as in progress" : "Attempt added");
+            toast.success("Attempt added");
             const nextAttempts = [...localAttempts, { ...result.entry, createdAt: new Date(result.entry.createdAt) }];
             setLocalAttempts(nextAttempts);
             onAttemptsChange?.(nextAttempts);
@@ -275,7 +275,7 @@ export function CourseAttempts({
                 type="button"
                 variant="ghost"
                 size="sm"
-                onClick={() => handleAddAttempt(false)}
+                onClick={() => handleAddAttempt()}
                 disabled={isPending}
                 className="h-11 gap-1.5 px-3 text-muted-foreground hover:text-foreground sm:h-auto"
             >

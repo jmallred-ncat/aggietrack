@@ -19,6 +19,7 @@ model User {
   studentProfile        StudentProfile?
   advisees              StudentProfile[]      @relation("AdvisorToStudents")
   advisingNotes         AdvisingNote[]        @relation("AdvisorNotes")
+  planNotes             PlanNote[]
   appointmentsAsAdvisor AdvisingAppointment[] @relation("AdvisorAppointments")
 
   @@unique([email])

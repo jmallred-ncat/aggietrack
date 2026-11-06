@@ -2,6 +2,7 @@
 
 import { Alert, AlertAction, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { useState } from "react";
 
 export function RuleViolationAlert({
     title,
@@ -10,9 +11,11 @@ export function RuleViolationAlert({
 }: {
     title: string;
     violations: string[];
-    onDismiss: () => void;
+    onDismiss?: () => void;
 }) {
-    if (violations.length === 0) return null;
+    const key = violations.join("\n");
+    const [hiddenKey, setHiddenKey] = useState<string | null>(null);
+    if (violations.length === 0 || hiddenKey === key) return null;
 
     return (
         <Alert className="mt-4">
@@ -25,8 +28,16 @@ export function RuleViolationAlert({
                 </ul>
             </AlertDescription>
             <AlertAction>
-                <Button type="button" variant="outline" size="sm" onClick={onDismiss}>
-                    Dismiss
+                <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                        setHiddenKey(key);
+                        onDismiss?.();
+                    }}
+                >
+                    Dismiss message
                 </Button>
             </AlertAction>
         </Alert>

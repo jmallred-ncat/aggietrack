@@ -81,6 +81,8 @@ model PlannedTerm {
   term      AcademicTerm   @relation(fields: [termId], references: [id])
 
   status          PlannedTermStatus @default(DRAFT)
+  /// Increments when courses, submission, return, approval, or registration change.
+  revision        Int               @default(0)
   registrationPin String?
   submittedAt     DateTime?
   reviewedAt      DateTime?
@@ -88,6 +90,7 @@ model PlannedTerm {
   registeredAt    DateTime?
 
   courses PlannedCourse[]
+  notes   PlanNote[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -109,4 +112,28 @@ model PlannedCourse {
 
   @@unique([plannedTermId, courseId])
   @@index([courseId])
+}
+
+/// Shared conversation and review events for one term plan.
+/// Private AdvisingNote rows stay on the student and are not part of this thread.
+model PlanNote {
+  id            String      @id @default(cuid())
+  plannedTermId String
+  plannedTerm   PlannedTerm @relation(fields: [plannedTermId], references: [id], onDelete: Cascade)
+
+  authorId   String
+  author     User     @relation(fields: [authorId], references: [id], onDelete: Restrict)
+  /// Name at the time of posting, so the thread still reads if the account changes.
+  authorName String
+  /// Role at the time of posting.
+  authorRole UserRole
+  kind       PlanNoteKind @default(NOTE)
+  body       String
+  /// Client retry key. The same actor and key cannot create a second note.
+  requestId  String?
+
+  createdAt DateTime @default(now())
+
+  @@unique([authorId, requestId])
+  @@index([plannedTermId, createdAt, id])
 }

@@ -73,11 +73,14 @@ export type PlannedTermSnapshot = {
 };
 
 export const draftLockedMessage = "This term plan has already been submitted.";
+export const planChangedMessage = "This plan changed. Refresh the plan before making changes.";
 
 export type DraftClaimData = {
     status?: "SUBMITTED";
     submittedAt?: Date;
+    reviewedAt?: Date | null;
     updatedAt?: Date;
+    revision?: { increment: number };
 };
 
 export class PlanRejected extends Error {
@@ -163,6 +166,23 @@ export function requiresCourseOverride(
         if (!completedAtSchool) return true;
     }
     return false;
+}
+
+/** Advisor-facing notes for one planned course. These do not replace the rule check. */
+export function reviewNotesForCourse(
+    course: RuleCourse,
+    sameTermCourseIds: ReadonlySet<string>,
+    completedSources: ReadonlyMap<string, string>,
+) {
+    const notes: string[] = [];
+    if (course.prerequisitesNeedAdvisorReview) notes.push("Prerequisites need advisor review");
+    if (requiresCourseOverride(course, sameTermCourseIds, completedSources)) notes.push(courseOverrideNote);
+    for (const group of course.groups) {
+        if (!catalogCorequisite(group)) continue;
+        const sentence = `Take with ${optionList(group.options)}`;
+        if (!notes.includes(sentence)) notes.push(sentence);
+    }
+    return notes;
 }
 
 /** Prerequisite, corequisite, and term-offering sentences for one term. */
@@ -273,20 +293,31 @@ function violationsAcrossTerms(
 }
 
 /**
- * Lock a draft row inside the write transaction.
- * A second tab's save matches zero rows once the plan is no longer a draft.
+ * Lock a draft or returned row inside the write transaction.
+ * A second tab's save matches zero rows once the plan is submitted or approved,
+ * or once revision no longer matches.
  */
 export async function claimDraftPlan(
     updateMany: (args: {
-        where: { id: string; studentId: string; status: "DRAFT" };
+        where: {
+            id: string;
+            studentId: string;
+            status: { in: Array<"DRAFT" | "RETURNED"> };
+            revision?: number;
+        };
         data: DraftClaimData;
     }) => Promise<{ count: number }>,
-    plan: { id: string; studentId: string },
+    plan: { id: string; studentId: string; revision?: number },
     data: DraftClaimData,
 ) {
     const updated = await updateMany({
-        where: { id: plan.id, studentId: plan.studentId, status: "DRAFT" },
-        data,
+        where: {
+            id: plan.id,
+            studentId: plan.studentId,
+            status: { in: ["DRAFT", "RETURNED"] },
+            ...(plan.revision != null ? { revision: plan.revision } : {}),
+        },
+        data: { ...data, revision: { increment: 1 } },
     });
     return updated.count === 1;
 }

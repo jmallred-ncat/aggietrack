@@ -50,13 +50,18 @@ export function TestLab({ draft, related, screenshots = [], onUpdate, onExecute 
   </article>;
 }
 
+function Emphasis({ text }: { text: string }) {
+  const parts = text.split(/(\*\*[^*]+\*\*)/g);
+  return <>{parts.map((part, index) => part.startsWith("**") && part.endsWith("**") ? <strong key={index}>{part.slice(2, -2)}</strong> : part)}</>;
+}
+
 function ItemSection({ title, items, ordered = false, links = [] }: { title: string; items: string[]; ordered?: boolean; links?: Related[] }) {
   if (items.length === 0 && links.length === 0) return null;
   const List = ordered ? "ol" : "ul";
   return <section>
     <h2 className="text-sm font-semibold">{title}</h2>
     {links.length > 0 && <ul className="mt-2 space-y-2 text-sm leading-6">{links.map(item => <li key={item.href}><RecordLink item={item}/></li>)}</ul>}
-    {items.length > 0 && <List className={ordered ? "mt-2 list-decimal space-y-2 pl-5 text-sm leading-6" : "mt-2 list-disc space-y-2 pl-5 text-sm leading-6"}>{items.map((item, index) => <li key={`${index}-${item}`}>{item}</li>)}</List>}
+    {items.length > 0 && <List className={ordered ? "mt-2 list-decimal space-y-2 pl-5 text-sm leading-6" : "mt-2 list-disc space-y-2 pl-5 text-sm leading-6"}>{items.map((item, index) => <li key={`${index}-${item}`}><Emphasis text={item} /></li>)}</List>}
   </section>;
 }
 

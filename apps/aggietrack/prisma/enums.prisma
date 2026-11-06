@@ -55,6 +55,14 @@ enum PlannedTermStatus {
   DRAFT
   SUBMITTED
   APPROVED
+  RETURNED
+}
+
+enum PlanNoteKind {
+  NOTE
+  RETURN
+  SUBMISSION
+  APPROVAL
 }
 
 enum StudentStanding {

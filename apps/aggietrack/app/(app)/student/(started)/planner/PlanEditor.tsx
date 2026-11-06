@@ -1,5 +1,6 @@
 "use client";
 
+import { PlanNotes } from "@/components/plan-notes";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/components/ui/empty";
@@ -12,7 +13,9 @@ import { courseMatchesSearch } from "@/lib/course-search";
 import type { PlannedTermStatus } from "@/lib/generated/prisma/client";
 import type { HandbookReference } from "@/lib/handbook-guidance";
 import { announcePlanViolations, finishPlanSave, type PlanSaveResult } from "@/lib/plan-save";
+import type { PresentedNote } from "@/lib/plan-notes";
 import { courseOverrideNote } from "@/lib/plan-rules";
+import { planCoursesLocked, plannedTermStatusLabel, plannedTermStatusVariant } from "@/lib/plan-status";
 import { applyAddedCourses, applyRemovedCourse, termCreditLabel, termCreditTotal } from "@/lib/plan-view";
 import { MagnifyingGlassIcon, XIcon } from "@phosphor-icons/react";
 import { useRouter } from "next/navigation";
@@ -72,8 +75,10 @@ type PlannedRow = CatalogCourse & { plannedCourseId: string };
 type EditorPlan = {
     id: string;
     status: PlannedTermStatus;
+    revision: number;
     registrationPin: string | null;
     registered: boolean;
+    returnComment: string | null;
     courses: PlannedRow[];
 };
 
@@ -81,8 +86,10 @@ function withCourses(current: EditorPlan | null, next: { id: string | null; cour
     return {
         id: next.id ?? current?.id ?? "",
         status: current?.status ?? "DRAFT",
+        revision: current?.revision ?? 0,
         registrationPin: current?.registrationPin ?? null,
         registered: current?.registered ?? false,
+        returnComment: current?.returnComment ?? null,
         courses: next.courses,
     };
 }
@@ -94,6 +101,8 @@ export default function PlanEditor({
     plan,
     courses,
     reference,
+    notes,
+    earlierCursor,
 }: {
     termId: string;
     termLabel: string;
@@ -101,6 +110,8 @@ export default function PlanEditor({
     plan: EditorPlan | null;
     courses: CatalogCourse[];
     reference: HandbookReference | null;
+    notes: PresentedNote[];
+    earlierCursor: string | null;
 }) {
     const router = useRouter();
     const [query, setQuery] = useState("");
@@ -119,7 +130,7 @@ export default function PlanEditor({
     }
     const shown = localPlan;
     const status = shown?.status ?? "DRAFT";
-    const editable = status === "DRAFT";
+    const editable = !planCoursesLocked(status);
     const plannedIds = new Set(shown?.courses.map((course) => course.id) ?? []);
     const creditLabel = termCreditLabel(termCreditTotal(shown?.courses ?? []));
     const needle = query.trim().toLowerCase();
@@ -154,7 +165,8 @@ export default function PlanEditor({
                 setViolations(result.violations);
             } else {
                 setViolations([]);
-                toast.add({ title: success });
+                if (success === "Plan submitted for review") sonner.success(success);
+                else toast.add({ title: success });
             }
             setQuery("");
             setResultsOpen(false);
@@ -215,8 +227,8 @@ export default function PlanEditor({
                     <h2 className="text-2xl font-bold not-typeset text-balance">{termLabel}</h2>
                     <p className="text-sm text-muted-foreground tabular-nums not-typeset">{creditLabel}</p>
                 </div>
-                <Badge className="not-typeset" variant={status === "APPROVED" ? "default" : "secondary"}>
-                    {status === "DRAFT" ? "Draft" : status === "SUBMITTED" ? "Submitted" : "Approved"}
+                <Badge className="not-typeset" variant={plannedTermStatusVariant(status)}>
+                    {plannedTermStatusLabel(status)}
                 </Badge>
             </header>
 
@@ -229,9 +241,11 @@ export default function PlanEditor({
                             ? advisorName
                                 ? `Waiting for ${advisorName} to review this plan and add a registration pin.`
                                 : "Waiting for an advisor to review this plan. No advisor is assigned yet."
-                            : advisorName
-                                ? `Add the courses you want to take, then submit the plan for ${advisorName} to review.`
-                                : "Add the courses you want to take, then submit the plan. No advisor is assigned yet."}
+                            : status === "RETURNED"
+                                ? "Your advisor requested changes. Read the comment, update your courses, then submit the plan again."
+                                : advisorName
+                                    ? `Add the courses you want to take, then submit the plan for ${advisorName} to review.`
+                                    : "Add the courses you want to take, then submit the plan. No advisor is assigned yet."}
             </p>
 
             <RuleViolationAlert
@@ -241,6 +255,18 @@ export default function PlanEditor({
             />
 
             {editable && reference ? <HandbookReferenceNote reference={reference} /> : null}
+
+            {status === "RETURNED" && shown?.returnComment ? (
+                <div className="mt-4 rounded-lg border bg-muted p-4">
+                    <p className="text-sm font-medium">Changes to make</p>
+                    <p className="mt-2 text-sm whitespace-pre-wrap [overflow-wrap:anywhere]">{shown.returnComment}</p>
+                    <a className="mt-2 inline-block text-sm underline" href="#plan-notes">View in Plan notes</a>
+                </div>
+            ) : null}
+
+            {status === "APPROVED" && shown && !shown.registrationPin ? (
+                <p className="mt-4 rounded-lg border p-4 text-sm">Registration pin unavailable</p>
+            ) : null}
 
             {status === "APPROVED" && shown?.registrationPin && (
                 <p className="mt-4 inline-flex items-center gap-3 rounded-lg bg-muted px-4 py-3 not-typeset">
@@ -289,12 +315,17 @@ export default function PlanEditor({
                                             disabled={pending}
                                             onMouseDown={(event) => event.preventDefault()}
                                             onClick={() => runCourseChange(
-                                                () => addPlannedCourse(termId, course.id),
+                                                () => addPlannedCourse(termId, course.id, [], shown?.revision),
                                                 `${course.subject} ${course.number} added`,
                                                 (result) => {
-                                                    setLocalPlan((current) => withCourses(current, applyAddedCourses(current, {
-                                                        planId: result.planId,
-                                                        courses: result.courses.map((row) => ({
+                                                    if (result.revision == null || !result.planId || !result.courses) return;
+                                                    const added = result.courses;
+                                                    const revision = result.revision;
+                                                    const planId = result.planId;
+                                                    setLocalPlan((current) => ({
+                                                    ...withCourses(current, applyAddedCourses(current, {
+                                                        planId,
+                                                        courses: added.map((row) => ({
                                                             plannedCourseId: row.plannedCourseId,
                                                             id: row.id,
                                                             subject: row.subject,
@@ -304,7 +335,9 @@ export default function PlanEditor({
                                                             requirements: requirementsFor(row.id, course),
                                                             requiresCourseOverride: row.requiresCourseOverride,
                                                         })),
-                                                    })));
+                                                    })),
+                                                    revision,
+                                                }));
                                                 },
                                             )}
                                         >
@@ -345,11 +378,16 @@ export default function PlanEditor({
                                         aria-label={`Remove ${course.subject} ${course.number}`}
                                         disabled={pending}
                                         onClick={() => runCourseChange(
-                                            () => removePlannedCourse(course.plannedCourseId),
+                                            () => removePlannedCourse(course.plannedCourseId, shown?.revision),
                                             `${course.subject} ${course.number} removed`,
-                                            () => {
+                                            (result) => {
+                                                if (result.revision == null) return;
+                                                const revision = result.revision;
                                                 setLocalPlan((current) => current
-                                                    ? withCourses(current, applyRemovedCourse(current, course.plannedCourseId))
+                                                    ? {
+                                                        ...withCourses(current, applyRemovedCourse(current, course.plannedCourseId)),
+                                                        revision,
+                                                    }
                                                     : current);
                                             },
                                         )}
@@ -378,16 +416,21 @@ export default function PlanEditor({
                         type="button"
                         disabled={pending || !shown || shown.courses.length === 0}
                         onClick={() => shown && run(
-                            () => submitPlannedTerm(shown.id),
-                            "Term plan submitted",
-                            () => setLocalPlan((current) => current ? { ...current, status: "SUBMITTED" } : current),
+                            () => submitPlannedTerm(shown.id, shown.revision),
+                            "Plan submitted for review",
+                            (result) => setLocalPlan((current) => current ? {
+                                ...current,
+                                status: "SUBMITTED",
+                                returnComment: null,
+                                revision: result.revision,
+                            } : current),
                             "This plan cannot be submitted",
                         )}
                     >
-                        Submit for review
+                        {status === "RETURNED" ? "Submit again for review" : "Submit for review"}
                     </Button>
                 )}
-                {status === "APPROVED" && shown && !shown.registered && (
+                {status === "APPROVED" && shown?.registrationPin && !shown.registered && (
                     <Button
                         type="button"
                         disabled={pending}
@@ -401,6 +444,19 @@ export default function PlanEditor({
                     </Button>
                 )}
             </div>
+            {shown?.id ? (
+                <div className="mt-6">
+                    <PlanNotes
+                        plannedTermId={shown.id}
+                        audience="student"
+                        advisorAssigned={advisorName !== null}
+                        notes={notes}
+                        earlierCursor={earlierCursor}
+                    />
+                </div>
+            ) : (
+                <p className="mt-6 text-sm text-muted-foreground">Add a course to create this term plan before posting a note.</p>
+            )}
         </section>
     );
 }
