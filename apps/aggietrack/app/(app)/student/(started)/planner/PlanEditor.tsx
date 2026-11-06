@@ -10,6 +10,7 @@ import { toast } from "@/components/ui/toast";
 import { RuleViolationAlert } from "@/components/rule-violation-alert";
 import { courseMatchesSearch } from "@/lib/course-search";
 import type { PlannedTermStatus } from "@/lib/generated/prisma/client";
+import type { HandbookReference } from "@/lib/handbook-guidance";
 import { announcePlanViolations, finishPlanSave, type PlanSaveResult } from "@/lib/plan-save";
 import { courseOverrideNote } from "@/lib/plan-rules";
 import { applyAddedCourses, applyRemovedCourse, termCreditLabel, termCreditTotal } from "@/lib/plan-view";
@@ -50,6 +51,22 @@ function CourseOverrideNote({ show }: { show: boolean }) {
     );
 }
 
+function HandbookReferenceNote({ reference }: { reference: HandbookReference }) {
+    return (
+        <div className="mt-4 rounded-lg border border-dashed border-border px-4 py-3 not-typeset" data-handbook-reference>
+            <p className="flex min-w-0 items-start gap-2 text-sm text-muted-foreground">
+                <Badge variant="outline" className="mt-0.5 shrink-0 font-mono text-muted-foreground">
+                    {reference.code}
+                </Badge>
+                <span className="min-w-0 text-balance">
+                    <span className="block">{reference.classYear} calls for {reference.title}.</span>
+                    {reference.aside ? <span className="mt-1 block">{reference.aside}</span> : null}
+                </span>
+            </p>
+        </div>
+    );
+}
+
 type PlannedRow = CatalogCourse & { plannedCourseId: string };
 
 type EditorPlan = {
@@ -76,12 +93,14 @@ export default function PlanEditor({
     advisorName,
     plan,
     courses,
+    reference,
 }: {
     termId: string;
     termLabel: string;
     advisorName: string | null;
     plan: EditorPlan | null;
     courses: CatalogCourse[];
+    reference: HandbookReference | null;
 }) {
     const router = useRouter();
     const [query, setQuery] = useState("");
@@ -220,6 +239,8 @@ export default function PlanEditor({
                 violations={violations}
                 onDismiss={() => setViolations([])}
             />
+
+            {editable && reference ? <HandbookReferenceNote reference={reference} /> : null}
 
             {status === "APPROVED" && shown?.registrationPin && (
                 <p className="mt-4 inline-flex items-center gap-3 rounded-lg bg-muted px-4 py-3 not-typeset">

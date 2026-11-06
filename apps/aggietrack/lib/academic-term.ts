@@ -14,6 +14,10 @@ export function academicTermLabel(term: { season: TermSeason; year: number }) {
     return `${seasonLabels[term.season]} ${term.year}`;
 }
 
+export function termSeasonLabel(season: TermSeason) {
+    return seasonLabels[season];
+}
+
 type DatedTerm = {
     season: TermSeason;
     startsOn: Date;
