@@ -3,12 +3,16 @@ import { getProgressSlotCourses, type ProgressSlotCourse } from "@/lib/catalog";
 import { computeDegreeProgress } from "@/lib/degree-progress";
 import type { TranscriptSource, TranscriptStatus } from "@/lib/generated/prisma/browser";
 import { computeGpa } from "@/lib/gpa";
+import { loggedRequirementCredits } from "@/lib/logged-credits";
 import { getCurriculumRecommendations, planPosition, requirementGroupTitle, requirementSlotBadge } from "@/lib/planner";
+import { prisma } from "@/lib/prisma";
+import { formatProgramName } from "@/lib/program";
 import { slotIsUnfilled } from "@/lib/progress-slots";
-import { hasConfirmedStart, requireStudentProfile } from "@/lib/student";
+import { getStudentProfile, hasConfirmedStart } from "@/lib/student";
 import { getTranscript, progressStatusFromEntry, type ProgressStatus } from "@/lib/transcript";
 import { ArrowsLeftRightIcon, CheckCircleIcon, MedalIcon } from "@phosphor-icons/react/dist/ssr";
 import ProgressForm, { type ProgressTerm, type ProgressYear } from "./ProgressForm";
+import { RequirementSummary } from "./RequirementSummary";
 
 const emptySlot = {
     courseId: "",
@@ -51,13 +55,58 @@ type TranscriptAttempt = {
 };
 
 export default async function ProgressPage() {
-    const profile = await requireStudentProfile();
-    const [transcript, curriculum, slotCourses, progress] = await Promise.all([
+    const profile = await getStudentProfile();
+    if (!profile) {
+        return (
+            <div className="flex min-h-full flex-1 flex-col">
+                <header>
+                    <h1>Your Degree Progress</h1>
+                    <p className="max-w-prose text-sm text-balance text-muted-foreground">A student profile is required to view degree progress.</p>
+                </header>
+            </div>
+        );
+    }
+
+    const [transcript, curriculum, slotCourses, progress, requirementGroups] = await Promise.all([
         getTranscript(),
         getCurriculumRecommendations(),
         getProgressSlotCourses(),
         computeDegreeProgress(profile.id),
+        prisma.requirementGroup.findMany({
+            where: { catalogYearId: profile.catalogYearId },
+            orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+            select: {
+                id: true,
+                name: true,
+                minCredits: true,
+                sortOrder: true,
+                items: { select: { courseId: true } },
+            },
+        }),
     ]);
+    const slotIds = transcript.flatMap((entry) => entry.recommendedTermCourseId ? [entry.recommendedTermCourseId] : []);
+    const slotGroups = slotIds.length === 0
+        ? []
+        : await prisma.recommendedTermCourse.findMany({
+            where: { id: { in: slotIds } },
+            select: { id: true, requirementGroupId: true },
+        });
+    const groupBySlot = new Map(slotGroups.map((row) => [row.id, row.requirementGroupId]));
+    const logged = loggedRequirementCredits(
+        requirementGroups.map((group) => ({
+            id: group.id,
+            name: group.name,
+            minCredits: group.minCredits,
+            sortOrder: group.sortOrder,
+            courseIds: group.items.map((item) => item.courseId),
+        })),
+        transcript.map((entry) => ({
+            courseId: entry.courseId,
+            credits: entry.credits,
+            status: entry.status,
+            groupId: entry.recommendedTermCourseId ? groupBySlot.get(entry.recommendedTermCourseId) ?? null : null,
+        })),
+    );
     const gpa = computeGpa(transcript);
 
     const terms: Array<ProgressTerm & { yearLabel: string }> = [...curriculum]
@@ -246,8 +295,15 @@ export default async function ProgressPage() {
         <div className="flex min-h-full flex-1 flex-col">
             <header>
                 <h1>Your Degree Progress</h1>
+                <RequirementSummary
+                    programName={formatProgramName(profile.catalogYear.program)}
+                    catalogYear={profile.catalogYear.year}
+                    totalCredits={profile.catalogYear.program.totalCredits}
+                    groups={logged.groups}
+                    hasCompletedEntries={logged.hasCompletedEntries}
+                />
                 {progress.earnedCredits === 0 && (
-                    <p className="text-sm text-muted-foreground max-w-prose w-full text-balance">AggieTrack needs the courses you have already completed before you can continue. Mark those courses below, or say you have no prior coursework.</p>
+                    <p className="mt-4 max-w-prose text-sm text-balance text-muted-foreground">AggieTrack needs the courses you have already completed before you can continue. Mark those courses below, or say you have no prior coursework.</p>
                 )}
                 {progress.earnedCredits > 0 && (
                     <div className="mt-4 rounded-lg border border-border bg-muted px-4 py-3 not-typeset">

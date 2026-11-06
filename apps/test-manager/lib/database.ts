@@ -14,7 +14,7 @@ export const sectionDefinitions = seed.sections.map(section => {
 });
 
 const idFormat = "prefix-pad2";
-const copyRevision = "human-2026-11-06-apple";
+const copyRevision = "human-2026-11-06-agt11";
 const voiceFields: Record<string, string[]> = {
   Tests: ["Test / scenario", "Preconditions", "Inputs / data", "Procedure", "Expected result", "Pass criterion", "Evidence to retain"],
   "Risks & Decisions": ["Issue / risk", "Source gap or constraint", "Proposed control / decision"],
@@ -68,7 +68,10 @@ export async function applyHumanCopy(db: PrismaClient = getPrisma()) {
         const id = normalizeId(String(row.id));
         let current = await tx.workbookRecord.findUnique({ where: { section_id: { section: section.name, id } } });
         if (!current && id === "Source baseline") current = await tx.workbookRecord.findFirst({ where: { section: "Traceability", id: { startsWith: "Source baseline:" } } });
-        if (!current) continue;
+        if (!current) {
+          await tx.workbookRecord.create({ data: { section: section.name, id, position: row.sourceRow, values: rewriteRecordValues(row.values as Values) as Prisma.InputJsonValue } });
+          continue;
+        }
         const values = { ...(current.values as Values) };
         const next = rewriteRecordValues(row.values as Values);
         for (const field of fields) if (field in next) values[field] = next[field] ?? "";
