@@ -3,6 +3,7 @@
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { completionGradeChoices, completionGradeLabel, isCompletionGrade } from "@/lib/completion-menu";
 import { Grade } from "@/lib/generated/prisma/browser";
+import { cn } from "@/lib/utils";
 
 const gradeOptions = completionGradeChoices();
 
@@ -12,12 +13,17 @@ export function GradeSelect({
     disabled,
     size = "sm",
     placeholder = "Grade",
+    label,
+    className,
 }: {
     value: Grade | null;
     onChange: (grade: Grade) => void;
     disabled?: boolean;
     size?: "sm" | "default";
     placeholder?: string;
+    /** Accessible name, such as "Grade for CST 130". */
+    label?: string;
+    className?: string;
 }) {
     return (
         <Select
@@ -29,7 +35,7 @@ export function GradeSelect({
             }}
             disabled={disabled}
         >
-            <SelectTrigger size={size} className="w-[4.5rem]">
+            <SelectTrigger size={size} aria-label={label} className={cn("w-[4.5rem]", className)}>
                 <SelectValue placeholder={placeholder}>
                     {value ? completionGradeLabel(value) : placeholder}
                 </SelectValue>

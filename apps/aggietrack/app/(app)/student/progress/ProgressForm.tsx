@@ -1,5 +1,6 @@
 "use client";
 
+import { Alert, AlertAction, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -97,7 +98,7 @@ export type ProgressTerm = {
     id: string;
     label: string;
     rows: Array<
-        | { id: string; kind: "course"; courseId: string; subject: string; number: string; title: string }
+        | { id: string; kind: "course"; courseId: string; subject: string; number: string; title: string; credits: number }
         | {
             id: string;
             kind: "slot";
@@ -136,6 +137,7 @@ function CourseStatusField({
     onBlur,
     disabled,
     inProgress,
+    courseCode,
     releaseInteraction = false,
 }: {
     value?: SlotValue["status"];
@@ -143,6 +145,7 @@ function CourseStatusField({
     onBlur?: () => void;
     disabled?: boolean;
     inProgress?: boolean;
+    courseCode?: string;
     /** Drop leftover focus and hover after a completion is cleared. */
     releaseInteraction?: boolean;
 }) {
@@ -174,9 +177,9 @@ function CourseStatusField({
     }, [releaseInteraction]);
 
     return (
-        <div ref={rootRef} className="flex items-center gap-2">
+        <div ref={rootRef} className="flex min-w-0 flex-wrap items-center gap-2">
             {inProgress && !value ? (
-                <span className="text-xs text-muted-foreground">In progress</span>
+                <Badge variant="secondary">In progress</Badge>
             ) : null}
             <ToggleInputGroup
                 {...(value === undefined ? {} : { value })}
@@ -189,11 +192,19 @@ function CourseStatusField({
                 disabled={disabled}
                 variant="default"
                 attached
+                aria-label={courseCode ? `Record ${courseCode}` : "Record this course"}
                 className="w-full sm:w-fit"
             >
                 {courseStatuses.map(({ value: status, label, icon }) => (
-                    <ToggleInput key={status} value={status} aria-label={label} title={label} className="flex-1 px-0 sm:flex-none">
+                    <ToggleInput
+                        key={status}
+                        value={status}
+                        aria-label={label}
+                        title={label}
+                        className="h-11 flex-1 gap-1.5 px-3 sm:h-8 sm:flex-none"
+                    >
                         <StatusIcon icon={icon} />
+                        <span>{label}</span>
                     </ToggleInput>
                 ))}
             </ToggleInputGroup>
@@ -592,6 +603,12 @@ function SlotField({
     onBlur: () => void;
 }) {
     const hasCourse = Boolean(value.courseId || (value.subject && value.number));
+    const selectedCourse = courses.find((course) => course.id === value.courseId);
+    const courseCode = selectedCourse
+        ? `${selectedCourse.subject} ${selectedCourse.number}`
+        : value.subject && value.number
+            ? `${value.subject} ${value.number}`
+            : label;
 
     return (
         <div className="flex w-full flex-col gap-2 sm:w-auto sm:items-end">
@@ -618,6 +635,7 @@ function SlotField({
                 )}
                 <CourseStatusField
                     value={value.status}
+                    courseCode={courseCode}
                     disabled={!hasCourse}
                     inProgress={inProgress}
                     releaseInteraction={releaseInteraction}
@@ -625,7 +643,7 @@ function SlotField({
                     onBlur={onBlur}
                 />
             </div>
-            {statusError ? <p className="text-xs text-destructive">{statusError}</p> : null}
+            {statusError ? <FieldError errors={[{ message: statusError }]} /> : null}
         </div>
     );
 }
@@ -844,6 +862,7 @@ export default function ProgressForm({
         startConfirmed ? "saved" : "idle",
     );
     const [saveError, setSaveError] = useState<string | null>(null);
+    const [errorDismissed, setErrorDismissed] = useState(false);
     const [startKnown, setStartKnown] = useState(startConfirmed);
     const { isDirty } = form.formState;
     const recordsCoursework = formRecordsCoursework(watched);
@@ -854,11 +873,13 @@ export default function ProgressForm({
         if (!parsed.success) {
             setSaveState("error");
             setSaveError("Finish the course you started before you confirm.");
+            setErrorDismissed(false);
             return;
         }
         if (confirmStart && !formRecordsCoursework(parsed.data)) {
             setSaveState("error");
             setSaveError("Mark the courses you have completed, or say you have no prior coursework.");
+            setErrorDismissed(false);
             return;
         }
 
@@ -868,12 +889,14 @@ export default function ProgressForm({
             result = await saveTranscriptProgress(progressPayload(parsed.data, confirmStart));
         } catch {
             setSaveState("error");
-            setSaveError("The save did not finish.");
+            setSaveError("Your changes are still on this page. Try saving again.");
+            setErrorDismissed(false);
             return;
         }
         if (!result.success) {
             setSaveState("error");
-            setSaveError(result.error);
+            setSaveError("Your changes are still on this page. Try saving again.");
+            setErrorDismissed(false);
             return;
         }
 
@@ -899,6 +922,8 @@ export default function ProgressForm({
         )));
         if (marked) {
             toast.success(marked.title, { description: marked.description });
+        } else {
+            toast.success("Progress saved");
         }
         if (result.startConfirmed && !startKnown) {
             setStartKnown(true);
@@ -917,12 +942,14 @@ export default function ProgressForm({
             });
         } catch {
             setSaveState("error");
-            setSaveError("The save did not finish.");
+            setSaveError("Your changes are still on this page. Try saving again.");
+            setErrorDismissed(false);
             return;
         }
         if (!result.success) {
             setSaveState("error");
-            setSaveError(result.error);
+            setSaveError("Your changes are still on this page. Try saving again.");
+            setErrorDismissed(false);
             return;
         }
 
@@ -939,25 +966,25 @@ export default function ProgressForm({
     const showNoPrior = !startKnown && !recordsCoursework && saveState !== "saving";
     const showConfirm = !startKnown && recordsCoursework && saveState !== "saving";
     const saveMessage = saveState === "saving"
-        ? "Saving"
+        ? "Saving progress…"
         : saveState === "error"
-            ? `Not saved. ${saveError ?? "Those changes were not saved."}`
+            ? ""
             : !startKnown && recordsCoursework && !formIsValid
                 ? "Finish the course you started before you confirm."
                 : !startKnown && recordsCoursework
-                    ? "Confirm these courses to continue."
+                    ? "Save these courses to continue."
                     : !startKnown
                         ? "Mark the courses you have completed, or say you have none."
                         : isDirty
-                            ? "Save these changes when you are ready."
-                            : "Saved";
+                            ? "You have unsaved changes."
+                            : "";
 
     return (
         <form
             className="flex flex-1 flex-col"
             onSubmit={(event) => event.preventDefault()}
         >
-            <section className="mt-6 space-y-8 pb-6">
+            <section id="progress-courses" className="mt-6 space-y-8 pb-24">
                 <fieldset className="not-typeset space-y-2">
                     <legend className="text-sm font-medium">Student status</legend>
                     <p className="max-w-prose text-sm text-balance text-muted-foreground">
@@ -1029,7 +1056,11 @@ export default function ProgressForm({
                                                     : null;
 
                                             return (
-                                                <div key={row.id} className="not-typeset">
+                                                <div
+                                                    key={row.id}
+                                                    id={row.kind === "course" ? `progress-course-${row.courseId}` : `progress-slot-${row.id}`}
+                                                    className="not-typeset scroll-mt-28"
+                                                >
                                                     {/* Desktop: single row with centered items */}
                                                     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
                                                         {/* Course info */}
@@ -1037,7 +1068,7 @@ export default function ProgressForm({
                                                             {row.kind === "course" ? (
                                                                 <>
                                                                     <Badge className="shrink-0 font-mono">{row.subject} {row.number}</Badge>
-                                                                    <span className="min-w-0 truncate">{row.title}</span>
+                                                                    <span className="min-w-0 whitespace-normal">{row.title}</span>
                                                                 </>
                                                             ) : (
                                                                 <>
@@ -1048,7 +1079,7 @@ export default function ProgressForm({
                                                                     ) : row.badge ? (
                                                                         <Badge variant="outline" className="shrink-0 font-mono">{row.badge}</Badge>
                                                                     ) : null}
-                                                                    <span className="min-w-0 truncate">{slotCourse?.title ?? enteredCourse?.title ?? row.title}</span>
+                                                                    <span className="min-w-0 whitespace-normal">{slotCourse?.title ?? enteredCourse?.title ?? row.title}</span>
                                                                 </>
                                                             )}
                                                         </div>
@@ -1063,7 +1094,7 @@ export default function ProgressForm({
                                                                         subject={row.subject}
                                                                         number={row.number}
                                                                         title={row.title}
-                                                                        credits={3}
+                                                                        credits={row.credits}
                                                                         attempts={attempts}
                                                                         onUpdate={() => router.refresh()}
                                                                         onAttemptsChange={(next) => replaceAttempts("courses", row.courseId, next)}
@@ -1102,7 +1133,7 @@ export default function ProgressForm({
                                                                                 subject: slotValue.subject,
                                                                                 number: slotValue.number,
                                                                                 title: slotValue.title,
-                                                                                credits: Number(slotValue.credits) || 3,
+                                                                                credits: Number(slotValue.credits),
                                                                             }
                                                                             : null;
 
@@ -1145,6 +1176,7 @@ export default function ProgressForm({
                                                                         render={({ field }) => (
                                                                             <CourseStatusField
                                                                                 value={field.value ?? ""}
+                                                                                courseCode={`${row.subject} ${row.number}`}
                                                                                 inProgress={inProgressCourses.has(row.courseId)}
                                                                                 releaseInteraction={releasedRows[row.id] === true}
                                                                                 onChange={field.onChange}
@@ -1231,26 +1263,55 @@ export default function ProgressForm({
                     </div>
                 ) : null}
             </section>
-            <div className="sticky bottom-0 z-10 mt-auto flex items-center justify-between gap-4 border-t bg-background py-3">
-                <p className={saveState === "error" ? "text-sm text-destructive not-typeset" : "text-sm text-muted-foreground not-typeset"}>
-                    {saveMessage}
-                </p>
-                <div className="flex shrink-0 items-center gap-2">
-                    {showNoPrior ? (
-                        <Button type="button" variant="outline" onClick={() => void onNoPriorCoursework()}>
-                            I have no prior coursework
+            <div className="sticky bottom-0 z-10 mt-auto flex min-w-0 flex-col gap-3 border-t bg-background px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+                {saveState === "error" && !errorDismissed ? (
+                    <Alert variant="destructive">
+                        <AlertTitle>Progress not saved</AlertTitle>
+                        <AlertDescription>{saveError ?? "Your changes are still on this page. Try saving again."}</AlertDescription>
+                        <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            className="mt-2 w-full sm:w-auto"
+                            onClick={() => void (showNoPrior ? onNoPriorCoursework() : persist(showConfirm || !startKnown))}
+                        >
+                            Try again
                         </Button>
-                    ) : null}
-                    {showConfirm ? (
-                        <Button type="button" onClick={() => void persist(true)} disabled={!formIsValid}>
-                            Confirm
-                        </Button>
-                    ) : null}
-                    {startKnown && isDirty ? (
-                        <Button type="button" onClick={() => void persist(false)} disabled={saveState === "saving" || !formIsValid}>
-                            Save progress
-                        </Button>
-                    ) : null}
+                        <AlertAction>
+                            <Button type="button" size="sm" variant="ghost" aria-label="Dismiss message" onClick={() => setErrorDismissed(true)}>
+                                Dismiss message
+                            </Button>
+                        </AlertAction>
+                    </Alert>
+                ) : null}
+                <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+                    {saveMessage ? (
+                        <p className="min-w-0 text-sm text-balance text-muted-foreground not-typeset">
+                            {saveMessage}
+                        </p>
+                    ) : <span className="min-w-0" />}
+                    <div className="flex w-full min-w-0 flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center">
+                        {showNoPrior ? (
+                            <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={() => void onNoPriorCoursework()}>
+                                I have no prior coursework
+                            </Button>
+                        ) : null}
+                        {saveState === "saving" ? (
+                            <Button type="button" className="w-full sm:w-auto" disabled aria-busy="true">
+                                Saving…
+                            </Button>
+                        ) : null}
+                        {showConfirm ? (
+                            <Button type="button" className="w-full sm:w-auto" onClick={() => void persist(true)} disabled={!formIsValid}>
+                                Save and continue
+                            </Button>
+                        ) : null}
+                        {startKnown && isDirty ? (
+                            <Button type="button" className="w-full sm:w-auto" onClick={() => void persist(false)} disabled={saveState === "saving" || !formIsValid}>
+                                Save progress
+                            </Button>
+                        ) : null}
+                    </div>
                 </div>
             </div>
         </form>

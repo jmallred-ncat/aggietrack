@@ -1,5 +1,6 @@
 "use client";
 
+import { Alert, AlertAction, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
     AlertDialog,
     AlertDialogAction,
@@ -12,6 +13,8 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -33,8 +36,16 @@ import {
     isCompletionGrade,
     runAfterConfirmCloses,
 } from "@/lib/completion-menu";
+import {
+    chooseAddAttemptGrade,
+    confirmAddAttempt,
+    keepAddAttemptChoice,
+    openAddAttempt,
+} from "@/lib/add-attempt";
+import { attemptCreditPhrase, catalogCreditsReady } from "@/lib/attempt-credits";
 import { cn } from "@/lib/utils";
 import { CaretDownIcon, PlusIcon } from "@phosphor-icons/react";
+import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
 import { addTranscriptAttempt, removeTranscriptAttempt, updateTranscriptGrade } from "./grade-actions";
@@ -54,6 +65,7 @@ export function CourseAttempts({
     courseId,
     subject,
     number,
+    title,
     credits,
     attempts,
     recommendedTermCourseId,
@@ -75,10 +87,16 @@ export function CourseAttempts({
     onLastAttemptCleared?: () => void;
     onClearFailed?: () => void;
 }) {
+    const router = useRouter();
     const [isPending, startTransition] = useTransition();
     const [localAttempts, setLocalAttempts] = useState(attempts);
     const [confirmId, setConfirmId] = useState<string | null>(null);
     const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+    const [addOpen, setAddOpen] = useState(false);
+    const [addGrade, setAddGrade] = useState<Grade | null>(null);
+    const [adding, setAdding] = useState(false);
+    const [addNotice, setAddNotice] = useState<"grade" | "credits" | null>(null);
+    const courseCode = `${subject} ${number}`;
 
     function handleGradeChange(attemptId: string, grade: Grade) {
         const oldAttempts = [...localAttempts];
@@ -93,7 +111,17 @@ export function CourseAttempts({
             },
             () => {
                 startTransition(async () => {
-                    const result = await updateTranscriptGrade({ entryId: attemptId, grade });
+                    let result: Awaited<ReturnType<typeof updateTranscriptGrade>>;
+                    try {
+                        result = await updateTranscriptGrade({ entryId: attemptId, grade });
+                    } catch {
+                        setLocalAttempts(oldAttempts);
+                        onAttemptsChange?.(oldAttempts);
+                        toast.error("Could not update the grade", {
+                            description: "The change could not be confirmed. Refresh before trying again.",
+                        });
+                        return;
+                    }
 
                     if (!result.success) {
                         setLocalAttempts(oldAttempts);
@@ -112,30 +140,77 @@ export function CourseAttempts({
         );
     }
 
-    function handleAddAttempt() {
-        startTransition(async () => {
-            const result = await addTranscriptAttempt({
-                courseId,
-                subject: null,
-                number: null,
-                title: null,
-                credits,
-                grade: Grade.C,
-                status: "COMPLETED",
-                recommendedTermCourseId: recommendedTermCourseId ?? null,
-            });
+    function openAdd() {
+        if (!catalogCreditsReady(credits)) {
+            setAddOpen(false);
+            setAddNotice("credits");
+            return;
+        }
+        const draft = openAddAttempt(addGrade);
+        setAddGrade(draft.grade);
+        setAddNotice(null);
+        setAddOpen(true);
+    }
 
-            if (!result.success) {
-                toast.error("Could not add the attempt", { description: result.error });
-                return;
-            }
+    function confirmAdd() {
+        const decision = confirmAddAttempt({ open: true, grade: addGrade, pending: false });
+        if (!decision.ok) {
+            setAddNotice("grade");
+            setAddOpen(true);
+            return;
+        }
 
-            toast.success("Attempt added");
-            const nextAttempts = [...localAttempts, { ...result.entry, createdAt: new Date(result.entry.createdAt) }];
-            setLocalAttempts(nextAttempts);
-            onAttemptsChange?.(nextAttempts);
-            onUpdate?.();
-        });
+        const grade = decision.grade;
+        const named = courseId.length > 0;
+        runAfterConfirmCloses(
+            () => {
+                setAddOpen(false);
+                setAddNotice(null);
+                setAdding(true);
+            },
+            () => {
+                startTransition(async () => {
+                    let result: Awaited<ReturnType<typeof addTranscriptAttempt>>;
+                    try {
+                        result = await addTranscriptAttempt({
+                            courseId: named ? courseId : null,
+                            subject: named ? null : subject,
+                            number: named ? null : number,
+                            title: named ? null : title,
+                            credits,
+                            grade,
+                            status: "COMPLETED",
+                            recommendedTermCourseId: recommendedTermCourseId ?? null,
+                        });
+                    } catch {
+                        const kept = keepAddAttemptChoice({ open: false, grade, pending: true });
+                        setAddGrade(kept.grade);
+                        setAdding(false);
+                        toast.error("Attempt could not be added. Your choice has been kept.");
+                        return;
+                    }
+
+                    if (!result.success) {
+                        const kept = keepAddAttemptChoice({ open: false, grade, pending: true });
+                        setAddGrade(kept.grade);
+                        setAdding(false);
+                        toast.error("Attempt could not be added. Your choice has been kept.");
+                        return;
+                    }
+
+                    setAddGrade(null);
+                    setAdding(false);
+                    toast.success("Attempt added");
+                    const nextAttempts = [...localAttempts, { ...result.entry, createdAt: new Date(result.entry.createdAt) }];
+                    setLocalAttempts(nextAttempts);
+                    onAttemptsChange?.(nextAttempts);
+                    onUpdate?.();
+                });
+            },
+            (save) => {
+                window.setTimeout(save, 0);
+            },
+        );
     }
 
     function handleClear(attemptId: string) {
@@ -216,6 +291,9 @@ export function CourseAttempts({
                                 disabled={isPending}
                                 size="sm"
                                 placeholder="Set grade"
+                                label={sortedAttempts.length > 1
+                                    ? `Grade for ${courseCode}, attempt ${index + 1}`
+                                    : `Grade for ${courseCode}`}
                             />
                         </>
                     ) : (
@@ -271,17 +349,93 @@ export function CourseAttempts({
                     )}
                 </div>
             ))}
+            {adding ? (
+                <span className="text-xs text-muted-foreground" aria-live="polite">Adding attempt…</span>
+            ) : null}
             <Button
                 type="button"
                 variant="ghost"
                 size="sm"
-                onClick={() => handleAddAttempt()}
+                onClick={openAdd}
                 disabled={isPending}
                 className="h-11 gap-1.5 px-3 text-muted-foreground hover:text-foreground sm:h-auto"
             >
                 <PlusIcon className="size-4" />
                 <span className="text-xs">Add attempt</span>
             </Button>
+            {addNotice === "credits" ? (
+                <Alert>
+                    <AlertTitle>Course details unavailable</AlertTitle>
+                    <AlertDescription>Refresh the page before adding an attempt.</AlertDescription>
+                    <Button type="button" size="sm" variant="outline" onClick={() => router.refresh()}>
+                        Refresh page
+                    </Button>
+                    <AlertAction>
+                        <Button type="button" size="sm" variant="ghost" aria-label="Dismiss message" onClick={() => setAddNotice(null)}>
+                            Dismiss message
+                        </Button>
+                    </AlertAction>
+                </Alert>
+            ) : null}
+            <Dialog
+                open={addOpen}
+                onOpenChange={(open) => {
+                    setAddOpen(open);
+                    if (!open) setAddNotice((current) => current === "grade" ? null : current);
+                }}
+            >
+                <DialogContent className="max-w-md">
+                    <DialogHeader>
+                        <DialogTitle>Add an attempt</DialogTitle>
+                        <DialogDescription>
+                            Record another attempt for {courseCode}. Choose the grade from your record.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <p className="text-sm font-medium">{courseCode} · {attemptCreditPhrase(credits)}</p>
+                    {addNotice === "grade" ? (
+                        <Alert>
+                            <AlertTitle>Choose a grade</AlertTitle>
+                            <AlertDescription>Select the grade from your record.</AlertDescription>
+                            <AlertAction>
+                                <Button type="button" size="sm" variant="ghost" aria-label="Dismiss message" onClick={() => setAddNotice(null)}>
+                                    Dismiss message
+                                </Button>
+                            </AlertAction>
+                        </Alert>
+                    ) : null}
+                    <Field>
+                        <FieldLabel>Grade</FieldLabel>
+                        <GradeSelect
+                            value={addGrade}
+                            onChange={(grade) => {
+                                setAddGrade(chooseAddAttemptGrade({ open: true, grade: addGrade, pending: false }, grade).grade);
+                                setAddNotice(null);
+                            }}
+                            disabled={isPending}
+                            placeholder="Choose a grade"
+                            label="Grade"
+                            className="w-full"
+                        />
+                        <FieldDescription>This grade can change your GPA.</FieldDescription>
+                    </Field>
+                    <DialogFooter>
+                        <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => {
+                                setAddOpen(false);
+                                setAddGrade(null);
+                                setAddNotice(null);
+                            }}
+                        >
+                            Cancel
+                        </Button>
+                        <Button type="button" onClick={confirmAdd}>
+                            Add attempt
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
             <AlertDialog open={confirmId !== null} onOpenChange={(open) => { if (!open) setConfirmId(null); }}>
                 <AlertDialogContent>
                     <AlertDialogHeader>

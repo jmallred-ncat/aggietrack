@@ -1,4 +1,5 @@
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { getProgressSlotCourses, type ProgressSlotCourse } from "@/lib/catalog";
 import { computeDegreeProgress } from "@/lib/degree-progress";
 import type { TranscriptSource, TranscriptStatus } from "@/lib/generated/prisma/browser";
@@ -10,7 +11,8 @@ import { formatProgramName } from "@/lib/program";
 import { slotIsUnfilled } from "@/lib/progress-slots";
 import { getStudentProfile, hasConfirmedStart } from "@/lib/student";
 import { getTranscript, progressStatusFromEntry, type ProgressStatus } from "@/lib/transcript";
-import { ArrowsLeftRightIcon, CheckCircleIcon, MedalIcon } from "@phosphor-icons/react/dist/ssr";
+import { ArrowsLeftRightIcon, CheckCircleIcon } from "@phosphor-icons/react/dist/ssr";
+import Link from "next/link";
 import ProgressForm, { type ProgressTerm, type ProgressYear } from "./ProgressForm";
 import { RequirementSummary } from "./RequirementSummary";
 
@@ -127,6 +129,7 @@ export default async function ProgressPage() {
                             subject: course.course.subject,
                             number: course.course.number,
                             title: course.course.title,
+                            credits: course.course.credits,
                         }
                         : {
                             id: course.id,
@@ -291,6 +294,22 @@ export default async function ProgressPage() {
         coursesByGroup[row.groupId] = [...options, { ...entry.course, lab: row.requiresLab }];
     }
 
+    const setupFinished = hasConfirmedStart(profile);
+    const missingGrade = transcript.find((entry) => (
+        entry.status === "COMPLETED"
+        && entry.grade == null
+        && (
+            (entry.courseId != null && entry.courseId in defaultCourses)
+            || (entry.recommendedTermCourseId != null && entry.recommendedTermCourseId in defaultSlots)
+        )
+    ));
+    const reviewHref = missingGrade?.courseId && missingGrade.courseId in defaultCourses
+        ? `#progress-course-${missingGrade.courseId}`
+        : missingGrade?.recommendedTermCourseId
+            ? `#progress-slot-${missingGrade.recommendedTermCourseId}`
+            : "#progress-courses";
+    const reviewLabel = missingGrade ? "Review missing grades" : "Review courses";
+
     return (
         <div className="flex min-h-full flex-1 flex-col">
             <header>
@@ -302,33 +321,38 @@ export default async function ProgressPage() {
                     groups={logged.groups}
                     hasCompletedEntries={logged.hasCompletedEntries}
                 />
-                {progress.earnedCredits === 0 && (
-                    <p className="mt-4 max-w-prose text-sm text-balance text-muted-foreground">AggieTrack needs the courses you have already completed before you can continue. Mark those courses below, or say you have no prior coursework.</p>
-                )}
-                {progress.earnedCredits > 0 && (
-                    <div className="mt-4 rounded-lg border border-border bg-muted px-4 py-3 not-typeset">
-                        <div className="flex flex-wrap gap-4 items-start">
-                            <div className="flex-1 min-w-[200px]">
-                                <p className="text-sm font-medium">
-                                    Progress: {progress.earnedCredits} of {progress.totalCredits} credits ({progress.percentage}%)
+                {!setupFinished ? (
+                    <p className="mt-4 max-w-prose text-sm text-balance text-muted-foreground">
+                        Add your previous courses, or choose &apos;I have no prior coursework&apos; to continue.
+                    </p>
+                ) : null}
+                <div className="mt-4 rounded-lg border border-border bg-muted px-4 py-3 not-typeset">
+                    <div className="flex flex-wrap items-start gap-4">
+                        <div className="min-w-[200px] flex-1">
+                            <p className="text-sm font-medium">Degree progress</p>
+                            <p className="mt-1 text-xl font-semibold">
+                                {progress.earnedCredits} of {progress.totalCredits} credits ({progress.percentage}%)
+                            </p>
+                            <Badge className="mt-2">Completed requirements</Badge>
+                            <p className="mt-2 text-xs text-muted-foreground">
+                                Only completed courses that meet a degree requirement count here.
+                            </p>
+                            {setupFinished && progress.earnedCredits === 0 ? (
+                                <p className="mt-2 max-w-prose text-sm text-balance text-muted-foreground">
+                                    No completed credits count toward this degree yet. In-progress courses do not count until they are completed and meet the requirement.
                                 </p>
-                                <p className="text-xs text-muted-foreground mt-1">
-                                    {progress.mappedCourses} {progress.mappedCourses === 1 ? "course" : "courses"} counted toward degree requirements
-                                </p>
-                            </div>
-                            <div className="flex flex-col items-start rounded-lg bg-background px-3 py-2 border border-border">
-                                <span className="text-xs font-medium text-muted-foreground">Cumulative GPA</span>
-                                <div className="flex items-center gap-2 mt-1">
-                                    <MedalIcon weight="fill" size={18} className="text-primary" />
-                                    <span className="text-xl font-bold">{gpa !== null ? gpa.toFixed(2) : "—"}</span>
-                                </div>
-                                <Badge variant="outline" className="mt-1.5 text-xs border-border">
-                                    {gpa !== null ? "Completed courses" : "No GPA yet"}
-                                </Badge>
-                            </div>
+                            ) : null}
+                            <Button nativeButton={false} variant="outline" className="mt-3" render={<Link href={reviewHref}>{reviewLabel}</Link>} />
+                        </div>
+                        <div className="flex flex-col items-start rounded-lg border border-border bg-background px-3 py-2">
+                            <span className="text-xs font-medium text-muted-foreground">Cumulative GPA</span>
+                            <span className="mt-1 text-xl font-bold">{gpa !== null ? gpa.toFixed(2) : "—"}</span>
+                            <Badge variant="outline" className="mt-1.5 border-border text-xs">
+                                {gpa !== null ? "Recorded grades" : "No grades yet"}
+                            </Badge>
                         </div>
                     </div>
-                )}
+                </div>
                 <StatusLegend />
             </header>
             <ProgressForm
