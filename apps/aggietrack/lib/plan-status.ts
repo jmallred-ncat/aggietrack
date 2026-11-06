@@ -23,6 +23,29 @@ export function planCoursesLocked(status: string) {
     return status !== "DRAFT" && status !== "RETURNED";
 }
 
+/** Approval records the courses as in progress immediately, including a term that has not started. */
+export function coursesAreInProgress(status: string) {
+    return status === "APPROVED";
+}
+
+/**
+ * The dashboard lists an approved plan's courses even when that term is still ahead.
+ * A current-term plan stays first. A later approved plan is shown with it, or in its place when this semester has nothing to list.
+ */
+export function dashboardCoursePlan<T extends { status: string; courses: readonly unknown[] }>(input: {
+    semesterPlan: T | null;
+    laterPlan: T | null;
+}) {
+    const semester = input.semesterPlan && input.semesterPlan.courses.length > 0 ? input.semesterPlan : null;
+    const later = input.laterPlan && coursesAreInProgress(input.laterPlan.status) && input.laterPlan.courses.length > 0
+        ? input.laterPlan
+        : null;
+    return {
+        primary: semester ?? later,
+        also: semester && later ? later : null,
+    };
+}
+
 export function planNoteRoleLabel(role: string) {
     if (role === "STUDENT") return "Student";
     if (role === "ADVISOR") return "Advisor";
@@ -115,20 +138,11 @@ export function studentNextStep(plan: {
         };
     }
 
-    if (plan.status === "APPROVED" && plan.registered) {
-        return {
-            title: "Next step",
-            body: `You confirmed registration for ${plan.termLabel}.`,
-            action: "View plan",
-            href: plan.href,
-        };
-    }
-
     if (plan.status === "APPROVED") {
         return {
             title: "Next step",
-            body: `Your ${plan.termLabel} plan is approved. Register with your pin, then confirm in the planner.`,
-            action: "Open approved plan",
+            body: `Your ${plan.termLabel} plan is approved. These courses are in progress.`,
+            action: plan.registered ? "View plan" : "Open approved plan",
             href: plan.href,
         };
     }

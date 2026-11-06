@@ -27,6 +27,7 @@ export const testAdvisorCards: TestStudentCard[] = [
 export const testAccountCards = [...testStudentCards, ...testAdvisorCards];
 
 export const resetAfterUse = "Reset this student after every use.";
+export const jordanPlanReset = "Reset Jordan Hale puts his Spring 2027 plan back to Waiting for review.";
 
 export const nextSaveWorks = "Next save works";
 export const nextSaveFails = "Next save fails";

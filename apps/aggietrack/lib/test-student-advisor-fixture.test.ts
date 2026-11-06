@@ -109,11 +109,25 @@ test(
       assert.equal(await advisorEmailOf("it.mid@example.test"), sarahMartinezEmail);
       assert.equal(await prisma.session.count({ where: { userId: sarah.id } }), 0);
 
+      await prisma.transcriptEntry.create({
+        data: {
+          studentId: profileId,
+          courseId: plan.courses[0]!.course.id,
+          termId: plan.termId,
+          credits: plan.courses[0]!.course.credits,
+          status: "IN_PROGRESS",
+          source: "NCAT",
+        },
+      });
       await resetTestStudent(request("it.mid@example.test"), "it.mid@example.test");
       const rebuilt = await prisma.plannedTerm.findMany({ where: { studentId: profileId } });
       assert.equal(rebuilt.length, 1);
       assert.equal(rebuilt[0]!.status, PlannedTermStatus.SUBMITTED);
       assert.equal(rebuilt[0]!.registrationPin, null);
+      const approvedRows = await prisma.transcriptEntry.findMany({
+        where: { studentId: profileId, courseId: plan.courses[0]!.course.id, status: "IN_PROGRESS" },
+      });
+      assert.equal(approvedRows.length, 0);
       assert.equal(await advisorEmailOf("it.mid@example.test"), sarahMartinezEmail);
 
       await prisma.studentProfile.update({ where: { id: profileId }, data: { advisorId: null } });

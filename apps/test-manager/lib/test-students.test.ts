@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { aggietrackRequest, assignedToSarah, faultChoice, faultRequest, nextSaveFails, nextSaveWaits, nextSaveWorks, notAssignedToTestStudent, plannerFaultMap, resetAfterUse, testAdvisorCards, testStudentByEmail, testStudentCards } from "./test-students";
+import { aggietrackRequest, assignedToSarah, faultChoice, faultRequest, jordanPlanReset, nextSaveFails, nextSaveWaits, nextSaveWorks, notAssignedToTestStudent, plannerFaultMap, resetAfterUse, testAdvisorCards, testStudentByEmail, testStudentCards } from "./test-students";
 
 test("the testing site shows the Information Technology students and the reset instruction", () => {
   assert.deepEqual(testStudentCards.map(student => student.email), [
@@ -13,6 +13,7 @@ test("the testing site shows the Information Technology students and the reset i
     "it.over-credits@example.test",
   ]);
   assert.match(resetAfterUse, /after every use/);
+  assert.match(jordanPlanReset, /Reset Jordan Hale puts his Spring 2027 plan back to Waiting for review/);
   assert.equal(testStudentByEmail("it.late@example.test")?.name, "Riley Brooks");
   assert.equal(testStudentByEmail("someone@example.test"), null);
 });
