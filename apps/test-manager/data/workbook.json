@@ -1874,6 +1874,32 @@
             "Run / build / environment": "Preview",
             "Assignee": ""
           }
+        },
+        {
+          "id": "T-73",
+          "sourceRow": 77,
+          "values": {
+            "Test ID": "T-73",
+            "Requirement IDs": "FR-07",
+            "Test / scenario": "Progress lists required credits and logged credits for the student's catalog year",
+            "Priority": "High",
+            "Type": "Functional",
+            "Preconditions": "One student is on Information Technology 2025, has confirmed there is no prior coursework, and has no completed courses. A second student is on Electronics Technology 2025. Do not use production data.",
+            "Inputs / data": "Information Technology 2025 requirement groups; Electronics Technology 2025 requirement groups; MATH 110 marked complete, then cleared",
+            "Procedure": "1. Sign in as the Information Technology student.\n2. Open **Progress**.\n3. Read **Program**.\n4. Read **Catalog year**.\n5. Read **Credits required**.\n6. Read **CST Major Core** under **Requirements**.\n7. Read **Required** on **Mathematics**.\n8. Read **Earned** on **Mathematics**.\n9. Confirm **Add completed courses** is shown.\n10. Choose **Courses**.\n11. Sign out.\n12. Sign in as the Electronics Technology student.\n13. Open **Progress**.\n14. Read **Physics** under **Requirements**.\n15. Read **Required** on **Mathematics**.\n16. Read **Required** on **CST Major Core**.\n17. Sign out.\n18. Sign in as the Information Technology student.\n19. Open **Progress**.\n20. Choose **Complete** on MATH 110.\n21. Choose **Save progress**.\n22. Read **Earned** on **Mathematics**.\n23. Open **Set grade** on MATH 110.\n24. Choose **Clear completion**.\n25. Choose **Clear completion** in **Clear this completion?**.\n26. Read **Earned** on **Mathematics**.\n27. Confirm **Add completed courses** is shown.",
+            "Expected result": "The two catalog years show different requirement groups, and the required credits match the seed. Information Technology shows **B.S. Information Technology**, catalog year **2025**, and **120 credits** required. **CST Major Core** requires **56 credits** and **Mathematics** requires **11 credits**, both with **0 credits** earned. Electronics Technology shows **Physics** at **8 credits** required, **Mathematics** at **15 credits** required, and **CST Major Core** at **54 credits** required. After MATH 110 is saved as **Complete**, **Mathematics** shows **4 credits** earned. Clearing it returns **Earned** to **0 credits** and shows **Add completed courses** again. **Courses** opens the courses page. A course still in progress does not raise earned credits. A catalog year with no groups shows **This catalog isn't ready**. An advisor with no student profile does not see an error page.",
+            "Pass criterion": "Group names and required credits match the seed for each catalog year. Earned credits follow completed records only. **Add completed courses** is present when no course is complete and returns after that course is cleared.",
+            "Decision dependency": "Q-05",
+            "Evidence to retain": "Both requirement lists; **Mathematics** before the completion, after the save, and after the clear",
+            "Actual result": "",
+            "Status": "Not run",
+            "Defect ID": "",
+            "Tester": "",
+            "Run date": "",
+            "Evidence reference": "",
+            "Run / build / environment": "",
+            "Assignee": ""
+          }
         }
       ]
     },
