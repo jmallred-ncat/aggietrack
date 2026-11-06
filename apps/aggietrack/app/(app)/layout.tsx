@@ -2,12 +2,16 @@ import IdleTimer from "@/components/idle-timer";
 import { Separator } from "@/components/ui/separator";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { academicTermLabel } from "@/lib/academic-term";
+import { advisorPlanIdFromPath } from "@/lib/plan-crumb";
+import { prisma } from "@/lib/prisma";
 import { sidebarStateKey } from "@/lib/sidebar-state";
 import { getSessionUser, getStudentProfile } from "@/lib/student";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import DashboardBreadcrumbs from "./dashboard-breadcrumbs";
 import DashboardSidebar from "./dashboard-sidebar";
+import { PlanCrumbProvider } from "./plan-crumb";
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
     const user = await getSessionUser();
@@ -19,29 +23,50 @@ export default async function DashboardLayout({ children }: { children: React.Re
     }
 
     const sidebarState = (await cookies()).get(sidebarStateKey)?.value
+    const planCrumb = await advisorPlanCrumb((await headers()).get("x-pathname"), user.id);
 
     return (
         <SidebarProvider defaultOpen={sidebarState === "true"} className="h-svh min-h-0 overflow-hidden">
             <DashboardSidebar user={user} profile={profile} />
             <SidebarInset className="min-h-0 min-w-0 overflow-hidden">
                 <TooltipProvider>
-                    <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
-                        <header className="shrink-0 px-4 not-typeset py-2">
-                            <div className="flex items-center space-x-2">
-                                <SidebarTrigger />
-                                <Separator orientation="vertical" className="mr-3" />
-                                <DashboardBreadcrumbs />
-                            </div>
-                        </header>
-                        <div className="min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden px-4">
-                            <div className="container mx-auto flex min-h-full flex-col">
-                                <IdleTimer />
-                                {children}
+                    <PlanCrumbProvider initialLabel={planCrumb}>
+                        <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+                            <header className="shrink-0 px-4 not-typeset py-2">
+                                <div className="flex items-center space-x-2">
+                                    <SidebarTrigger />
+                                    <Separator orientation="vertical" className="mr-3" />
+                                    <DashboardBreadcrumbs />
+                                </div>
+                            </header>
+                            <div className="min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden px-4">
+                                <div className="container mx-auto flex min-h-full flex-col">
+                                    <IdleTimer />
+                                    {children}
+                                </div>
                             </div>
                         </div>
-                    </div>
+                    </PlanCrumbProvider>
                 </TooltipProvider>
             </SidebarInset>
         </SidebarProvider>
     );
+}
+
+async function advisorPlanCrumb(pathname: string | null, userId: string) {
+    const planId = advisorPlanIdFromPath(pathname);
+    if (!planId) return null;
+    try {
+        const plan = await prisma.plannedTerm.findUnique({
+            where: { id: planId },
+            select: {
+                term: { select: { season: true, year: true } },
+                student: { select: { advisorId: true } },
+            },
+        });
+        if (!plan || plan.student.advisorId !== userId) return "Unavailable";
+        return academicTermLabel(plan.term);
+    } catch {
+        return null;
+    }
 }

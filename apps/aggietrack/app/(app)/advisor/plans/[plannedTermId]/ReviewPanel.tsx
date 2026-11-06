@@ -44,8 +44,6 @@ export function ReviewPanel({
     registrationPin,
     reviewedAt,
     registeredAt,
-    advisorName,
-    updatedAt,
     canDecide,
     courseCount,
 }: {
@@ -57,8 +55,6 @@ export function ReviewPanel({
     registrationPin: string | null;
     reviewedAt: string | null;
     registeredAt: string | null;
-    advisorName: string;
-    updatedAt: string;
     canDecide: boolean;
     courseCount: number;
 }) {
@@ -205,13 +201,14 @@ export function ReviewPanel({
                         <div className="space-y-3">
                             <p className="text-sm">Approved {reviewed}</p>
                             {registrationPin ? (
-                                <div>
-                                    <Label htmlFor="approved-pin">Registration pin</Label>
-                                    <Input id="approved-pin" className="mt-2 font-mono" value={registrationPin} readOnly />
-                                </div>
+                                <p className="inline-flex items-center gap-3 rounded-lg bg-muted px-4 py-3 not-typeset">
+                                    <span className="text-sm text-muted-foreground">Registration pin</span>
+                                    <span className="font-mono text-lg font-semibold tracking-wide">{registrationPin}</span>
+                                </p>
                             ) : null}
-                            <p className="text-sm text-muted-foreground">These courses are in progress.</p>
-                            {registeredAt ? <p className="text-sm text-muted-foreground">The student confirmed registration.</p> : null}
+                            <p className="text-sm text-muted-foreground">
+                                {registeredAt ? "Registration confirmed." : "Waiting for the student to confirm registration."}
+                            </p>
                         </div>
                     ) : null}
                     {status === "SUBMITTED" && canDecide ? (
@@ -246,12 +243,6 @@ export function ReviewPanel({
                             ) : null}
                         />
                     ) : null}
-                </CardContent>
-            </Card>
-            <Card>
-                <CardContent className="space-y-2 text-sm">
-                    <p>Advisor: {advisorName}</p>
-                    <p>Last updated: {planTimestamp(updatedAt)}</p>
                 </CardContent>
             </Card>
 

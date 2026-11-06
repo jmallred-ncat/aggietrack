@@ -18,24 +18,26 @@ export default function PlannerNavigation({
     const activeId = terms.some((term) => term.id === requestedTerm) ? requestedTerm : terms[0]?.id;
 
     return (
-        <nav className="mt-4 flex w-full flex-col items-stretch gap-3">
-            <div className="flex flex-wrap gap-2">
+        <nav className="mt-4 flex w-full min-w-0 flex-col items-stretch gap-3">
+            <div className="flex w-full min-w-0 flex-wrap gap-2">
                 {terms.map((term) => {
                     const active = term.id === activeId;
                     return (
-                        <Button
-                            key={term.id}
-                            variant={active ? "secondary" : "ghost"}
-                            nativeButton={false}
-                            render={
-                                <Link
-                                    href={`/student/planner?term=${term.id}`}
-                                    aria-current={active ? "page" : undefined}
-                                />
-                            }
-                        >
-                            {term.label}
-                        </Button>
+                        <span key={term.id} className="inline-flex shrink-0">
+                            <Button
+                                className="shrink-0"
+                                variant={active ? "secondary" : "ghost"}
+                                nativeButton={false}
+                                render={
+                                    <Link
+                                        href={`/student/planner?term=${term.id}`}
+                                        aria-current={active ? "page" : undefined}
+                                    />
+                                }
+                            >
+                                {term.label}
+                            </Button>
+                        </span>
                     );
                 })}
             </div>

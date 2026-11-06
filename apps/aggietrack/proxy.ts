@@ -3,11 +3,22 @@ import { NextResponse } from "next/server";
 
 const showCurtain = process.env.COMING_SOON === "true";
 
+function withPathname(request: NextRequest) {
+    const requestHeaders = new Headers(request.headers);
+    requestHeaders.set("x-pathname", request.nextUrl.pathname);
+    return requestHeaders;
+}
+
 export default function proxy(request: NextRequest) {
+    const requestHeaders = withPathname(request);
     if (showCurtain && request.nextUrl.pathname !== "/coming-soon") {
-        return NextResponse.rewrite(new URL("/coming-soon", request.url));
+        return NextResponse.rewrite(new URL("/coming-soon", request.url), {
+            request: { headers: requestHeaders },
+        });
     }
-    return NextResponse.next();
+    return NextResponse.next({
+        request: { headers: requestHeaders },
+    });
 }
 
 export const config = {

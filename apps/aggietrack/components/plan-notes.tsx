@@ -142,7 +142,7 @@ export function PlanNotes({
                     </ol>
                 )}
                 {alert ? <DismissibleAlert title={alert.title} description={alert.description} /> : null}
-                <div>
+                <div className="border-t pt-4">
                     <Label htmlFor={`plan-note-${plannedTermId}`}>Add a note</Label>
                     <Textarea
                         id={`plan-note-${plannedTermId}`}

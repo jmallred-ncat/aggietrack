@@ -16,11 +16,13 @@ import { prisma } from "@/lib/prisma";
 import { getSessionUser } from "@/lib/student";
 import type { Prisma } from "@/lib/generated/prisma/client";
 import Link from "next/link";
+import { SetPlanCrumb } from "../../../plan-crumb";
 import { ReviewPanel } from "./ReviewPanel";
 
 function Unavailable() {
     return (
         <div className="py-6">
+            <SetPlanCrumb label="Unavailable" />
             <h1 className="text-4xl font-bold">Plan unavailable</h1>
             <p className="mt-2 max-w-prose text-sm text-muted-foreground">This plan does not exist or you do not have access to it.</p>
             <Button className="mt-4" nativeButton={false} render={<Link href="/advisor/students">Back to students</Link>} />
@@ -106,22 +108,27 @@ export default async function AdvisorPlanPage({
     return (
         <div className="py-6">
             <Button variant="ghost" className="mb-4 px-0" nativeButton={false} render={<Link href={back}>Back to students</Link>} />
-            <header className="mb-6">
+            <SetPlanCrumb label={termLabel} />
+            <header className="not-typeset mb-6">
                 <div className="flex flex-wrap items-center gap-3">
-                    <h1 className="text-4xl font-bold">{termLabel} plan</h1>
+                    <h1 className="text-3xl font-bold text-balance sm:text-4xl">{termLabel} plan</h1>
                     <Badge variant={plannedTermStatusVariant(plan.status)}>{plannedTermStatusLabel(plan.status)}</Badge>
                 </div>
-                <p className="mt-2 text-sm text-muted-foreground">
+                <p className="mt-2 text-base font-medium text-foreground">
                     {studentName}
-                    {plan.student.bannerId ? ` · Student ID: ${plan.student.bannerId}` : ""}
+                    {plan.student.bannerId ? (
+                        <span className="font-normal text-muted-foreground"> · Student ID: {plan.student.bannerId}</span>
+                    ) : null}
                 </p>
                 <p className="mt-1 text-sm text-muted-foreground">
                     {plan.submittedAt ? `Submitted ${planTimestamp(plan.submittedAt)}` : "Not submitted yet"}
                 </p>
                 <p className="mt-1 text-sm text-muted-foreground">Catalog year: {catalogYearLabel(plan.student.catalogYear.year)}</p>
+                <p className="mt-1 text-sm text-muted-foreground">Advisor: {personName(plan.student.advisor)}</p>
+                <p className="mt-1 text-sm text-muted-foreground">Last updated: {planTimestamp(plan.updatedAt)}</p>
             </header>
-            <div className="grid items-start gap-6 lg:grid-cols-3">
-                <div className="space-y-6 lg:col-span-2 lg:col-start-1 lg:row-start-1">
+            <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,2fr)_minmax(280px,1fr)]">
+                <div className="min-w-0 space-y-6 xl:col-start-1 xl:row-start-1">
                     <Card>
                         <CardHeader>
                             <CardTitle>Courses</CardTitle>
@@ -138,12 +145,12 @@ export default async function AdvisorPlanPage({
                             ) : (
                                 <>
                                     <div className="hidden md:block">
-                                        <Table>
+                                        <Table className="table-fixed">
                                             <TableHeader>
                                                 <TableRow>
-                                                    <TableHead>Course</TableHead>
+                                                    <TableHead className="w-[8rem]">Course</TableHead>
                                                     <TableHead>Title</TableHead>
-                                                    <TableHead className="text-right">Credits</TableHead>
+                                                    <TableHead className="w-[5rem] text-right">Credits</TableHead>
                                                 </TableRow>
                                             </TableHeader>
                                             <TableBody>
@@ -151,7 +158,9 @@ export default async function AdvisorPlanPage({
                                                     const notesForCourse = reviewNotesForCourse(toRuleCourse(row.course), sameTerm, standing.completedSources);
                                                     return (
                                                         <TableRow key={row.id}>
-                                                            <TableCell className="font-mono">{row.course.subject} {row.course.number}</TableCell>
+                                                            <TableCell>
+                                                                <Badge className="font-mono whitespace-nowrap">{row.course.subject} {row.course.number}</Badge>
+                                                            </TableCell>
                                                             <TableCell>
                                                                 {row.course.title}
                                                                 {notesForCourse.map((note) => (
@@ -170,8 +179,8 @@ export default async function AdvisorPlanPage({
                                             const notesForCourse = reviewNotesForCourse(toRuleCourse(row.course), sameTerm, standing.completedSources);
                                             return (
                                                 <li key={row.id}>
-                                                    <p className="flex justify-between gap-3 text-sm">
-                                                        <span className="font-mono">{row.course.subject} {row.course.number}</span>
+                                                    <p className="flex items-center justify-between gap-3 text-sm">
+                                                        <Badge className="font-mono whitespace-nowrap">{row.course.subject} {row.course.number}</Badge>
                                                         <span className="tabular-nums">{row.course.credits}</span>
                                                     </p>
                                                     <p className="mt-1 text-sm">{row.course.title}</p>
@@ -188,7 +197,7 @@ export default async function AdvisorPlanPage({
                         </CardContent>
                     </Card>
                 </div>
-                <div className="lg:col-start-3 lg:row-start-1">
+                <div className="xl:col-start-2 xl:row-start-1">
                     <ReviewPanel
                         plannedTermId={plan.id}
                         status={plan.status}
@@ -198,13 +207,11 @@ export default async function AdvisorPlanPage({
                         registrationPin={plan.registrationPin}
                         reviewedAt={plan.reviewedAt?.toISOString() ?? null}
                         registeredAt={plan.registeredAt?.toISOString() ?? null}
-                        advisorName={personName(plan.student.advisor)}
-                        updatedAt={plan.updatedAt.toISOString()}
                         canDecide={plan.student.advisorId === user.id}
                         courseCount={courses.length}
                     />
                 </div>
-                <div className="lg:col-span-2 lg:col-start-1">
+                <div className="min-w-0 xl:col-start-1">
                     <PlanNotes
                         plannedTermId={plan.id}
                         audience="advisor"

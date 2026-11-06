@@ -58,10 +58,28 @@ export function catalogYearLabel(year: number | null | undefined) {
     return `${year}\u2013${year + 1}`;
 }
 
-export function planTimestamp(value: Date | string | null | undefined) {
+function planInstant(value: Date | string | null | undefined) {
     if (!value) return null;
     const date = value instanceof Date ? value : new Date(value);
     if (Number.isNaN(date.getTime())) return null;
+    return date;
+}
+
+/** Eastern calendar day only, for roster and queue rows. Review pages keep planTimestamp. */
+export function planDate(value: Date | string | null | undefined) {
+    const date = planInstant(value);
+    if (!date) return null;
+    return new Intl.DateTimeFormat("en-US", {
+        timeZone: "America/New_York",
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+    }).format(date);
+}
+
+export function planTimestamp(value: Date | string | null | undefined) {
+    const date = planInstant(value);
+    if (!date) return null;
     return new Intl.DateTimeFormat("en-US", {
         timeZone: "America/New_York",
         month: "short",

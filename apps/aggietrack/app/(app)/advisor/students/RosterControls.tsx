@@ -40,10 +40,11 @@ export function RosterControls({
 }) {
     const router = useRouter();
     const [search, setSearch] = useState(query.q);
-
-    useEffect(() => {
+    const [syncedQuery, setSyncedQuery] = useState(query.q);
+    if (syncedQuery !== query.q) {
+        setSyncedQuery(query.q);
         setSearch(query.q);
-    }, [query.q]);
+    }
 
     function visit(next: Partial<RosterQuery>, page = 1) {
         const merged = { ...query, ...next };
@@ -70,12 +71,14 @@ export function RosterControls({
     const sortLabel = sorts.find((item) => item.value === query.sort)?.label ?? "Needs review first";
     const termLabel = terms.find((term) => term.id === query.term)?.label ?? "Term";
 
+    const triggerClass = "mt-2 w-full *:data-[slot=select-value]:line-clamp-none! *:data-[slot=select-value]:overflow-visible!";
+
     return (
-        <div className="mt-6 grid gap-4 md:grid-cols-4">
-            <div>
+        <div className="flex flex-wrap gap-4">
+            <div className="min-w-[220px] flex-1">
                 <Label htmlFor="roster-term">Term</Label>
                 <Select value={query.term} onValueChange={(value) => { if (value) visit({ term: value }); }}>
-                    <SelectTrigger id="roster-term" className="mt-2 w-full">
+                    <SelectTrigger id="roster-term" className={triggerClass}>
                         <SelectValue>{termLabel}</SelectValue>
                     </SelectTrigger>
                     <SelectContent>
@@ -87,7 +90,7 @@ export function RosterControls({
                     </SelectContent>
                 </Select>
             </div>
-            <div className="md:col-span-1">
+            <div className="min-w-[220px] flex-1">
                 <Label htmlFor="roster-search">Search students</Label>
                 <InputGroup className="mt-2">
                     <InputGroupAddon>
@@ -96,7 +99,7 @@ export function RosterControls({
                     <InputGroupInput
                         id="roster-search"
                         value={search}
-                        placeholder="Search by name or student ID"
+                        placeholder="Name or student ID"
                         onChange={(event) => setSearch(event.target.value)}
                         onKeyDown={(event) => {
                             if (event.key === "Enter") visit({ q: search });
@@ -104,10 +107,10 @@ export function RosterControls({
                     />
                 </InputGroup>
             </div>
-            <div>
+            <div className="min-w-[220px] flex-1">
                 <Label htmlFor="roster-status">Plan status</Label>
                 <Select value={query.status} onValueChange={(value) => { if (value) visit({ status: value }); }}>
-                    <SelectTrigger id="roster-status" className="mt-2 w-full">
+                    <SelectTrigger id="roster-status" className={triggerClass}>
                         <SelectValue>{statusLabel}</SelectValue>
                     </SelectTrigger>
                     <SelectContent>
@@ -119,10 +122,10 @@ export function RosterControls({
                     </SelectContent>
                 </Select>
             </div>
-            <div>
+            <div className="min-w-[220px] flex-1">
                 <Label htmlFor="roster-sort">Sort by</Label>
                 <Select value={query.sort} onValueChange={(value) => { if (value) visit({ sort: value }); }}>
-                    <SelectTrigger id="roster-sort" className="mt-2 w-full">
+                    <SelectTrigger id="roster-sort" className={triggerClass}>
                         <SelectValue>{sortLabel}</SelectValue>
                     </SelectTrigger>
                     <SelectContent>
@@ -135,7 +138,7 @@ export function RosterControls({
                 </Select>
             </div>
             {filtered ? (
-                <div className="md:col-span-4">
+                <div className="w-full">
                     <Button type="button" variant="ghost" onClick={() => visit({ q: "", status: "all", sort: "review" })}>
                         Clear filters
                     </Button>
