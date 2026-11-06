@@ -1043,6 +1043,7 @@ export default function ProgressForm({
                                             );
                                             const listKey = attemptListKey(attempts);
                                             const showCompleted = completionRowMode({ attempts }) === "menu";
+                                            const showAttempts = showCompleted || attempts.some((attempt) => attempt.status === "IN_PROGRESS");
                                             const slotSelection = row.kind === "slot" ? watchedSlots?.[row.id] : undefined;
                                             const slotCourse =
                                                 row.kind === "slot" && slotSelection?.courseId
@@ -1086,7 +1087,7 @@ export default function ProgressForm({
 
                                                         {/* Actions: grade select or attempts */}
                                                         <div className="flex shrink-0 items-center justify-start sm:justify-end">
-                                                            {showCompleted ? (
+                                                            {showAttempts ? (
                                                                 row.kind === "course" ? (
                                                                     <CourseAttempts
                                                                         key={listKey}

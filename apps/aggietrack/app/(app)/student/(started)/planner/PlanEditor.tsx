@@ -247,21 +247,19 @@ export default function PlanEditor({
             </header>
 
             <p className="mt-2 max-w-prose text-sm text-balance text-muted-foreground">
-                {shown?.registered
-                    ? "These courses are on your transcript as in progress. You confirmed that you registered."
-                    : status === "APPROVED"
-                        ? "Your advisor approved this plan, so these courses are in progress. Register with the pin, then confirm that you registered."
-                        : status === "SUBMITTED"
-                            ? advisorName
-                                ? `Waiting for ${advisorName} to review this plan and add a registration pin.`
-                                : "Waiting for an advisor to review this plan. No advisor is assigned yet."
-                            : status === "RETURNED"
-                                ? "Your advisor requested changes. Read the comment, update your courses, then submit the plan again."
-                                : status !== "DRAFT"
-                                    ? "Status unavailable."
-                                    : advisorName
-                                        ? `Add the courses you want to take, then submit the plan for ${advisorName} to review.`
-                                        : "Add the courses you want to take, then submit the plan. No advisor is assigned yet."}
+                {status === "APPROVED"
+                    ? "Your advisor approved this plan. These courses are in progress."
+                    : status === "SUBMITTED"
+                        ? advisorName
+                            ? `Waiting for ${advisorName} to review this plan and add a registration pin.`
+                            : "Waiting for an advisor to review this plan. No advisor is assigned yet."
+                        : status === "RETURNED"
+                            ? "Your advisor requested changes. Read the comment, update your courses, then submit the plan again."
+                            : status !== "DRAFT"
+                                ? "Status unavailable."
+                                : advisorName
+                                    ? `Add the courses you want to take, then submit the plan for ${advisorName} to review.`
+                                    : "Add the courses you want to take, then submit the plan. No advisor is assigned yet."}
             </p>
 
             <RuleViolationAlert
@@ -385,6 +383,7 @@ export default function PlanEditor({
                                 </span>
                             </p>
                             <span className="flex shrink-0 items-center gap-2">
+                                {status === "APPROVED" ? <Badge variant="secondary">In progress</Badge> : null}
                                 <span className="text-sm text-muted-foreground tabular-nums">{course.credits} credits</span>
                                 {editable && (
                                     <Button

@@ -210,9 +210,8 @@ export function ReviewPanel({
                                     <Input id="approved-pin" className="mt-2 font-mono" value={registrationPin} readOnly />
                                 </div>
                             ) : null}
-                            <p className="text-sm text-muted-foreground">
-                                {registeredAt ? "Registration confirmed." : "Waiting for the student to confirm registration."}
-                            </p>
+                            <p className="text-sm text-muted-foreground">These courses are in progress.</p>
+                            {registeredAt ? <p className="text-sm text-muted-foreground">The student confirmed registration.</p> : null}
                         </div>
                     ) : null}
                     {status === "SUBMITTED" && canDecide ? (

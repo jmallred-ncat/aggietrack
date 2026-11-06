@@ -5,7 +5,7 @@ import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTi
 import { academicTermLabel, semesterInSession } from "@/lib/academic-term";
 import { computeDegreeProgress } from "@/lib/degree-progress";
 import { computeGpa } from "@/lib/gpa";
-import { plannedTermStatusLabel, plannedTermStatusVariant, studentNextStep } from "@/lib/plan-status";
+import { coursesAreInProgress, dashboardCoursePlan, plannedTermStatusLabel, plannedTermStatusVariant, studentNextStep } from "@/lib/plan-status";
 import { prisma } from "@/lib/prisma";
 import { getTranscript } from "@/lib/transcript";
 import { formatProgramName } from "@/lib/program";
@@ -80,6 +80,8 @@ export default async function Dashboard() {
         }
         : null);
     const target = graduation?.expectedGradTerm;
+    const listed = dashboardCoursePlan({ semesterPlan, laterPlan: otherPlan });
+    const headingTerm = listed.primary?.term ?? semester;
 
     return <div className="flex flex-col gap-6 py-6">
         <header className="not-typeset">
@@ -126,28 +128,16 @@ export default async function Dashboard() {
 
         <section className="not-typeset flex flex-col gap-6">
             <header className="flex items-center justify-between gap-3">
-                <h2 className="text-2xl font-bold">{semester ? academicTermLabel(semester) : "No semester in session"}</h2>
-                {semesterPlan ? (
-                    <Badge variant={plannedTermStatusVariant(semesterPlan.status)}>
-                        {plannedTermStatusLabel(semesterPlan.status)}
+                <h2 className="text-2xl font-bold">{headingTerm ? academicTermLabel(headingTerm) : "No semester in session"}</h2>
+                {listed.primary ? (
+                    <Badge variant={plannedTermStatusVariant(listed.primary.status)}>
+                        {plannedTermStatusLabel(listed.primary.status)}
                     </Badge>
                 ) : null}
             </header>
 
-            {semesterPlan && semesterPlan.courses.length > 0 ? (
-                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                    {semesterPlan.courses.map((row) => (
-                        <div key={row.id} className="flex w-full flex-col items-start space-y-3 rounded-lg border border-border bg-muted p-4 not-typeset">
-                            <div className="flex w-full items-center justify-between gap-2">
-                                <Badge variant="default">{row.course.subject} {row.course.number}</Badge>
-                                {row.course.isLab && <FlaskIcon size={20} weight="fill" />}
-                            </div>
-                            <h3 className="text-lg font-bold">{row.course.title}</h3>
-                            <span className="text-sm text-muted-foreground">{row.course.credits} credits</span>
-                            <p className="line-clamp-3 text-sm text-muted-foreground">{row.course.description}</p>
-                        </div>
-                    ))}
-                </div>
+            {listed.primary ? (
+                <CourseCards courses={listed.primary.courses} inProgress={coursesAreInProgress(listed.primary.status)} />
             ) : (
                 <Empty className="border border-dashed">
                     <EmptyHeader>
@@ -161,7 +151,9 @@ export default async function Dashboard() {
                                 : draft
                                     ? `Your ${academicTermLabel(draft.term)} plan is ${plannedTermStatusLabel(draft.status)}. Open the planner, add the courses you want to take, and submit the plan so your advisor can review it. Those courses show here during that semester once the plan is waiting for review or approved.`
                                     : otherPlan
-                                        ? `Your ${academicTermLabel(otherPlan.term)} plan is ${plannedTermStatusLabel(otherPlan.status)}. Its courses show here when that semester is in session.`
+                                        ? otherPlan.status === "APPROVED"
+                                            ? `Your ${academicTermLabel(otherPlan.term)} plan is ${plannedTermStatusLabel(otherPlan.status)} and has no courses on it, so there is nothing in progress yet.`
+                                            : `Your ${academicTermLabel(otherPlan.term)} plan is ${plannedTermStatusLabel(otherPlan.status)}. Its courses show here when that semester is in session.`
                                         : semester
                                             ? `${academicTermLabel(semester)} does not have a plan that is waiting for review or approved. Open the planner, add the courses for the term you are registering for, and submit that plan so your advisor can review it.`
                                             : "No semester is in session. Open the planner, add the courses for your next term, and submit that plan so your advisor can review it. Those courses show here once that semester begins."}
@@ -172,6 +164,17 @@ export default async function Dashboard() {
                     </EmptyContent>
                 </Empty>
             )}
+            {listed.also ? (
+                <div className="flex flex-col gap-6">
+                    <header className="flex items-center justify-between gap-3">
+                        <h2 className="text-2xl font-bold">{academicTermLabel(listed.also.term)}</h2>
+                        <Badge variant={plannedTermStatusVariant(listed.also.status)}>
+                            {plannedTermStatusLabel(listed.also.status)}
+                        </Badge>
+                    </header>
+                    <CourseCards courses={listed.also.courses} inProgress />
+                </div>
+            ) : null}
         </section>
 
         <Card>
@@ -188,4 +191,41 @@ export default async function Dashboard() {
             </CardContent>
         </Card>
     </div>;
+}
+
+function CourseCards({
+    courses,
+    inProgress,
+}: {
+    courses: Array<{
+        id: string;
+        course: {
+            subject: string;
+            number: string;
+            title: string;
+            credits: number;
+            description: string | null;
+            isLab: boolean;
+        };
+    }>;
+    inProgress: boolean;
+}) {
+    return (
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            {courses.map((row) => (
+                <div key={row.id} className="flex w-full flex-col items-start space-y-3 rounded-lg border border-border bg-muted p-4 not-typeset">
+                    <div className="flex w-full items-center justify-between gap-2">
+                        <Badge variant="default">{row.course.subject} {row.course.number}</Badge>
+                        <span className="flex items-center gap-2">
+                            {inProgress ? <Badge variant="secondary">In progress</Badge> : null}
+                            {row.course.isLab ? <FlaskIcon size={20} weight="fill" /> : null}
+                        </span>
+                    </div>
+                    <h3 className="text-lg font-bold">{row.course.title}</h3>
+                    <span className="text-sm text-muted-foreground">{row.course.credits} credits</span>
+                    <p className="line-clamp-3 text-sm text-muted-foreground">{row.course.description}</p>
+                </div>
+            ))}
+        </div>
+    );
 }

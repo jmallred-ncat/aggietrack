@@ -18,7 +18,7 @@ import { toast } from "@aggietrack/ui/toast";
 import { ChoiceSelect } from "@/components/choice-select";
 import { Label } from "@aggietrack/ui/label";
 import { resetAllSummary, resetTestAccounts } from "@/lib/reset-students";
-import { faultChoice, faultRequest, nextSaveChoices, nextSaveFails, nextSaveWaits, nextSaveWorks, resetAfterUse, type TestStudentCard } from "@/lib/test-students";
+import { faultChoice, faultRequest, jordanPlanReset, nextSaveChoices, nextSaveFails, nextSaveWaits, nextSaveWorks, resetAfterUse, type TestStudentCard } from "@/lib/test-students";
 
 async function postReset(email: string) {
   const response = await fetch("/api/test-students", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email }) });
@@ -140,7 +140,7 @@ export function TestStudents({ students, password, notice, faults = {} }: { stud
             <ChoiceSelect id={`next-save-${student.email}`} label={`Next planner save for ${student.name}`} value={nextSave[student.email] ?? nextSaveWorks} options={nextSaveChoices} onChange={choice => { if (arming !== student.email && pending !== student.email) void arm(student, choice); }} className="w-full bg-background"/>
             <p className="text-sm leading-6 text-muted-foreground">Set this before the save. It turns off after one add or remove. The live site ignores it.</p>
           </div>
-          <p className="mt-4 text-sm leading-6">{resetAfterUse}</p>
+          <p className="mt-4 text-sm leading-6">{student.email === "it.mid@example.test" ? jordanPlanReset : resetAfterUse}</p>
           <Button className="mt-4 w-fit" disabled={pending === student.email || pendingAll || !password} onClick={() => reset(student)}>{pending === student.email ? "Resetting…" : `Reset ${student.name}`}</Button>
         </section>)}
       </div>
