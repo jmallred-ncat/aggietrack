@@ -10,6 +10,8 @@ export type RuleOption = {
 
 export type RuleGroup = {
     isConcurrent: boolean;
+    /** True when the catalog corequisite text lists this direction. */
+    fromCatalog: boolean;
     options: RuleOption[];
 };
 
@@ -38,11 +40,14 @@ export type PlanCheck = {
     sameTermCourseIds?: ReadonlySet<string>;
     /**
      * Save, submit, and approval leave this on.
-     * A lecture can still be saved without its lab. A lab needs that lecture
-     * on this term or already completed.
+     * Only a direction written in the catalog is required. A completed companion
+     * can stand in for the same term, including a transfer credit.
      */
     corequisites?: boolean;
 };
+
+/** Shown on a planned course whose catalog companion was completed as transfer credit. */
+export const courseOverrideNote = "Requires course override";
 
 type StoredCourse = {
     id: string;
@@ -52,6 +57,7 @@ type StoredCourse = {
     offeredIn: readonly TermSeason[];
     prerequisiteGroups: {
         isConcurrent: boolean;
+        fromCatalog: boolean;
         note: string | null;
         options: {
             requires: { id: string; subject: string; number: string; isLab: boolean };
@@ -94,6 +100,7 @@ export function toRuleCourse(course: StoredCourse): RuleCourse {
         offeredIn: course.offeredIn,
         groups: course.prerequisiteGroups.map((group) => ({
             isConcurrent: group.isConcurrent,
+            fromCatalog: group.fromCatalog,
             options: group.options.map((option) => ({
                 id: option.requires.id,
                 code: `${option.requires.subject} ${option.requires.number}`,
@@ -124,15 +131,8 @@ function optionList(options: readonly RuleOption[]) {
     return orList.format(options.map((option) => option.code));
 }
 
-/**
- * The catalog writes the corequisite on the lab. The seed also stores the reverse
- * link so the course browser can offer the pair. A lecture can be submitted
- * without that lab. Jordan Hale's spring plan includes CST 250 and not CST 260.
- */
-function corequisiteRequired(course: RuleCourse, group: RuleGroup) {
-    if (group.options.length === 0) return false;
-    if (course.isLab) return true;
-    return group.options.some((option) => !option.isLab);
+function catalogCorequisite(group: RuleGroup) {
+    return group.isConcurrent && group.fromCatalog && group.options.length > 0;
 }
 
 function pushUnique(messages: string[], message: string | null) {
@@ -146,9 +146,26 @@ export function isPairViolation(message: string) {
 
 /**
  * Prerequisite, corequisite, and term-offering sentences for one term.
- * Prerequisites use the same rule as adding a course. Corequisites are the
- * lab's lecture, on this term or already completed. A lecture does not require its lab.
+ * A corequisite is required only when the catalog lists that direction.
+ * The companion is on this term or already completed.
  */
+export function requiresCourseOverride(
+    course: RuleCourse,
+    sameTermCourseIds: ReadonlySet<string>,
+    completedSources: ReadonlyMap<string, string>,
+) {
+    for (const group of course.groups) {
+        if (!catalogCorequisite(group)) continue;
+        if (group.options.some((option) => sameTermCourseIds.has(option.id))) continue;
+        const completed = group.options.filter((option) => completedSources.has(option.id));
+        if (completed.length === 0) continue;
+        const completedAtSchool = completed.some((option) => completedSources.get(option.id) !== "TRANSFER");
+        if (!completedAtSchool) return true;
+    }
+    return false;
+}
+
+/** Prerequisite, corequisite, and term-offering sentences for one term. */
 export function planRuleViolations(input: PlanCheck) {
     const messages: string[] = [];
     const onPlan = new Set(input.courses.map((course) => course.id));
@@ -177,7 +194,7 @@ export function planRuleViolations(input: PlanCheck) {
 
         if (!checkCorequisites) continue;
         for (const group of course.groups) {
-            if (!group.isConcurrent || !corequisiteRequired(course, group)) continue;
+            if (!catalogCorequisite(group)) continue;
             const met = group.options.some((option) =>
                 onPlan.has(option.id) || input.completedCourseIds.has(option.id),
             );

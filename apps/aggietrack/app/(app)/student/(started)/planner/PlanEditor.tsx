@@ -11,6 +11,7 @@ import { RuleViolationAlert } from "@/components/rule-violation-alert";
 import { courseMatchesSearch } from "@/lib/course-search";
 import type { PlannedTermStatus } from "@/lib/generated/prisma/client";
 import { announcePlanViolations, finishPlanSave, type PlanSaveResult } from "@/lib/plan-save";
+import { courseOverrideNote } from "@/lib/plan-rules";
 import { applyAddedCourses, applyRemovedCourse, termCreditLabel, termCreditTotal } from "@/lib/plan-view";
 import { MagnifyingGlassIcon, XIcon } from "@phosphor-icons/react";
 import { useRouter } from "next/navigation";
@@ -25,6 +26,7 @@ type CatalogCourse = {
     title: string;
     credits: number;
     requirements: string[];
+    requiresCourseOverride?: boolean;
 };
 
 function RequirementNames({ requirements }: { requirements: string[] }) {
@@ -35,6 +37,15 @@ function RequirementNames({ requirements }: { requirements: string[] }) {
     return (
         <span className="block truncate text-xs font-normal text-muted-foreground">
             {requirements.join(", ")}
+        </span>
+    );
+}
+
+function CourseOverrideNote({ show }: { show: boolean }) {
+    if (!show) return null;
+    return (
+        <span className="block truncate text-xs font-normal text-muted-foreground">
+            {courseOverrideNote}
         </span>
     );
 }
@@ -270,6 +281,7 @@ export default function PlanEditor({
                                                             title: row.title,
                                                             credits: row.credits,
                                                             requirements: requirementsFor(row.id, course),
+                                                            requiresCourseOverride: row.requiresCourseOverride,
                                                         })),
                                                     })));
                                                 },
@@ -299,6 +311,7 @@ export default function PlanEditor({
                                 <span className="min-w-0">
                                     <span className="block truncate">{course.title}</span>
                                     <RequirementNames requirements={course.requirements} />
+                                    <CourseOverrideNote show={course.requiresCourseOverride === true} />
                                 </span>
                             </p>
                             <span className="flex shrink-0 items-center gap-2">

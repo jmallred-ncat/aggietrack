@@ -1,15 +1,23 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { test } from "node:test";
+import { catalogCorequisiteEdge, catalogCorequisiteEdges } from "../prisma/seed/catalog-corequisites";
 import { courseKey, concurrentPairs, courses as handbookCourses, type CourseRef } from "../prisma/seed/courses";
-import { cstCatalogCourses, cstCatalogGroups } from "../prisma/seed/cst-catalog";
+import { cstCatalogCourses, cstCatalogGroups, mergeCstCatalogConcurrentPairs } from "../prisma/seed/cst-catalog";
+import { gecCatalogGroups, gecCourses, mergeGecConcurrentPairs } from "../prisma/seed/gec";
 import type { PrerequisiteGroupSeed } from "../prisma/seed/prerequisite-text";
 import { TermSeason } from "./generated/prisma/client";
 import { PLAN_SAVE_FAILED, announcePlanViolations } from "./plan-save";
 import { planCourseSave, type AddCourseRecord, type PlanCourseSaveDecision, type PlanCourseSaveInput } from "./plan-add";
+import {
+    courseOverrideNote,
+    planRuleViolations,
+    requiresCourseOverride,
+    submitDecision,
+    type RuleGroup,
+} from "./plan-rules";
 import { plannerFailure, writePlannedCourses } from "./planner-write";
 import { coursePrerequisitesNeedAdvisorReview } from "./prerequisites";
-import type { RuleGroup } from "./plan-rules";
 
 const rawEnum = /\b(FALL|SPRING|SUMMER_I|SUMMER_II|DRAFT|SUBMITTED|APPROVED|IN_PROGRESS|COMPLETED)\b/;
 const pairSentence = "CST 122 must be taken with CST 112 in Spring 2027.";
@@ -26,7 +34,7 @@ const addPlannedCourseSource = actionsSource.slice(
 type CatalogMeta = { isLab: boolean; offeredIn: TermSeason[]; credits: number };
 
 const meta = new Map<string, CatalogMeta>();
-for (const course of [...cstCatalogCourses, ...handbookCourses]) {
+for (const course of [...cstCatalogCourses, ...gecCourses, ...handbookCourses]) {
     const key = courseKey(course);
     const prior = meta.get(key);
     meta.set(key, {
@@ -38,7 +46,13 @@ for (const course of [...cstCatalogCourses, ...handbookCourses]) {
 
 const groups = new Map<string, Array<RuleGroup & { note: string | null }>>();
 
-function addGroup(course: CourseRef, isConcurrent: boolean, options: CourseRef[], note: string | null) {
+function addGroup(
+    course: CourseRef,
+    isConcurrent: boolean,
+    options: CourseRef[],
+    note: string | null,
+    fromCatalog: boolean,
+) {
     const optionRows = options.flatMap((option) => {
         const id = courseKey(option);
         const info = meta.get(id);
@@ -48,28 +62,30 @@ function addGroup(course: CourseRef, isConcurrent: boolean, options: CourseRef[]
     if (optionRows.length === 0 && options.length > 0 && !note) return;
     const key = courseKey(course);
     const list = groups.get(key) ?? [];
-    const signature = `${isConcurrent}|${optionRows.map((option) => option.id).sort().join(",")}`;
+    const signature = `${isConcurrent}|${fromCatalog}|${optionRows.map((option) => option.id).sort().join(",")}`;
     const existing = list.some((group) => {
-        const current = `${group.isConcurrent}|${group.options.map((option) => option.id).sort().join(",")}`;
+        const current = `${group.isConcurrent}|${group.fromCatalog}|${group.options.map((option) => option.id).sort().join(",")}`;
         return current === signature;
     });
     if (existing) return;
-    list.push({ isConcurrent, options: optionRows, note });
+    list.push({ isConcurrent, fromCatalog, options: optionRows, note });
     groups.set(key, list);
 }
 
 function loadGroups(seeds: PrerequisiteGroupSeed[]) {
-    for (const [lecture, lab] of concurrentPairs) {
-        addGroup(lecture, true, [lab], null);
-        addGroup(lab, true, [lecture], null);
+    const pairs = mergeCstCatalogConcurrentPairs(mergeGecConcurrentPairs(concurrentPairs));
+    const edges = catalogCorequisiteEdges(seeds);
+    for (const [lecture, lab] of pairs) {
+        addGroup(lecture, true, [lab], null, edges.has(catalogCorequisiteEdge(lecture, lab)));
+        addGroup(lab, true, [lecture], null, edges.has(catalogCorequisiteEdge(lab, lecture)));
     }
     for (const group of seeds) {
         if (group.isConcurrent && group.options.length === 1) continue;
-        addGroup(group.course, group.isConcurrent, group.options, group.note);
+        addGroup(group.course, group.isConcurrent, group.options, group.note, group.isConcurrent);
     }
 }
 
-loadGroups(cstCatalogGroups);
+loadGroups([...cstCatalogGroups, ...gecCatalogGroups]);
 
 function record(course: CourseRef): AddCourseRecord {
     const id = courseKey(course);
@@ -85,7 +101,7 @@ function record(course: CourseRef): AddCourseRecord {
             code: `${course.subject} ${course.number}`,
             isLab: info.isLab,
             offeredIn: info.offeredIn,
-            groups: stored.map(({ isConcurrent, options }) => ({ isConcurrent, options })),
+            groups: stored.map(({ isConcurrent, fromCatalog, options }) => ({ isConcurrent, fromCatalog, options })),
             prerequisitesNeedAdvisorReview: coursePrerequisitesNeedAdvisorReview(
                 stored.map((group) => ({
                     isConcurrent: group.isConcurrent,
@@ -333,4 +349,129 @@ test("a failed lab insert leaves no half pair on the plan", async () => {
     assert.match(addPlannedCourseSource, /writePlannedCourses\(\s*decision\.creatingIds/);
     assert.match(actionsSource, /z\.array\(z\.string\(\)\.min\(1\)\)\.max\(8\)/);
     assert.match(addPlannedCourseSource, /if \(!decision\.success\)/);
+});
+
+const survey = record({ subject: "PHYS", number: "110" });
+const surveyLab = record({ subject: "PHYS", number: "111" });
+const generalPhysics = record({ subject: "PHYS", number: "241" });
+const generalPhysicsLab = record({ subject: "PHYS", number: "251" });
+const calculus = record({ subject: "MATH", number: "132" });
+
+function saveCourses(
+    primary: AddCourseRecord,
+    companions: readonly AddCourseRecord[],
+    overrides: Partial<PlanCourseSaveInput> = {},
+) {
+    return planCourseSave({
+        courseId: primary.id,
+        companionIds: companions.map((course) => course.id),
+        allowedCompanionIds: allowedCompanions(primary),
+        courses: [primary, ...companions],
+        season: TermSeason.SPRING,
+        termLabel: "Spring 2027",
+        satisfiedCourseIds: new Set([math]),
+        completedCourseIds: new Set([math]),
+        sameTermCourseIds: new Set(),
+        otherTermCourseIds: new Set(),
+        onTranscriptIds: new Set(),
+        ...overrides,
+    });
+}
+
+test("a two-way pair rejects either course saved alone", () => {
+    const lectureAlone = saveCourses(survey, []);
+    const labAlone = saveCourses(surveyLab, []);
+    assert.equal(lectureAlone.success, false);
+    assert.equal(labAlone.success, false);
+    if (!lectureAlone.success && !labAlone.success) {
+        assert.ok(lectureAlone.violations?.includes("PHYS 110 must be taken with PHYS 111 in Spring 2027."));
+        assert.ok(labAlone.violations?.includes("PHYS 111 must be taken with PHYS 110 in Spring 2027."));
+        assertHuman(lectureAlone.error);
+        assertHuman(labAlone.error);
+    }
+    assert.deepEqual(rowsAfterSave([math], lectureAlone), [math]);
+    assert.deepEqual(rowsAfterSave([math], labAlone), [math]);
+
+    const together = saveCourses(survey, [surveyLab]);
+    assert.equal(together.success, true);
+    if (together.success) {
+        assert.deepEqual(together.creatingIds, [survey.id, surveyLab.id]);
+    }
+});
+
+test("PHYS 241 without MATH 132 is rejected", () => {
+    const withLab = saveCourses(generalPhysics, [generalPhysicsLab]);
+    assert.equal(withLab.success, false);
+    if (!withLab.success) {
+        assert.ok(withLab.violations?.includes("PHYS 241 must be taken with MATH 132 in Spring 2027."));
+        assertHuman(withLab.error);
+    }
+    assert.deepEqual(rowsAfterSave([], withLab), []);
+
+    const calculusAlone = saveCourses(calculus, [], {
+        satisfiedCourseIds: new Set([courseKey({ subject: "MATH", number: "131" })]),
+        completedCourseIds: new Set([courseKey({ subject: "MATH", number: "131" })]),
+    });
+    assert.equal(calculusAlone.success, true);
+    if (!calculusAlone.success) return;
+    const violations = planRuleViolations({
+        courses: [calculus.rule],
+        season: TermSeason.SPRING,
+        termLabel: "Spring 2027",
+        satisfiedCourseIds: new Set([courseKey({ subject: "MATH", number: "131" })]),
+        completedCourseIds: new Set([courseKey({ subject: "MATH", number: "131" })]),
+    });
+    assert.equal(violations.some((message) => message.includes("PHYS 241")), false);
+});
+
+test("a completed A&T companion allows the course with no override note", () => {
+    const decision = save({
+        courseId: lab.id,
+        companionIds: [],
+        satisfiedCourseIds: new Set([math, lecture.id]),
+        completedCourseIds: new Set([math, lecture.id]),
+    });
+    assert.equal(decision.success, true);
+    assert.equal(requiresCourseOverride(lab.rule, new Set(), new Map([[lecture.id, "NCAT"]])), false);
+    const violations = planRuleViolations({
+        courses: [lab.rule],
+        season: TermSeason.SPRING,
+        termLabel: "Spring 2027",
+        satisfiedCourseIds: new Set([math, lecture.id]),
+        completedCourseIds: new Set([math, lecture.id]),
+    });
+    assert.equal(submitDecision({ courseCount: 1, violations }).success, true);
+});
+
+test("a transfer companion allows the course and the planner says Requires course override", () => {
+    const decision = save({
+        courseId: lab.id,
+        companionIds: [],
+        satisfiedCourseIds: new Set([math, lecture.id]),
+        completedCourseIds: new Set([math, lecture.id]),
+    });
+    assert.equal(decision.success, true);
+    if (decision.success) assert.deepEqual(decision.creatingIds, [lab.id]);
+    assert.equal(requiresCourseOverride(lab.rule, new Set(), new Map([[lecture.id, "TRANSFER"]])), true);
+    assert.equal(courseOverrideNote, "Requires course override");
+    assert.doesNotMatch(courseOverrideNote, rawEnum);
+
+    const otherDirection = saveCourses(survey, [], {
+        satisfiedCourseIds: new Set([math, surveyLab.id]),
+        completedCourseIds: new Set([math, surveyLab.id]),
+    });
+    assert.equal(otherDirection.success, true);
+    assert.equal(
+        requiresCourseOverride(survey.rule, new Set(), new Map([[surveyLab.id, "TRANSFER"], [math, "NCAT"]])),
+        true,
+    );
+    const violations = planRuleViolations({
+        courses: [survey.rule],
+        season: TermSeason.SPRING,
+        termLabel: "Spring 2027",
+        satisfiedCourseIds: new Set([math, surveyLab.id]),
+        completedCourseIds: new Set([math, surveyLab.id]),
+    });
+    assert.equal(submitDecision({ courseCount: 1, violations }).success, true);
+    assert.equal(violations.some((message) => message.includes("must be taken with")), false);
 });

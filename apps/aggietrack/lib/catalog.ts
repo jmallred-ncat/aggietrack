@@ -15,6 +15,7 @@ const courseWithRequirements = {
             select: {
                 id: true,
                 isConcurrent: true,
+                fromCatalog: true,
                 note: true,
                 options: {
                     select: {

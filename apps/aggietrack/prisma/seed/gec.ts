@@ -1,5 +1,7 @@
 import { GenEdTag, TermSeason } from "../../lib/generated/prisma/client";
-import { type CourseRef, type CourseSeed, courseKey } from "./courses";
+import { cstCatalogCourses } from "./cst-catalog";
+import { type CourseRef, type CourseSeed, courseKey, courses as handbookCourses } from "./courses";
+import { mgmtCourses } from "./mgmt";
 import { type AttributeSeed } from "./curriculum";
 import ncatGenEdCourses from "./ncat_gen_ed_courses_detailed.json";
 import { type PrerequisiteGroupSeed, prerequisiteGroupsFor } from "./prerequisite-text";
@@ -181,9 +183,14 @@ export const gecAttributes: AttributeSeed[] = parsedRows.flatMap(
     })),
 );
 
-const gecCourseKeys = new Set(gecCourses.map(courseKey));
+const seededCourseKeys = new Set<string>([
+  ...handbookCourses.map(courseKey),
+  ...gecCourses.map(courseKey),
+  ...cstCatalogCourses.map(courseKey),
+  ...mgmtCourses.map(courseKey),
+]);
 
-/** Same-subject coreqs (lecture/lab). Cross-subject coreqs stay description-only. */
+/** Corequisites whose option courses are seeded, including a course in another subject. */
 export const gecCatalogGroups: PrerequisiteGroupSeed[] = parsedRows.flatMap(
   ({ course, row }) => {
     const courseRef = { subject: course.subject, number: course.number };
@@ -197,11 +204,7 @@ export const gecCatalogGroups: PrerequisiteGroupSeed[] = parsedRows.flatMap(
         return [group];
       }
 
-      const options = group.options.filter(
-        (option) =>
-          option.subject === course.subject
-          && gecCourseKeys.has(courseKey(option)),
-      );
+      const options = group.options.filter((option) => seededCourseKeys.has(courseKey(option)));
       if (options.length === 0 && !group.note) {
         return [];
       }

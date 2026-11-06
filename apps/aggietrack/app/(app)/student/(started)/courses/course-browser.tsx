@@ -49,7 +49,6 @@ export function CourseBrowser({
     planningTerms,
     placements,
     satisfiedCourseIds,
-    completedCourseIds,
     plannedCourses,
 }: {
     profile: StudentProfileWithCatalog;
@@ -57,7 +56,6 @@ export function CourseBrowser({
     planningTerms: PlanningTerm[];
     placements: PlanPlacement[];
     satisfiedCourseIds: string[];
-    completedCourseIds: string[];
     plannedCourses: PlannedCourseTiming[];
 }) {
     const [query, setQuery] = useState("");
@@ -138,7 +136,6 @@ export function CourseBrowser({
                 planningTerms={planningTerms}
                 placements={placements}
                 satisfiedCourseIds={satisfiedCourseIds}
-                completedCourseIds={completedCourseIds}
                 plannedCourses={plannedCourses}
             />
         ))}
@@ -156,14 +153,12 @@ const RequirementCourseSection = memo(function RequirementCourseSection({
     planningTerms,
     placements,
     satisfiedCourseIds,
-    completedCourseIds,
     plannedCourses,
 }: {
     section: CurriculumCourseSection;
     planningTerms: PlanningTerm[];
     placements: PlanPlacement[];
     satisfiedCourseIds: string[];
-    completedCourseIds: string[];
     plannedCourses: PlannedCourseTiming[];
 }) {
     const { group, courses } = section;
@@ -203,7 +198,6 @@ const RequirementCourseSection = memo(function RequirementCourseSection({
                         placement={placements.find((item) => item.courseId === course.id) ?? null}
                         placements={placements}
                         satisfiedCourseIds={satisfiedCourseIds}
-                        completedCourseIds={completedCourseIds}
                         plannedCourses={plannedCourses}
                     />
                 ))}
@@ -219,7 +213,7 @@ type PrerequisiteGroup = CurriculumCourse["prerequisiteGroups"][number];
 
 function requirementGroups(course: CurriculumCourse, concurrent: boolean) {
     return course.prerequisiteGroups
-        .filter((group) => group.isConcurrent === concurrent)
+        .filter((group) => group.isConcurrent === concurrent && (!concurrent || group.fromCatalog))
         .map((group) => ({
             ...group,
             options: [...group.options].sort((a, b) =>
@@ -272,7 +266,6 @@ const CourseCard = memo(function CourseCard({
     placement,
     placements,
     satisfiedCourseIds,
-    completedCourseIds,
     plannedCourses,
 }: {
     course: CurriculumCourse;
@@ -280,7 +273,6 @@ const CourseCard = memo(function CourseCard({
     placement: PlanPlacement | null;
     placements: PlanPlacement[];
     satisfiedCourseIds: string[];
-    completedCourseIds: string[];
     plannedCourses: PlannedCourseTiming[];
 }) {
     const prerequisites = requirementGroups(course, false);
@@ -309,19 +301,12 @@ const CourseCard = memo(function CourseCard({
     };
     const eligibleTerms = planningTerms.filter((term) => !term.locked && prerequisitesMet(term));
     const blockedByPrerequisites = !placement && hasCoursePrerequisites && !planningTerms.some(prerequisitesMet);
-    const completed = new Set(completedCourseIds);
     const taken = new Set([
         ...satisfiedCourseIds,
         ...placements.map((item) => item.courseId),
     ]);
     const companions = corequisiteCourses(course);
     const companionsToAdd = companions.filter((item) => !taken.has(item.id));
-    const completedCorequisites = companions.filter((item) => completed.has(item.id));
-    const corequisiteGroups = course.prerequisiteGroups.filter((group) => group.isConcurrent && group.options.length > 0);
-    const addWithOverride = !blockedByPrerequisites
-        && corequisiteGroups.length > 0
-        && companionsToAdd.length === 0
-        && corequisiteGroups.every((group) => group.options.some((option) => completed.has(option.requires.id)));
     const addButton = () => (
         <AddToPlannerButton
             course={course}
@@ -330,8 +315,6 @@ const CourseCard = memo(function CourseCard({
             blockedByPrerequisites={blockedByPrerequisites}
             needsAdvisorReview={needsAdvisorReview}
             companions={companionsToAdd}
-            completedCorequisites={completedCorequisites}
-            addWithOverride={addWithOverride}
         />
     );
 
@@ -421,8 +404,6 @@ function AddToPlannerButton({
     blockedByPrerequisites,
     needsAdvisorReview,
     companions,
-    completedCorequisites,
-    addWithOverride,
 }: {
     course: CurriculumCourse;
     terms: PlanningTerm[];
@@ -430,8 +411,6 @@ function AddToPlannerButton({
     blockedByPrerequisites: boolean;
     needsAdvisorReview: boolean;
     companions: CompanionCourse[];
-    completedCorequisites: CompanionCourse[];
-    addWithOverride: boolean;
 }) {
     const [pending, startTransition] = useTransition();
     const [added, setAdded] = useState<PlanPlacement | null>(null);
@@ -441,8 +420,6 @@ function AddToPlannerButton({
     const current = added ?? placement;
     const label = `${course.subject} ${course.number}`;
     const companionList = joinCourses(companions.map((item) => item.code));
-    const completedList = joinCourses(completedCorequisites.map((item) => item.code));
-    const triggerLabel = addWithOverride ? "Add with override" : "Add to Plan";
 
     function offeringMessage(term: PlanningTerm, companionIds: string[]) {
         const courseMessage = offeringViolation(
@@ -555,27 +532,23 @@ function AddToPlannerButton({
                 <Button
                     type="button"
                     variant="secondary"
-                    className={cn("w-full flex-1", addWithOverride && "h-auto whitespace-normal px-2 text-center leading-tight")}
+                    className="w-full flex-1"
                     size="sm"
                 >
-                    {triggerLabel}
+                    Add to Plan
                 </Button>
             } />
             <DialogContent className="not-typeset w-full sm:max-w-lg" showCloseButton={false}>
                 <DialogHeader className="min-w-0">
                     <DialogTitle>
-                        {addWithOverride
-                            ? `Add ${label} with an override?`
-                            : onlyTerm
-                                ? `Add ${label} to ${onlyTerm.label}?`
-                                : `Add ${label} to your plan?`}
+                        {onlyTerm
+                            ? `Add ${label} to ${onlyTerm.label}?`
+                            : `Add ${label} to your plan?`}
                     </DialogTitle>
                     <DialogDescription role={onlyCourseBlocked ? "alert" : undefined} className={onlyCourseBlocked ? "text-foreground" : undefined}>
                         {onlyCourseBlocked
                             ? onlyCourseBlocked
-                            : addWithOverride
-                                ? `${completedList} ${completedCorequisites.length === 1 ? "is" : "are"} already completed. Adding ${label} without ${completedCorequisites.length === 1 ? "that corequisite" : "those corequisites"} uses an override. You can remove it before submitting the plan for review.`
-                                : companions.length > 0
+                            : companions.length > 0
                                     ? `${label} must be taken with ${companionList} in the same term. Add ${companions.length === 1 ? "both courses" : "all of these courses"} together. You can remove them before submitting the plan for review.`
                                     : onlyTerm
                                         ? `${course.title} will be added to your ${onlyTerm.label} plan. You can remove it before submitting the plan for review.`
@@ -605,13 +578,11 @@ function AddToPlannerButton({
                                 disabled={pending || Boolean(onlyTermBlocked)}
                                 onClick={() => add(onlyTerm, companions.length > 0 ? companionIds : [])}
                             >
-                                {addWithOverride
-                                    ? "Add with override"
-                                    : companions.length > 1
-                                        ? "Add all"
-                                        : companions.length === 1
-                                            ? `Add ${label} and ${companions[0].code}`
-                                            : "Add to Plan"}
+                                {companions.length > 1
+                                    ? "Add all"
+                                    : companions.length === 1
+                                        ? `Add ${label} and ${companions[0].code}`
+                                        : "Add to Plan"}
                             </Button>
                         </ButtonGroup>
                     </DialogFooter>
@@ -644,7 +615,7 @@ function AddToPlannerButton({
                                     disabled={pending || Boolean(blocked)}
                                     onClick={() => add(term, includeCompanions ? companionIds : [])}
                                 >
-                                    {addWithOverride ? `${term.label} with override` : term.label}
+                                    {term.label}
                                 </Button>
                             );
                         })}

@@ -1,5 +1,6 @@
 import { getCurriculumCourseSections, requirementLabelsByCourse } from "@/lib/catalog";
-import { academicTermLabel, getPlannerWindow, getPlannableCourses, getStudentPlannedTerm } from "@/lib/planned-term";
+import { requiresCourseOverride, toRuleCourse } from "@/lib/plan-rules";
+import { academicTermLabel, courseStandingBefore, getPlannerWindow, getPlannableCourses, getStudentPlannedTerm } from "@/lib/planned-term";
 import { prisma } from "@/lib/prisma";
 import { requireStudentProfile } from "@/lib/student";
 import CurrentSemesterPrompt, { PlanCurrentSemesterButton } from "./CurrentSemesterPrompt";
@@ -30,14 +31,16 @@ export default async function PlannerPage({
         : null;
     const terms = planner.terms;
     const selected = terms.find((term) => term.id === params.term) ?? terms[0] ?? null;
-    const [plan, courses, sections] = selected
+    const [plan, courses, sections, standing] = selected
         ? await Promise.all([
             getStudentPlannedTerm(selected.id),
             getPlannableCourses(selected),
             getCurriculumCourseSections(),
+            courseStandingBefore(profile.id, selected.startsOn),
         ])
-        : [null, [], []];
+        : [null, [], [], null];
     const requirementLabels = requirementLabelsByCourse(sections);
+    const sameTermCourseIds = new Set(plan?.courses.map((row) => row.course.id) ?? []);
 
     return (
         <div>
@@ -75,6 +78,9 @@ export default async function PlannerPage({
                             title: row.course.title,
                             credits: row.course.credits,
                             requirements: requirementLabels(row.course),
+                            requiresCourseOverride: standing
+                                ? requiresCourseOverride(toRuleCourse(row.course), sameTermCourseIds, standing.completedSources)
+                                : false,
                         })),
                     } : null}
                 />

@@ -10,6 +10,7 @@ import {
     draftLockedMessage,
     PlanRejected,
     submitDecision,
+    requiresCourseOverride,
     toRuleCourse,
 } from "@/lib/plan-rules";
 import {
@@ -132,6 +133,7 @@ export async function addPlannedCourse(termId: string, courseId: string, compani
                     orderBy: { sortOrder: "asc" },
                     select: {
                         isConcurrent: true,
+                        fromCatalog: true,
                         note: true,
                         options: {
                             select: {
@@ -175,6 +177,7 @@ export async function addPlannedCourse(termId: string, courseId: string, compani
         else otherTermCourseIds.add(row.courseId);
     }
 
+    const rules = new Map(courseRows.map((item) => [item.id, toRuleCourse(item)]));
     const decision = planCourseSave({
         courseId,
         companionIds: companions.data,
@@ -183,7 +186,7 @@ export async function addPlannedCourse(termId: string, courseId: string, compani
             id: item.id,
             credits: item.credits,
             isLab: item.isLab,
-            rule: toRuleCourse(item),
+            rule: rules.get(item.id)!,
         })),
         season: term.season,
         termLabel: academicTermLabel(term),
@@ -240,7 +243,19 @@ export async function addPlannedCourse(termId: string, courseId: string, compani
                     };
                 },
             );
-            return { planId: plannedTerm.id, courses: added };
+            const placedIds = new Set<string>([...sameTermCourseIds, ...decision.creatingIds]);
+            return {
+                planId: plannedTerm.id,
+                courses: added.map((row) => {
+                    const rule = rules.get(row.id);
+                    return {
+                        ...row,
+                        requiresCourseOverride: rule
+                            ? requiresCourseOverride(rule, placedIds, standing.completedSources)
+                            : false,
+                    };
+                }),
+            };
         }, planTransactionOptions());
         if (!saved) {
             return { success: false as const, error: draftLockedMessage };

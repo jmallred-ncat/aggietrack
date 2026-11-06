@@ -23,7 +23,6 @@ export default async function CoursesPage() {
             planningTerms={planner.terms}
             placements={planner.placements}
             satisfiedCourseIds={planner.satisfiedCourseIds}
-            completedCourseIds={planner.completedCourseIds}
             plannedCourses={planner.plannedCourses}
         />
     );
