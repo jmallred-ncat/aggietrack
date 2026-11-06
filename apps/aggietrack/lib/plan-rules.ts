@@ -13,6 +13,8 @@ export type RuleGroup = {
     /** True when the catalog corequisite text lists this direction. */
     fromCatalog: boolean;
     options: RuleOption[];
+    /** Catalog sentence kept beside the course options, such as a placement score. */
+    note?: string | null;
 };
 
 export type RuleCourse = {
@@ -104,6 +106,7 @@ export function toRuleCourse(course: StoredCourse): RuleCourse {
         groups: course.prerequisiteGroups.map((group) => ({
             isConcurrent: group.isConcurrent,
             fromCatalog: group.fromCatalog,
+            note: group.note,
             options: group.options.map((option) => ({
                 id: option.requires.id,
                 code: `${option.requires.subject} ${option.requires.number}`,
@@ -201,7 +204,7 @@ export function planRuleViolations(input: PlanCheck) {
         for (const group of course.groups) {
             if (group.isConcurrent || group.options.length === 0) continue;
             const met = coursePrerequisitesSatisfied(
-                [{ isConcurrent: false, optionIds: group.options.map((option) => option.id) }],
+                [{ isConcurrent: false, optionIds: group.options.map((option) => option.id), note: group.note }],
                 input.satisfiedCourseIds,
             );
             if (!met) {

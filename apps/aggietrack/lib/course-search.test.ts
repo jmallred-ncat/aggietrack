@@ -44,7 +44,7 @@ test("the courses page is labeled Catalog browser and has a search box", () => {
     assert.match(browserSource, /Search for a course/);
 });
 
-test("only CST 300's unparsed prerequisite needs advisor review", () => {
+test("malformed catalog prerequisite text is not imported as a rule", () => {
     const groups = [...cstCatalogGroups, ...gecCatalogGroups, ...mgmtCatalogGroups];
     const byCourse = Map.groupBy(groups, (group) => `${group.course.subject} ${group.course.number}`);
     const needsReview = [...byCourse.entries()]
@@ -55,16 +55,9 @@ test("only CST 300's unparsed prerequisite needs advisor review", () => {
         }))))
         .map(([code]) => code);
 
-    assert.deepEqual(needsReview, ["CST 300"]);
+    assert.deepEqual(needsReview, []);
+    assert.equal(byCourse.get("CST 300"), undefined);
     assert.equal(ADVISOR_REVIEW_PREREQUISITES, "Prerequisites need advisor review");
-
-    const notes = cstCatalogGroups
-        .filter((group) => group.course.subject === "CST" && group.course.number === "300")
-        .map((group) => group.note);
-    assert.deepEqual(notes, [
-        "prerequisites,",
-        "identify a critical path to completion of a project",
-    ]);
     assert.match(browserSource, /ADVISOR_REVIEW_PREREQUISITES/);
     assert.doesNotMatch(browserSource, /critical path/);
 });

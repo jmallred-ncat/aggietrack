@@ -10,6 +10,7 @@ import { replaceCurriculum } from "./seed/curriculum";
 import { degrees } from "./seed/degrees";
 import { departments } from "./seed/departments";
 import { elet2025 } from "./seed/elet-2025";
+import { withGuideOfferings } from "./seed/guide-offerings";
 import {
   gecAttributes,
   gecCourses,
@@ -31,8 +32,9 @@ import type { PrerequisiteGroupSeed } from "./seed/prerequisite-text";
 /** CST Undergraduate Handbook (August 2025) is the only published curriculum in the seed. */
 const HANDBOOK_YEAR = 2025;
 
-const courses = mergeCstCatalogCourses(
-  mergeMgmtCourses(mergeGecCourses(handbookCourses)),
+const courses = withGuideOfferings(
+  mergeCstCatalogCourses(mergeMgmtCourses(mergeGecCourses(handbookCourses))),
+  [info2025, elet2025],
 );
 const concurrentPairs = mergeMgmtConcurrentPairs(
   mergeCstCatalogConcurrentPairs(

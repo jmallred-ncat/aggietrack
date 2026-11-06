@@ -337,6 +337,7 @@ export async function getPlannableCourses(term: { id: string; season: TermSeason
                 isConcurrent: group.isConcurrent,
                 fromCatalog: group.fromCatalog,
                 optionIds: group.options.map((option) => option.requiresId),
+                note: group.note,
             })),
         })),
         term.season,
