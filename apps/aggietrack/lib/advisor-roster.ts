@@ -54,11 +54,40 @@ export function advisorTermChoices<T extends DatedTerm>(terms: readonly T[], now
     return { terms: window, defaultTermId: defaultTerm?.id ?? null };
 }
 
-export function safeStudentsReturn(value: string | undefined) {
-    if (!value || !value.startsWith("/advisor/students") || value.startsWith("//") || value.includes("://")) {
-        return "/advisor/students";
+const advisorListReturns = {
+    "/advisor/plans": "Back to plans",
+    "/advisor/students": "Back to students",
+} as const;
+
+export type AdvisorReturnTarget = {
+    href: string;
+    label: (typeof advisorListReturns)[keyof typeof advisorListReturns];
+};
+
+const studentsReturn: AdvisorReturnTarget = { href: "/advisor/students", label: "Back to students" };
+
+/** Review may return only to an advisor list page, plus that page's own query string. */
+export function advisorReturnTarget(value: string | undefined): AdvisorReturnTarget {
+    if (!value || value.length > 2048) return studentsReturn;
+    if (!value.startsWith("/") || value.startsWith("//") || value.includes("\\") || value.includes("://") || /[\u0000-\u001F\u007F\s]/.test(value)) {
+        return studentsReturn;
     }
-    return value;
+    const path = value.split(/[?#]/, 1)[0] ?? "";
+    const label = advisorListReturns[path as keyof typeof advisorListReturns];
+    if (!label) return studentsReturn;
+    let parsed: URL;
+    try {
+        parsed = new URL(value, "http://advisor.local");
+    } catch {
+        return studentsReturn;
+    }
+    if (parsed.origin !== "http://advisor.local" || parsed.pathname !== path) return studentsReturn;
+    return { href: `${path}${parsed.search}${parsed.hash}`, label };
+}
+
+export function safeStudentsReturn(value: string | undefined) {
+    const target = advisorReturnTarget(value);
+    return target.label === "Back to students" ? target.href : "/advisor/students";
 }
 
 function nameOrder(a: RosterRow, b: RosterRow) {

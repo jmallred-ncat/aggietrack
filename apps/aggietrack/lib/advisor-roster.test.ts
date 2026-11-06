@@ -3,6 +3,7 @@ import { test } from "node:test";
 import { TermSeason } from "./generated/prisma/client";
 import { academicTerms } from "../prisma/seed/academic-terms";
 import {
+    advisorReturnTarget,
     advisorTermChoices,
     filterRoster,
     paginateRoster,
@@ -68,4 +69,37 @@ test("a return path stays inside the students roster", () => {
     assert.equal(safeStudentsReturn("/advisor/students?term=spring"), "/advisor/students?term=spring");
     assert.equal(safeStudentsReturn("https://example.test/advisor/students"), "/advisor/students");
     assert.equal(safeStudentsReturn("/student/planner"), "/advisor/students");
+    assert.equal(safeStudentsReturn("/advisor/plans"), "/advisor/students");
+});
+
+test("plan review returns only to an allowlisted advisor list", () => {
+    assert.deepEqual(advisorReturnTarget("/advisor/plans"), { href: "/advisor/plans", label: "Back to plans" });
+    assert.deepEqual(advisorReturnTarget("/advisor/plans?status=waiting"), {
+        href: "/advisor/plans?status=waiting",
+        label: "Back to plans",
+    });
+    assert.deepEqual(advisorReturnTarget("/advisor/students?term=spring&status=waiting"), {
+        href: "/advisor/students?term=spring&status=waiting",
+        label: "Back to students",
+    });
+    assert.deepEqual(advisorReturnTarget("/advisor/students?q=Jordan+Hale"), {
+        href: "/advisor/students?q=Jordan+Hale",
+        label: "Back to students",
+    });
+    assert.deepEqual(advisorReturnTarget(undefined), { href: "/advisor/students", label: "Back to students" });
+    for (const blocked of [
+        "",
+        "https://example.test/advisor/plans",
+        "//evil.test/advisor/plans",
+        "/advisor/plans/cm123",
+        "/advisor/plans-extra",
+        "/advisor/plans/../appointments",
+        "/advisor/students/../../evil",
+        "/student/planner",
+        "/advisor/plans?next=https://evil.test",
+        "/\\advisor/plans",
+        "/advisor/plans ",
+    ]) {
+        assert.deepEqual(advisorReturnTarget(blocked), { href: "/advisor/students", label: "Back to students" }, blocked);
+    }
 });

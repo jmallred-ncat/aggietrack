@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/components/ui/empty";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { academicTermLabel } from "@/lib/academic-term";
-import { safeStudentsReturn } from "@/lib/advisor-roster";
+import { advisorReturnTarget, type AdvisorReturnTarget } from "@/lib/advisor-roster";
 import { NOTE_PAGE_SIZE, pagePlanNotes, presentPlanNote } from "@/lib/plan-notes";
 import { violationsForTerm } from "@/lib/plan-rule-check";
 import { reviewNotesForCourse, toRuleCourse } from "@/lib/plan-rules";
@@ -19,13 +19,13 @@ import Link from "next/link";
 import { SetPlanCrumb } from "../../../plan-crumb";
 import { ReviewPanel } from "./ReviewPanel";
 
-function Unavailable() {
+function Unavailable({ back }: { back: AdvisorReturnTarget }) {
     return (
         <div className="py-6">
             <SetPlanCrumb label="Unavailable" />
             <h1 className="text-4xl font-bold">Plan unavailable</h1>
             <p className="mt-2 max-w-prose text-sm text-muted-foreground">This plan does not exist or you do not have access to it.</p>
-            <Button className="mt-4" nativeButton={false} render={<Link href="/advisor/students">Back to students</Link>} />
+            <Button className="mt-4" nativeButton={false} render={<Link href={back.href}>{back.label}</Link>} />
         </div>
     );
 }
@@ -38,6 +38,7 @@ export default async function AdvisorPlanPage({
     searchParams: Promise<{ from?: string }>;
 }) {
     const [{ plannedTermId }, query, user] = await Promise.all([params, searchParams, getSessionUser()]);
+    const back = advisorReturnTarget(query.from);
     const plan = await prisma.plannedTerm.findUnique({
         where: { id: plannedTermId },
         include: {
@@ -79,7 +80,7 @@ export default async function AdvisorPlanPage({
             },
         },
     });
-    if (!plan || plan.student.advisorId !== user.id) return <Unavailable />;
+    if (!plan || plan.student.advisorId !== user.id) return <Unavailable back={back} />;
 
     const [standing, noteRows, violations] = await Promise.all([
         courseStandingBefore(plan.studentId, plan.term.startsOn),
@@ -103,11 +104,10 @@ export default async function AdvisorPlanPage({
     const credits = courses.reduce((total, row) => total + row.course.credits, 0);
     const studentName = personName(plan.student.user);
     const termLabel = academicTermLabel(plan.term);
-    const back = safeStudentsReturn(query.from);
 
     return (
         <div className="py-6">
-            <Button variant="ghost" className="mb-4 px-0" nativeButton={false} render={<Link href={back}>Back to students</Link>} />
+            <Button variant="ghost" className="mb-4 px-0" nativeButton={false} render={<Link href={back.href}>{back.label}</Link>} />
             <SetPlanCrumb label={termLabel} />
             <header className="not-typeset mb-6">
                 <div className="flex flex-wrap items-center gap-3">
