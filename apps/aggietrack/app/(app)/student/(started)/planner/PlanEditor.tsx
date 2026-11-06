@@ -6,11 +6,11 @@ import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/components/u
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
 import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent } from "@/components/ui/popover";
-import { toast } from "@/components/ui/toast";
 import { RuleViolationAlert } from "@/components/rule-violation-alert";
 import { courseMatchesSearch } from "@/lib/course-search";
+import { planStatusBadgeVariant, planStatusLabel } from "@/lib/enum-labels";
 import type { PlannedTermStatus } from "@/lib/generated/prisma/client";
-import { announcePlanViolations, finishPlanSave, type PlanSaveResult } from "@/lib/plan-save";
+import { announcePlanViolations, finishPlanSave, PLAN_SAVE_FAILED, type PlanSaveResult } from "@/lib/plan-save";
 import { courseOverrideNote } from "@/lib/plan-rules";
 import { applyAddedCourses, applyRemovedCourse, termCreditLabel, termCreditTotal } from "@/lib/plan-view";
 import { MagnifyingGlassIcon, XIcon } from "@phosphor-icons/react";
@@ -114,11 +114,19 @@ export default function PlanEditor({
     function run<T extends { success: boolean; error?: string; violations?: string[] }>(
         action: () => Promise<T>,
         success: string,
+        failure: string,
         apply?: (result: T & { success: true }) => void,
         violationTitleText = "Requirement not met",
     ) {
         startTransition(async () => {
-            const result = await action();
+            let result: T;
+            try {
+                result = await action();
+            } catch {
+                setViolations([]);
+                sonner.error("The change could not be confirmed. Refresh before trying again.");
+                return;
+            }
             if (!result.success) {
                 if (result.violations && result.violations.length > 0) {
                     setViolationTitle(violationTitleText);
@@ -126,7 +134,7 @@ export default function PlanEditor({
                     return;
                 }
                 setViolations([]);
-                toast.add({ title: result.error ?? "That change could not be saved." });
+                sonner.error(studentSafeMessage(result.error, failure));
                 return;
             }
             apply?.(result as T & { success: true });
@@ -135,7 +143,7 @@ export default function PlanEditor({
                 setViolations(result.violations);
             } else {
                 setViolations([]);
-                toast.add({ title: success });
+                sonner.success(success);
             }
             setQuery("");
             setResultsOpen(false);
@@ -146,6 +154,7 @@ export default function PlanEditor({
     function runCourseChange<T extends PlanSaveResult>(
         action: () => Promise<T>,
         success: string,
+        failure: string,
         apply?: (result: T & { success: true }) => void,
     ) {
         startTransition(async () => {
@@ -163,8 +172,7 @@ export default function PlanEditor({
             }
             if (outcome.status === "failed") {
                 setViolations([]);
-                if (outcome.sonner) sonner.error(outcome.message);
-                else toast.add({ title: outcome.message });
+                sonner.error(outcome.message === PLAN_SAVE_FAILED ? outcome.message : studentSafeMessage(outcome.message, failure));
                 router.refresh();
                 return;
             }
@@ -174,7 +182,7 @@ export default function PlanEditor({
                 setViolations(outcome.result.violations);
             } else {
                 setViolations([]);
-                toast.add({ title: success });
+                sonner.success(success);
             }
             setQuery("");
             setResultsOpen(false);
@@ -193,11 +201,11 @@ export default function PlanEditor({
         <section>
             <header className="flex flex-wrap items-center justify-between gap-3">
                 <div className="flex min-w-0 flex-wrap items-baseline gap-x-3 gap-y-1">
-                    <h2 className="text-2xl font-bold not-typeset text-balance">{termLabel}</h2>
+                    <h2 className="text-2xl font-bold not-typeset text-balance">{termLabel} plan</h2>
                     <p className="text-sm text-muted-foreground tabular-nums not-typeset">{creditLabel}</p>
                 </div>
-                <Badge className="not-typeset" variant={status === "APPROVED" ? "default" : "secondary"}>
-                    {status === "DRAFT" ? "Draft" : status === "SUBMITTED" ? "Submitted" : "Approved"}
+                <Badge className="not-typeset" variant={planStatusBadgeVariant(status)}>
+                    {planStatusLabel(status)}
                 </Badge>
             </header>
 
@@ -270,6 +278,7 @@ export default function PlanEditor({
                                             onClick={() => runCourseChange(
                                                 () => addPlannedCourse(termId, course.id),
                                                 `${course.subject} ${course.number} added`,
+                                                "Course could not be added. Try again.",
                                                 (result) => {
                                                     setLocalPlan((current) => withCourses(current, applyAddedCourses(current, {
                                                         planId: result.planId,
@@ -289,7 +298,7 @@ export default function PlanEditor({
                                         >
                                             <Badge className="font-mono">{course.subject} {course.number}</Badge>
                                             <span className="min-w-0 flex-1">
-                                                <span className="block truncate">{course.title}</span>
+                                                <span className="block text-balance">{course.title}</span>
                                                 <RequirementNames requirements={course.requirements} />
                                             </span>
                                             <span className="ml-auto shrink-0 text-muted-foreground tabular-nums">{course.credits} credits</span>
@@ -309,7 +318,7 @@ export default function PlanEditor({
                             <p className="flex min-w-0 items-center gap-2 text-sm font-medium">
                                 <Badge className="font-mono">{course.subject} {course.number}</Badge>
                                 <span className="min-w-0">
-                                    <span className="block truncate">{course.title}</span>
+                                    <span className="block text-balance">{course.title}</span>
                                     <RequirementNames requirements={course.requirements} />
                                     <CourseOverrideNote show={course.requiresCourseOverride === true} />
                                 </span>
@@ -326,6 +335,7 @@ export default function PlanEditor({
                                         onClick={() => runCourseChange(
                                             () => removePlannedCourse(course.plannedCourseId),
                                             `${course.subject} ${course.number} removed`,
+                                            "Course could not be removed. Try again.",
                                             () => {
                                                 setLocalPlan((current) => current
                                                     ? withCourses(current, applyRemovedCourse(current, course.plannedCourseId))
@@ -358,7 +368,8 @@ export default function PlanEditor({
                         disabled={pending || !shown || shown.courses.length === 0}
                         onClick={() => shown && run(
                             () => submitPlannedTerm(shown.id),
-                            "Term plan submitted",
+                            "Plan submitted for review",
+                            "Plan could not be submitted. Try again.",
                             () => setLocalPlan((current) => current ? { ...current, status: "SUBMITTED" } : current),
                             "This plan cannot be submitted",
                         )}
@@ -373,6 +384,7 @@ export default function PlanEditor({
                         onClick={() => run(
                             () => markPlannedTermRegistered(shown.id),
                             "Registration recorded",
+                            "Registration could not be recorded. Try again.",
                             () => setLocalPlan((current) => current ? { ...current, registered: true } : current),
                         )}
                     >
@@ -382,4 +394,12 @@ export default function PlanEditor({
             </div>
         </section>
     );
+}
+
+function studentSafeMessage(error: string | undefined, fallback: string) {
+    const message = error?.trim() ?? "";
+    if (!message || /[_]|Prisma|P\d{4}|\b(DRAFT|SUBMITTED|APPROVED|IN_PROGRESS|COMPLETED)\b/.test(message)) {
+        return fallback;
+    }
+    return message;
 }

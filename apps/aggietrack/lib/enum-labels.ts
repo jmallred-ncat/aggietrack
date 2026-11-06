@@ -1,4 +1,4 @@
-import { Grade, TranscriptStatus, TranscriptSource } from "./generated/prisma/browser";
+import { Grade, PlannedTermStatus, TranscriptStatus, TranscriptSource } from "./generated/prisma/browser";
 
 /**
  * Human-readable labels for Grade enum values
@@ -44,6 +44,26 @@ export function transcriptStatusLabel(status: TranscriptStatus): string {
 /**
  * Human-readable labels for TranscriptSource enum values
  */
+const planStatusLabels: Record<PlannedTermStatus, string> = {
+  [PlannedTermStatus.DRAFT]: "Draft",
+  [PlannedTermStatus.SUBMITTED]: "Waiting for review",
+  [PlannedTermStatus.APPROVED]: "Approved",
+};
+
+/** The same plan-status words on every student page. Unknown values stay unlabeled. */
+export function planStatusLabel(status: string): string {
+  if (status in planStatusLabels) {
+    return planStatusLabels[status as PlannedTermStatus];
+  }
+  return "Status unavailable";
+}
+
+export function planStatusBadgeVariant(status: string): "default" | "secondary" | "outline" {
+  if (status === PlannedTermStatus.APPROVED) return "default";
+  if (status === PlannedTermStatus.DRAFT || status === PlannedTermStatus.SUBMITTED) return "secondary";
+  return "outline";
+}
+
 export function transcriptSourceLabel(source: TranscriptSource): string {
   const labels: Record<TranscriptSource, string> = {
     [TranscriptSource.NCAT]: "NC A&T",

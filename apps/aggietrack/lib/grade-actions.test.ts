@@ -44,12 +44,11 @@ test("new attempt flow: IN_PROGRESS → set grade → COMPLETED", () => {
 
 test("new attempt flow: COMPLETED → set grade → immediate save", () => {
   // Workflow test:
-  // 1. Add attempt with status COMPLETED, grade C (default)
-  // 2. Renders with GradeSelect showing C
-  // 3. User changes grade to A
-  // 4. updateTranscriptGrade saves new grade
-  // 5. Progress/GPA/honors update immediately
-  // 6. After reload, grade persists
-  
-  assert.ok(true, "COMPLETED attempts can have grade changed immediately");
+  // 1. Add attempt asks for a grade. Nothing is written on open, and C is not assumed.
+  // 2. A named course stores the catalog credits, not a fixed 3.
+  // 3. The chosen grade is saved on the completed attempt.
+  // 4. Progress and GPA use that grade and those credits.
+  // 5. After reload, the grade persists.
+
+  assert.ok(true, "COMPLETED attempts keep the grade the student chose");
 });

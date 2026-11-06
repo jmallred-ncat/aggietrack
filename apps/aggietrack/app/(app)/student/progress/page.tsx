@@ -1,4 +1,5 @@
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { getProgressSlotCourses, type ProgressSlotCourse } from "@/lib/catalog";
 import { computeDegreeProgress } from "@/lib/degree-progress";
 import type { TranscriptSource, TranscriptStatus } from "@/lib/generated/prisma/browser";
@@ -7,7 +8,7 @@ import { getCurriculumRecommendations, planPosition, requirementGroupTitle, requ
 import { slotIsUnfilled } from "@/lib/progress-slots";
 import { hasConfirmedStart, requireStudentProfile } from "@/lib/student";
 import { getTranscript, progressStatusFromEntry, type ProgressStatus } from "@/lib/transcript";
-import { ArrowsLeftRightIcon, CheckCircleIcon, MedalIcon } from "@phosphor-icons/react/dist/ssr";
+import { ArrowsLeftRightIcon, CheckCircleIcon } from "@phosphor-icons/react/dist/ssr";
 import ProgressForm, { type ProgressTerm, type ProgressYear } from "./ProgressForm";
 
 const emptySlot = {
@@ -23,6 +24,29 @@ const courseStatuses = [
     { value: "complete", label: "Complete", detail: "Completed at NCA&T", icon: CheckCircleIcon },
     { value: "transfer", label: "Transfer", detail: "Credit from another school", icon: ArrowsLeftRightIcon },
 ] as const;
+
+function reviewTarget(
+    years: ProgressYear[],
+    courseAttempts: Record<string, TranscriptAttempt[]>,
+    slotAttempts: Record<string, TranscriptAttempt[]>,
+): { id: string; missingGrade: boolean } | null {
+    let firstRow: string | null = null;
+    for (const year of years) {
+        for (const term of year.terms) {
+            for (const row of term.rows) {
+                const id = `progress-row-${row.id}`;
+                if (!firstRow) firstRow = id;
+                const attempts = row.kind === "course"
+                    ? courseAttempts[row.courseId] ?? []
+                    : slotAttempts[row.id] ?? [];
+                if (attempts.some((attempt) => attempt.status === "COMPLETED" && attempt.grade == null)) {
+                    return { id, missingGrade: true };
+                }
+            }
+        }
+    }
+    return firstRow ? { id: firstRow, missingGrade: false } : null;
+}
 
 function StatusLegend() {
     return (
@@ -78,6 +102,7 @@ export default async function ProgressPage() {
                             subject: course.course.subject,
                             number: course.course.number,
                             title: course.course.title,
+                            credits: course.course.credits,
                         }
                         : {
                             id: course.id,
@@ -209,7 +234,7 @@ export default async function ProgressPage() {
             subject,
             number,
             title: entry.course?.title ?? entry.title ?? `${subject} ${number}`,
-            credits: entry.credits,
+            credits: entry.course?.credits ?? entry.credits,
             attempts: [],
         };
         existing.attempts.push({
@@ -242,37 +267,48 @@ export default async function ProgressPage() {
         coursesByGroup[row.groupId] = [...options, { ...entry.course, lab: row.requiresLab }];
     }
 
+    const setupFinished = hasConfirmedStart(profile);
+    const review = reviewTarget(years, courseAttempts, slotAttempts);
+
     return (
         <div className="flex min-h-full flex-1 flex-col">
             <header>
                 <h1>Your Degree Progress</h1>
-                {progress.earnedCredits === 0 && (
-                    <p className="text-sm text-muted-foreground max-w-prose w-full text-balance">AggieTrack needs the courses you have already completed before you can continue. Mark those courses below, or say you have no prior coursework.</p>
-                )}
-                {progress.earnedCredits > 0 && (
-                    <div className="mt-4 rounded-lg border border-border bg-muted px-4 py-3 not-typeset">
-                        <div className="flex flex-wrap gap-4 items-start">
-                            <div className="flex-1 min-w-[200px]">
-                                <p className="text-sm font-medium">
-                                    Progress: {progress.earnedCredits} of {progress.totalCredits} credits ({progress.percentage}%)
-                                </p>
-                                <p className="text-xs text-muted-foreground mt-1">
-                                    {progress.mappedCourses} {progress.mappedCourses === 1 ? "course" : "courses"} counted toward degree requirements
-                                </p>
-                            </div>
-                            <div className="flex flex-col items-start rounded-lg bg-background px-3 py-2 border border-border">
-                                <span className="text-xs font-medium text-muted-foreground">Cumulative GPA</span>
-                                <div className="flex items-center gap-2 mt-1">
-                                    <MedalIcon weight="fill" size={18} className="text-primary" />
-                                    <span className="text-xl font-bold">{gpa !== null ? gpa.toFixed(2) : "—"}</span>
-                                </div>
-                                <Badge variant="outline" className="mt-1.5 text-xs border-border">
-                                    {gpa !== null ? "Completed courses" : "No GPA yet"}
-                                </Badge>
-                            </div>
+                {!setupFinished ? (
+                    <p className="max-w-prose text-sm text-balance text-muted-foreground">Add your previous courses, or choose &lsquo;I have no prior coursework&rsquo; to continue.</p>
+                ) : null}
+                {setupFinished && progress.earnedCredits === 0 ? (
+                    <p className="max-w-prose text-sm text-balance text-muted-foreground">No completed credits count toward this degree yet. In-progress courses do not count until they are completed and meet the requirement.</p>
+                ) : null}
+                <div className="mt-4 rounded-lg border border-border bg-muted px-4 py-3 not-typeset">
+                    <div className="flex flex-wrap items-start gap-4">
+                        <div className="flex min-w-[200px] flex-1 flex-col items-start gap-2">
+                            <p className="text-sm font-medium">Degree progress</p>
+                            <p className="text-2xl font-bold tabular-nums">
+                                {progress.earnedCredits} of {progress.totalCredits} credits ({progress.percentage}%)
+                            </p>
+                            <Badge>Completed requirements</Badge>
+                            <p className="text-xs text-balance text-muted-foreground">
+                                Only completed courses that meet a degree requirement count here.
+                            </p>
+                        </div>
+                        <div className="flex flex-col items-start gap-2 rounded-lg border border-border bg-background px-3 py-2">
+                            <span className="text-xs font-medium text-muted-foreground">Cumulative GPA</span>
+                            <span className="text-2xl font-bold tabular-nums">{gpa !== null ? gpa.toFixed(2) : "—"}</span>
+                            <Badge variant="outline">
+                                {gpa !== null ? "Recorded grades" : "No grades yet"}
+                            </Badge>
                         </div>
                     </div>
-                )}
+                </div>
+                {review ? (
+                    <Button
+                        nativeButton={false}
+                        variant="outline"
+                        className="mt-4"
+                        render={<a href={review.missingGrade ? `#${review.id}` : "#progress-courses"}>{review.missingGrade ? "Review missing grades" : "Review courses"}</a>}
+                    />
+                ) : null}
                 <StatusLegend />
             </header>
             <ProgressForm

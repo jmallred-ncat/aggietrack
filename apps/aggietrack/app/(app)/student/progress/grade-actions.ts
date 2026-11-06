@@ -2,6 +2,7 @@
 
 import { Grade, type TranscriptStatus } from "@/lib/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
+import { resolveAttemptCredits } from "@/lib/retake-attempt";
 import { requireStudentProfile } from "@/lib/student";
 import { refreshStudentViews } from "@/lib/refresh-student-views";
 import { z } from "zod";
@@ -89,7 +90,22 @@ export async function addTranscriptAttempt(input: unknown) {
         return { success: false as const, error: "Invalid attempt request." };
     }
 
-    const { courseId, subject, number, title, credits, grade, status, recommendedTermCourseId } = parsed.data;
+    const { courseId, subject, number, title, grade, status, recommendedTermCourseId } = parsed.data;
+    const catalogCourse = courseId
+        ? await prisma.course.findUnique({
+            where: { id: courseId },
+            select: { credits: true },
+        })
+        : null;
+    const resolvedCredits = resolveAttemptCredits({
+        courseId,
+        clientCredits: parsed.data.credits,
+        catalogCredits: catalogCourse?.credits ?? null,
+    });
+    if (!resolvedCredits.ok) {
+        return { success: false as const, error: "Course details unavailable. Refresh the page before adding an attempt." };
+    }
+    const credits = resolvedCredits.credits;
 
     // Verify the student has access to this course (either catalog course or it's their own entry)
     if (recommendedTermCourseId) {

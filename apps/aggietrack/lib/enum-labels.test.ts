@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { Grade, TranscriptStatus, TranscriptSource } from "./generated/prisma/browser";
-import { gradeLabel, transcriptStatusLabel, transcriptSourceLabel } from "./enum-labels";
+import { Grade, PlannedTermStatus, TranscriptStatus, TranscriptSource } from "./generated/prisma/browser";
+import { gradeLabel, planStatusLabel, transcriptStatusLabel, transcriptSourceLabel } from "./enum-labels";
 
 test("every Grade enum value has a human label", () => {
   for (const grade of Object.values(Grade)) {
@@ -29,6 +29,20 @@ test("every TranscriptSource enum value has a human label", () => {
     const label = transcriptSourceLabel(source);
     assert.ok(label, `TranscriptSource ${source} should have a label`);
     assert.ok(!label.includes("_"), `TranscriptSource label "${label}" should not contain underscore`);
+  }
+});
+
+test("plan status uses one set of words and never a raw enum", () => {
+  assert.equal(planStatusLabel(PlannedTermStatus.DRAFT), "Draft");
+  assert.equal(planStatusLabel(PlannedTermStatus.SUBMITTED), "Waiting for review");
+  assert.equal(planStatusLabel(PlannedTermStatus.APPROVED), "Approved");
+  assert.equal(planStatusLabel("RETURNED"), "Status unavailable");
+  assert.equal(planStatusLabel("SUBMITTED_LATE"), "Status unavailable");
+
+  for (const status of Object.values(PlannedTermStatus)) {
+    const label = planStatusLabel(status);
+    assert.equal(label.includes("_"), false);
+    assert.notEqual(label, status);
   }
 });
 
