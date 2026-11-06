@@ -1,4 +1,6 @@
-import type { RequirementGroup } from "./generated/prisma/client";
+import { academicTermLabel } from "./academic-term";
+import type { RequirementGroup, StudentStanding, TermSeason } from "./generated/prisma/client";
+import { handbookReferenceForTerm, type RecordedStanding } from "./handbook-guidance";
 import { prisma } from "./prisma";
 import { requireStudentProfile } from "./student";
 
@@ -22,6 +24,76 @@ export async function getCurriculumRecommendations() {
     });
 
     return recommended;
+}
+
+function recordedStanding(standing: StudentStanding | null): RecordedStanding | null {
+    if (
+        standing === "FRESHMAN"
+        || standing === "SOPHOMORE"
+        || standing === "JUNIOR"
+        || standing === "SENIOR"
+    ) {
+        return standing;
+    }
+    return null;
+}
+
+/** Handbook course for this student's year, as a reference for the term they have open. */
+export async function getHandbookReference(
+    student: { id: string; catalogYearId: string; standing: StudentStanding | null },
+    term: { season: TermSeason; year: number },
+) {
+    const [recommended, entries] = await Promise.all([
+        prisma.recommendedTerm.findMany({
+            where: { catalogYearId: student.catalogYearId },
+            orderBy: { sequence: "asc" },
+            include: {
+                courses: {
+                    where: { courseId: { not: null } },
+                    orderBy: { sortOrder: "asc" },
+                    include: {
+                        course: {
+                            select: { subject: true, number: true, title: true, offeredIn: true },
+                        },
+                    },
+                },
+            },
+        }),
+        prisma.transcriptEntry.findMany({
+            where: {
+                studentId: student.id,
+                status: "COMPLETED",
+                courseId: { not: null },
+            },
+            select: {
+                course: { select: { subject: true, number: true } },
+            },
+        }),
+    ]);
+
+    const courses = recommended.flatMap((row) =>
+        row.courses.flatMap((item) => item.course
+            ? [{
+                sequence: row.sequence,
+                sortOrder: item.sortOrder,
+                subject: item.course.subject,
+                number: item.course.number,
+                title: item.course.title,
+                offeredIn: item.course.offeredIn,
+            }]
+            : []),
+    );
+    const completed = new Set(
+        entries.flatMap((entry) => entry.course ? [`${entry.course.subject} ${entry.course.number}`] : []),
+    );
+
+    return handbookReferenceForTerm({
+        courses,
+        completed,
+        standing: recordedStanding(student.standing),
+        season: term.season,
+        termLabel: academicTermLabel(term),
+    });
 }
 
 export function requirementSlotCredits(
