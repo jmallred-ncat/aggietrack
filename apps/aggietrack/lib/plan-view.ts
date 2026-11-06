@@ -15,6 +15,8 @@ export const plannerMutationPaths = [
     "/student/courses",
     "/student/progress",
     "/student",
+    "/advisor",
+    "/advisor/students",
     "/advisor/plans",
 ] as const;
 

@@ -1,4 +1,5 @@
 import { getCurriculumCourseSections, requirementLabelsByCourse } from "@/lib/catalog";
+import { NOTE_PAGE_SIZE, pagePlanNotes, presentPlanNote } from "@/lib/plan-notes";
 import { requiresCourseOverride, toRuleCourse } from "@/lib/plan-rules";
 import { academicTermLabel, courseStandingBefore, getPlannerWindow, getPlannableCourses, getStudentPlannedTerm } from "@/lib/planned-term";
 import { getHandbookReference } from "@/lib/planner";
@@ -46,6 +47,15 @@ export default async function PlannerPage({
         : [null, [], [], null, null];
     const requirementLabels = requirementLabelsByCourse(sections);
     const sameTermCourseIds = new Set(plan?.courses.map((row) => row.course.id) ?? []);
+    const noteRows = plan
+        ? await prisma.planNote.findMany({
+            where: { plannedTermId: plan.id },
+            orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+            take: NOTE_PAGE_SIZE + 1,
+        })
+        : [];
+    const thread = pagePlanNotes(noteRows);
+    const latestReturn = noteRows.find((note) => note.kind === "RETURN");
 
     return (
         <div>
@@ -71,9 +81,13 @@ export default async function PlannerPage({
                         requirements: requirementLabels(course),
                     }))}
                     reference={reference}
+                    notes={thread.notes.map(presentPlanNote)}
+                    earlierCursor={thread.earlierCursor}
                     plan={plan ? {
                         id: plan.id,
                         status: plan.status,
+                        revision: plan.revision,
+                        returnComment: plan.status === "RETURNED" ? latestReturn?.body ?? null : null,
                         registrationPin: plan.registrationPin,
                         registered: plan.registeredAt !== null,
                         courses: plan.courses.map((row) => ({

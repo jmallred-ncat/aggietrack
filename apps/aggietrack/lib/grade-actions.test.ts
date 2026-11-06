@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { Grade } from "./generated/prisma/client";
+import { progressInProgressRejection } from "./transcript-write";
 
 /**
  * Integration test for add attempt + set grade workflow
@@ -30,16 +31,13 @@ test("addTranscriptAttempt return type includes entry", () => {
   assert.ok(true, "Return type includes entry field for optimistic UI update");
 });
 
-test("new attempt flow: IN_PROGRESS → set grade → COMPLETED", () => {
-  // Workflow test:
-  // 1. Add attempt with status IN_PROGRESS, grade null
-  // 2. Renders with "In progress" badge + "Set grade" placeholder
-  // 3. User selects grade from dropdown
-  // 4. updateTranscriptGrade changes status to COMPLETED, sets grade
-  // 5. Progress/GPA/honors update immediately
-  // 6. After reload, grade persists
-  
-  assert.ok(true, "IN_PROGRESS attempts can be converted to COMPLETED by setting grade");
+test("progress cannot create an in-progress attempt", () => {
+  assert.equal(
+    progressInProgressRejection("IN_PROGRESS"),
+    "A course is marked in progress only after your advisor approves the plan.",
+  );
+  assert.equal(progressInProgressRejection("COMPLETED"), null);
+  assert.equal(Grade.C, "C");
 });
 
 test("new attempt flow: COMPLETED → set grade → immediate save", () => {

@@ -4,6 +4,7 @@ import { Grade, type TranscriptStatus } from "@/lib/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireStudentProfile } from "@/lib/student";
 import { refreshStudentViews } from "@/lib/refresh-student-views";
+import { progressInProgressRejection } from "@/lib/transcript-write";
 import { z } from "zod";
 
 const gradeSchema = z.nativeEnum(Grade);
@@ -20,13 +21,13 @@ const addAttemptSchema = z.object({
     title: z.string().max(120).nullable(),
     credits: z.number().int().min(1).max(6),
     grade: gradeSchema.nullable(),
-    status: z.enum(["IN_PROGRESS", "COMPLETED"] as const),
+    status: z.literal("COMPLETED"),
     recommendedTermCourseId: z.string().min(1).nullable(),
 }).refine(
     (data) => (data.courseId != null) !== (data.subject != null && data.number != null && data.title != null),
     { message: "Must provide either courseId or subject/number/title" }
 ).refine(
-    (data) => data.status === "IN_PROGRESS" || data.grade != null,
+    (data) => data.grade != null,
     { message: "Grade required for completed courses" }
 );
 
@@ -82,6 +83,13 @@ export async function updateTranscriptGrade(input: unknown) {
  * Only allows adding attempts for the current student.
  */
 export async function addTranscriptAttempt(input: unknown) {
+    const requested = typeof input === "object" && input !== null && "status" in input
+        ? (input as { status?: unknown }).status
+        : undefined;
+    if (typeof requested === "string") {
+        const rejected = progressInProgressRejection(requested);
+        if (rejected) return { success: false as const, error: rejected };
+    }
     const profile = await requireStudentProfile();
     const parsed = addAttemptSchema.safeParse(input);
 
@@ -125,8 +133,8 @@ export async function addTranscriptAttempt(input: unknown) {
             number: courseId ? null : number,
             title: courseId ? null : title,
             credits,
-            grade: status === "IN_PROGRESS" ? null : grade,
-            status: status as TranscriptStatus,
+            grade,
+            status: "COMPLETED" satisfies TranscriptStatus,
             source: grade === Grade.TR ? "TRANSFER" : "NCAT",
             recommendedTermCourseId,
         },

@@ -20,11 +20,12 @@ test("workbook import, execution history, live coverage, and persistence", async
     let workspace = await readWorkspace(db);
     assert.equal(workspace.sections.length, 7);
     const tests = workspace.sections.find(section => section.name === "Tests")!;
-    assert.equal(tests.rows.length, 72);
+    assert.equal(tests.rows.length, 77);
     assert.equal(workspace.sections.find(section => section.name === "Course Catalog")!.rows.length, 202);
     const alreadyPassed = new Set(["T-63", "T-64", "T-65", "T-66", "T-67", "T-69", "T-70", "T-71", "T-72"]);
     assert(tests.rows.every(row => (alreadyPassed.has(row.id) ? row.values.Status === "Pass" : row.values.Status === "Not run")));
     const original = tests.rows.find(row => row.id === "T-01")!;
+    assert.match(tests.rows.find(row => row.id === "T-74")!.values.Procedure, /Approve plan/);
     assert.match(original.values["Test / scenario"], /Sign up/);
     assert.equal(workspace.sections.find(section => section.name === "Risks & Decisions")!.rows.find(row => row.id === "Q-01")!.values["Issue / risk"], "Sign-in rules do not match the requirement");
     const q12 = workspace.sections.find(section => section.name === "Risks & Decisions")!.rows.find(row => row.id === "Q-12")!;

@@ -1,5 +1,6 @@
 import { cache } from "react";
 import { academicTermLabel, semesterInSession } from "./academic-term";
+import { planCoursesLocked } from "./plan-status";
 import type { AcademicTerm, Prisma, TermSeason, TranscriptSource } from "./generated/prisma/client";
 import { selectPlannableCourses } from "./plannable-courses";
 import { coursePrerequisitesNeedAdvisorReview } from "./prerequisites";
@@ -135,12 +136,12 @@ export async function getPlannerAddContext() {
         }),
     ]);
     const lockedTermIds = new Set(
-        plans.filter((plan) => plan.status !== "DRAFT").map((plan) => plan.termId),
+        plans.filter((plan) => planCoursesLocked(plan.status)).map((plan) => plan.termId),
     );
     const placements = plans.flatMap((plan) => plan.courses.map((course) => ({
         courseId: course.courseId,
         termLabel: academicTermLabel(plan.term),
-        locked: plan.status !== "DRAFT",
+        locked: planCoursesLocked(plan.status),
     })));
     const plannedCourseIds = new Set(placements.map((placement) => placement.courseId));
     for (const entry of transcript) {

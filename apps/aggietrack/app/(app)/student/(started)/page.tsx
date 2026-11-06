@@ -10,6 +10,7 @@ import { computeDegreeProgress } from "@/lib/degree-progress";
 import { computeGpa, computeHonors } from "@/lib/gpa";
 import { prisma } from "@/lib/prisma";
 import { getTranscript } from "@/lib/transcript";
+import { plannedTermStatusLabel, plannedTermStatusVariant } from "@/lib/plan-status";
 import { formatProgramName } from "@/lib/program";
 import { getSessionUser, requireStudentProfile } from "@/lib/student";
 import { CheckSquareIcon, FlaskIcon, GraduationCapIcon, MedalIcon, NoteIcon } from "@phosphor-icons/react/dist/ssr";
@@ -51,7 +52,7 @@ export default async function Dashboard() {
     const semester = semesterInSession(terms, now);
     const semesterPlan = plans
         .filter((plan) =>
-            (plan.status === "SUBMITTED" || plan.status === "APPROVED")
+            (plan.status === "SUBMITTED" || plan.status === "APPROVED" || plan.status === "RETURNED")
             && plan.term.startsOn <= now
             && plan.term.endsOn >= now,
         )
@@ -64,7 +65,7 @@ export default async function Dashboard() {
         .sort((a, b) => a.term.startsOn.getTime() - b.term.startsOn.getTime())[0] ?? null;
     const otherPlan = plans
         .filter((plan) =>
-            (plan.status === "SUBMITTED" || plan.status === "APPROVED") && plan.term.startsOn > now,
+            (plan.status === "SUBMITTED" || plan.status === "APPROVED" || plan.status === "RETURNED") && plan.term.startsOn > now,
         )
         .sort((a, b) => a.term.startsOn.getTime() - b.term.startsOn.getTime())[0] ?? null;
 
@@ -111,8 +112,8 @@ export default async function Dashboard() {
                 <header className="flex justify-between items-center gap-3">
                     <h2 className="text-2xl font-bold">{semester ? academicTermLabel(semester) : "No semester in session"}</h2>
                     {semesterPlan && (
-                        <Badge variant={semesterPlan.status === "APPROVED" ? "default" : "secondary"}>
-                            {semesterPlan.status === "APPROVED" ? "Approved" : "Pending review"}
+                        <Badge variant={plannedTermStatusVariant(semesterPlan.status)}>
+                            {plannedTermStatusLabel(semesterPlan.status)}
                         </Badge>
                     )}
                 </header>
@@ -140,11 +141,11 @@ export default async function Dashboard() {
                             <EmptyTitle>{semesterPlan ? "No courses on this plan" : "No courses this semester"}</EmptyTitle>
                             <EmptyDescription>
                                 {semesterPlan
-                                    ? `Your ${academicTermLabel(semesterPlan.term)} plan is ${semesterPlan.status === "APPROVED" ? "approved" : "waiting for your advisor"} and has no courses on it, so there is nothing in progress this semester.`
+                                    ? `Your ${academicTermLabel(semesterPlan.term)} plan is ${semesterPlan.status === "APPROVED" ? "approved" : semesterPlan.status === "RETURNED" ? "changes requested" : "waiting for your advisor"} and has no courses on it, so there is nothing in progress this semester.`
                                     : draft
                                         ? `Your ${academicTermLabel(draft.term)} plan is still a draft. Open the planner, add the courses you want to take, and submit the plan so your advisor can review it. Those courses show here during that semester once the plan is pending or approved.`
                                         : otherPlan
-                                            ? `Your ${academicTermLabel(otherPlan.term)} plan is ${otherPlan.status === "APPROVED" ? "approved" : "waiting for review"}. Its courses show here when that semester is in session.`
+                                            ? `Your ${academicTermLabel(otherPlan.term)} plan is ${otherPlan.status === "APPROVED" ? "approved" : otherPlan.status === "RETURNED" ? "changes requested" : "waiting for review"}. Its courses show here when that semester is in session.`
                                             : semester
                                                 ? `${academicTermLabel(semester)} does not have a pending or approved plan. Open the planner, add the courses for the term you are registering for, and submit that plan so your advisor can review it.`
                                                 : "No semester is in session. Open the planner, add the courses for your next term, and submit that plan so your advisor can review it. Those courses show here once that semester begins."}
