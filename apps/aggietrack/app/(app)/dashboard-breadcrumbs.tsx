@@ -5,6 +5,7 @@ import { CATALOG_BROWSER_LABEL } from "@/lib/course-search";
 import { cn } from "@/lib/utils";
 import { useSelectedLayoutSegments } from "next/navigation";
 import { Fragment } from "react/jsx-runtime";
+import { usePlanCrumb } from "./plan-crumb";
 
 const labels: Record<string, string> = {
     student: "Dashboard",
@@ -25,6 +26,7 @@ const labels: Record<string, string> = {
 
 export default function DashboardBreadcrumbs() {
     const segments = useSelectedLayoutSegments().filter((segment) => !segment.startsWith("("));
+    const planCrumb = usePlanCrumb();
 
     return (
         <Breadcrumb>
@@ -32,7 +34,7 @@ export default function DashboardBreadcrumbs() {
                 {segments.map((segment, i) => {
                     const href = `/${segments.slice(0, i + 1).join("/")}`;
                     const isLast = i === segments.length - 1;
-                    const label = labels[segment] ?? (segments[i - 1] === "plans" ? "Plan" : "Details");
+                    const label = labels[segment] ?? (segments[i - 1] === "plans" ? (planCrumb ?? "Plan") : "Details");
 
                     return (
                         <Fragment key={href}>

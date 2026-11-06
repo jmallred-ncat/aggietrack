@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { DismissibleAlert } from "@/components/dismissible-alert";
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/components/ui/empty";
-import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { academicTermLabel } from "@/lib/academic-term";
 import {
     advisorTermChoices,
@@ -13,7 +13,7 @@ import {
     type RosterRow,
     type RosterStatus,
 } from "@/lib/advisor-roster";
-import { catalogYearLabel, countNoun, planTimestamp, plannedTermStatusLabel, plannedTermStatusVariant } from "@/lib/plan-status";
+import { catalogYearLabel, planDate, plannedTermStatusLabel, plannedTermStatusVariant } from "@/lib/plan-status";
 import { prisma } from "@/lib/prisma";
 import { getSessionUser } from "@/lib/student";
 import Link from "next/link";
@@ -42,9 +42,9 @@ function loadAssignedStudents(advisorId: string, termId: string) {
 
 function timing(row: RosterRow, termLabel: string) {
     if (!row.planId) return `No plan for ${termLabel}`;
-    if (row.status === "SUBMITTED" && row.submittedAt) return `Submitted ${planTimestamp(new Date(row.submittedAt))}`;
-    if (row.status === "RETURNED" && row.reviewedAt) return `Returned ${planTimestamp(new Date(row.reviewedAt))}`;
-    if (row.status === "APPROVED" && row.reviewedAt) return `Reviewed ${planTimestamp(new Date(row.reviewedAt))}`;
+    if (row.status === "SUBMITTED" && row.submittedAt) return `Submitted ${planDate(new Date(row.submittedAt))}`;
+    if (row.status === "RETURNED" && row.reviewedAt) return `Returned ${planDate(new Date(row.reviewedAt))}`;
+    if (row.status === "APPROVED" && row.reviewedAt) return `Reviewed ${planDate(new Date(row.reviewedAt))}`;
     return "Not submitted";
 }
 
@@ -98,11 +98,13 @@ export default async function AdvisorStudentsPage({
     if (sort !== "review") queryString.set("sort", sort);
     const returnTo = `/advisor/students${queryString.size ? `?${queryString}` : ""}`;
 
+    const filtersChangedSet = paged.total !== rows.length;
+
     return (
-        <div className="py-6">
-            <header>
-                <h1 className="text-4xl font-bold">Students</h1>
-                <p className="mt-2 max-w-prose text-sm text-muted-foreground">Review term plans for the students assigned to you.</p>
+        <div className="not-typeset flex flex-col gap-6 py-6">
+            <header className="space-y-2">
+                <h1 className="text-3xl font-bold text-balance sm:text-4xl">Students</h1>
+                <p className="max-w-prose text-balance text-sm text-muted-foreground">Review term plans for the students assigned to you.</p>
             </header>
             {failed ? (
                 <DismissibleAlert
@@ -112,7 +114,7 @@ export default async function AdvisorStudentsPage({
                 />
             ) : null}
             {choices.terms.length === 0 ? (
-                <Empty className="mt-6 border">
+                <Empty className="border">
                     <EmptyHeader>
                         <EmptyTitle>No terms available</EmptyTitle>
                         <EmptyDescription>There is no term open for plan review.</EmptyDescription>
@@ -120,7 +122,7 @@ export default async function AdvisorStudentsPage({
                 </Empty>
             ) : (
                 <>
-                    <p className="mt-4 text-sm text-muted-foreground">
+                    <p className="text-sm text-muted-foreground">
                         {rows.length === 1 ? "1 student" : `${rows.length} students`} · {waiting} waiting for review
                     </p>
                     <RosterControls
@@ -128,14 +130,14 @@ export default async function AdvisorStudentsPage({
                         terms={choices.terms.map((item) => ({ id: item.id, label: academicTermLabel(item) }))}
                     />
                     {rows.length === 0 ? (
-                        <Empty className="mt-6 border">
+                        <Empty className="border">
                             <EmptyHeader>
                                 <EmptyTitle>No students assigned yet</EmptyTitle>
                                 <EmptyDescription>Students assigned to you will appear here.</EmptyDescription>
                             </EmptyHeader>
                         </Empty>
                     ) : paged.total === 0 ? (
-                        <Empty className="mt-6 border">
+                        <Empty className="border">
                             <EmptyHeader>
                                 <EmptyTitle>No students found</EmptyTitle>
                                 <EmptyDescription>Try a different name, student ID, or plan status.</EmptyDescription>
@@ -144,16 +146,20 @@ export default async function AdvisorStudentsPage({
                         </Empty>
                     ) : (
                         <>
-                            <p className="mt-4 text-sm">{paged.total === 1 ? "1 student" : `${paged.total} students`}</p>
-                            <div className="mt-4 hidden md:block">
-                                <Table>
-                                    <TableCaption>Students assigned to you for {termLabel}</TableCaption>
+                            {filtersChangedSet ? (
+                                <p className="text-sm text-muted-foreground">
+                                    {paged.total === 1 ? "1 student matches these filters" : `${paged.total} students match these filters`}
+                                </p>
+                            ) : null}
+                            <div className="hidden xl:block">
+                                <Card className="overflow-hidden py-0">
+                                <Table className="table-fixed">
                                     <TableHeader>
                                         <TableRow>
-                                            <TableHead>Student</TableHead>
-                                            <TableHead>Catalog year</TableHead>
-                                            <TableHead>Plan status</TableHead>
-                                            <TableHead>Action</TableHead>
+                                            <TableHead className="w-[30%]">Student</TableHead>
+                                            <TableHead className="w-[16%]">Catalog year</TableHead>
+                                            <TableHead className="w-[34%]">Plan status</TableHead>
+                                            <TableHead className="w-[20%]">Action</TableHead>
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
@@ -162,23 +168,24 @@ export default async function AdvisorStudentsPage({
                                             const name = `${row.firstName} ${row.lastName}`;
                                             return (
                                                 <TableRow key={row.id}>
-                                                    <TableCell>
-                                                        <p className="text-base font-medium">{name}</p>
-                                                        <p className="text-sm text-muted-foreground">{row.bannerId ? `Student ID: ${row.bannerId}` : "Student ID not added"}</p>
+                                                    <TableCell className="align-top">
+                                                        <p className="text-pretty text-base font-medium">{name}</p>
+                                                        <p className="mt-1 text-sm text-muted-foreground">{row.bannerId ? `Student ID: ${row.bannerId}` : "Student ID not added"}</p>
                                                     </TableCell>
-                                                    <TableCell>{catalogYearLabel(student?.catalogYear.year)}</TableCell>
-                                                    <TableCell>
+                                                    <TableCell className="align-top whitespace-nowrap tabular-nums">{catalogYearLabel(student?.catalogYear.year)}</TableCell>
+                                                    <TableCell className="align-top">
                                                         {row.status ? <Badge variant={plannedTermStatusVariant(row.status)}>{plannedTermStatusLabel(row.status)}</Badge> : <Badge variant="outline">No plan yet</Badge>}
                                                         <p className="mt-1 text-sm text-muted-foreground">{timing(row, termLabel)}</p>
                                                     </TableCell>
-                                                    <TableCell>{action(row, name, termLabel, returnTo)}</TableCell>
+                                                    <TableCell className="align-top whitespace-nowrap">{action(row, name, termLabel, returnTo)}</TableCell>
                                                 </TableRow>
                                             );
                                         })}
                                     </TableBody>
                                 </Table>
+                                </Card>
                             </div>
-                            <div className="mt-4 space-y-4 md:hidden">
+                            <div className="space-y-4 xl:hidden">
                                 {paged.rows.map((row) => {
                                     const student = assigned.find((item) => item.id === row.id);
                                     const name = `${row.firstName} ${row.lastName}`;
@@ -199,7 +206,7 @@ export default async function AdvisorStudentsPage({
                                 })}
                             </div>
                             {paged.pages > 1 ? (
-                                <nav className="mt-4 flex items-center justify-between gap-3" aria-label="Student pages">
+                                <nav className="flex items-center justify-between gap-3" aria-label="Student pages">
                                     {paged.page <= 1 ? (
                                         <Button variant="outline" disabled aria-label="Previous page">Previous</Button>
                                     ) : (

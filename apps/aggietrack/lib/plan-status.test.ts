@@ -7,6 +7,7 @@ import {
     dashboardCoursePlan,
     planCoursesLocked,
     planNoteRoleLabel,
+    planDate,
     planTimestamp,
     plannedTermStatusLabel,
     plannedTermStatusVariant,
@@ -56,8 +57,10 @@ test("an approved plan is in progress before its term starts", () => {
     assert.match(planner, /These courses are in progress\./);
     assert.match(planner, />In progress</);
     assert.doesNotMatch(planner, /confirm that you registered|You confirmed that you registered/);
-    assert.match(review, /These courses are in progress\./);
-    assert.doesNotMatch(review, /Waiting for the student to confirm registration/);
+    assert.match(review, /Waiting for the student to confirm registration\./);
+    assert.match(review, /Registration confirmed\./);
+    assert.doesNotMatch(review, /These courses are in progress/);
+    assert.doesNotMatch(review, /readOnly/);
     assert.match(progress, /attempts\.some\(\(attempt\) => attempt\.status === "IN_PROGRESS"\)/);
 });
 
@@ -77,6 +80,12 @@ test("roles and catalog years stay readable", () => {
     assert.equal(catalogYearLabel(2025), "2025–2026");
     assert.equal(catalogYearLabel(null), "Not set");
     assert.doesNotMatch(planNoteRoleLabel("STUDENT"), rawEnum);
+});
+
+test("plan dates are the Eastern calendar day without a clock", () => {
+    assert.equal(planDate("2026-11-06T03:45:00.000Z"), "Nov 5, 2026");
+    assert.equal(planDate(null), null);
+    assert.equal(planDate("not-a-date"), null);
 });
 
 test("timestamps use Eastern Time and do not print an ISO instant", () => {

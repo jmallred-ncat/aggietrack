@@ -373,11 +373,11 @@ export default function PlanEditor({
             {shown && shown.courses.length > 0 ? (
                 <div className="mt-4 min-h-[300px] space-y-4 rounded-lg border border-dashed border-border px-4 pt-3 pb-3">
                     {shown.courses.map((course) => (
-                        <div key={course.plannedCourseId} className="flex items-center justify-between gap-3 not-typeset">
-                            <p className="flex min-w-0 items-center gap-2 text-sm font-medium">
+                        <div key={course.plannedCourseId} className="flex items-start justify-between gap-3 not-typeset">
+                            <p className="flex min-w-0 items-start gap-2 text-sm font-medium">
                                 <Badge className="font-mono">{course.subject} {course.number}</Badge>
                                 <span className="min-w-0">
-                                    <span className="block truncate">{course.title}</span>
+                                    <span className="block text-pretty">{course.title}</span>
                                     <RequirementNames requirements={course.requirements} />
                                     <CourseOverrideNote show={course.requiresCourseOverride === true} />
                                 </span>
