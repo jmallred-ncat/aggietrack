@@ -10,7 +10,7 @@ import { toast } from "@/components/ui/toast";
 import { RuleViolationAlert } from "@/components/rule-violation-alert";
 import { courseMatchesSearch } from "@/lib/course-search";
 import type { PlannedTermStatus } from "@/lib/generated/prisma/client";
-import { finishPlanSave, type PlanSaveResult } from "@/lib/plan-save";
+import { announcePlanViolations, finishPlanSave, type PlanSaveResult } from "@/lib/plan-save";
 import { applyAddedCourses, applyRemovedCourse, termCreditLabel, termCreditTotal } from "@/lib/plan-view";
 import { MagnifyingGlassIcon, XIcon } from "@phosphor-icons/react";
 import { useRouter } from "next/navigation";
@@ -140,8 +140,14 @@ export default function PlanEditor({
         startTransition(async () => {
             const outcome = await finishPlanSave(action, { onLate: () => router.refresh() });
             if (outcome.status === "violations") {
-                setViolationTitle("Requirement not met");
-                setViolations(outcome.violations);
+                const notices = announcePlanViolations(outcome.violations);
+                for (const message of notices.sonner) sonner.error(message);
+                if (notices.alert.length > 0) {
+                    setViolationTitle("Requirement not met");
+                    setViolations(notices.alert);
+                } else {
+                    setViolations([]);
+                }
                 return;
             }
             if (outcome.status === "failed") {

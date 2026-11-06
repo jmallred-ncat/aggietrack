@@ -12,7 +12,7 @@ import { toast } from "@/components/ui/toast";
 import type { CurriculumCourseSection } from "@/lib/catalog";
 import { CATALOG_BROWSER_LABEL, courseMatchesSearch } from "@/lib/course-search";
 import { GenEdTag, RequirementSlot, type TermSeason } from "@/lib/generated/prisma/browser";
-import { PLAN_SAVE_FAILED } from "@/lib/plan-save";
+import { announcePlanViolations, PLAN_SAVE_FAILED } from "@/lib/plan-save";
 import { offeringViolation } from "@/lib/plan-rules";
 import { ADVISOR_REVIEW_PREREQUISITES, coursePrerequisitesNeedAdvisorReview, coursePrerequisitesSatisfied } from "@/lib/prerequisites";
 import type { StudentProfileWithCatalog } from "@/lib/student";
@@ -481,9 +481,18 @@ function AddToPlannerButton({
                 return;
             }
             if (!result.success) {
-                const message = result.error?.trim() ? result.error : PLAN_SAVE_FAILED;
-                if (message === PLAN_SAVE_FAILED || message.toLowerCase().includes("advisor review")) sonner.error(message);
-                else toast.add({ title: message });
+                const messages = result.violations?.length
+                    ? result.violations
+                    : [result.error?.trim() ? result.error : PLAN_SAVE_FAILED];
+                const notices = announcePlanViolations(messages);
+                for (const message of notices.sonner) sonner.error(message);
+                if (notices.alert.length > 0) {
+                    const message = notices.alert.join(" ");
+                    if (message === PLAN_SAVE_FAILED || message.toLowerCase().includes("advisor review")) sonner.error(message);
+                    else toast.add({ title: message });
+                } else if (notices.sonner.length === 0) {
+                    sonner.error(PLAN_SAVE_FAILED);
+                }
                 return;
             }
             const addedCodes = [
@@ -567,7 +576,7 @@ function AddToPlannerButton({
                             : addWithOverride
                                 ? `${completedList} ${completedCorequisites.length === 1 ? "is" : "are"} already completed. Adding ${label} without ${completedCorequisites.length === 1 ? "that corequisite" : "those corequisites"} uses an override. You can remove it before submitting the plan for review.`
                                 : companions.length > 0
-                                    ? `${label} is taken with ${companionList}. Add ${companions.length === 1 ? "both courses" : "all of these courses"} to the same plan, or add ${label} on its own. You can remove them before submitting the plan for review.`
+                                    ? `${label} must be taken with ${companionList} in the same term. Add ${companions.length === 1 ? "both courses" : "all of these courses"} together. You can remove them before submitting the plan for review.`
                                     : onlyTerm
                                         ? `${course.title} will be added to your ${onlyTerm.label} plan. You can remove it before submitting the plan for review.`
                                         : "Choose the term this course should join. You can remove it before submitting the plan for review."}

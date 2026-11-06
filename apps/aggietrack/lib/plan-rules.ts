@@ -32,8 +32,14 @@ export type PlanCheck = {
     /** Completed transcript courses. A finished lecture can stand in for its lab. */
     completedCourseIds: ReadonlySet<string>;
     /**
-     * Adding a course still allows the lab to be left off.
-     * Submit and approval check corequisites again.
+     * Courses already saved on this same term. They satisfy a pair
+     * without being checked again. Submit sends the whole term in `courses`.
+     */
+    sameTermCourseIds?: ReadonlySet<string>;
+    /**
+     * Save, submit, and approval leave this on.
+     * A lecture can still be saved without its lab. A lab needs that lecture
+     * on this term or already completed.
      */
     corequisites?: boolean;
 };
@@ -133,14 +139,20 @@ function pushUnique(messages: string[], message: string | null) {
     if (message && !messages.includes(message)) messages.push(message);
 }
 
+/** The sentence shown when a lab is saved without its lecture. */
+export function isPairViolation(message: string) {
+    return message.includes(" must be taken with ");
+}
+
 /**
  * Prerequisite, corequisite, and term-offering sentences for one term.
  * Prerequisites use the same rule as adding a course. Corequisites are the
- * lab's lecture, on this plan or already completed.
+ * lab's lecture, on this term or already completed. A lecture does not require its lab.
  */
 export function planRuleViolations(input: PlanCheck) {
     const messages: string[] = [];
     const onPlan = new Set(input.courses.map((course) => course.id));
+    for (const id of input.sameTermCourseIds ?? []) onPlan.add(id);
     const checkCorequisites = input.corequisites !== false;
 
     for (const course of input.courses) {

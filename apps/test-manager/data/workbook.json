@@ -527,7 +527,7 @@
             "Preconditions": "MATH 110 is completed; CST 112 and CST 122 are not on the transcript; The clock is 2026-10-11 at 12:00 UTC, Fall 2026 is acknowledged, and Spring 2027 is open",
             "Inputs / data": "CST 122 by itself; CST 112 and CST 122 together; CST 112 already on an earlier plan; CST 112 on a later plan; CST 112 already completed",
             "Procedure": "1. Reset before each try.\n2. Try to add CST 122 to Spring 2027 from the course browser and from the action.\n3. Check the exact course and term ids that were saved.",
-            "Expected result": "The pair in the same term is allowed; A missing companion, or a companion in another term, is rejected unless a completed companion was approved as an exception; The screen currently lets you add the lab alone, and the server does not enforce the pair",
+            "Expected result": "The pair in the same term is allowed; A missing companion, or a companion in another term, is rejected unless a completed companion was approved as an exception; Saving the lab alone is refused with a sentence that CST 122 must be taken with CST 112 in that term",
             "Pass criterion": "Each try matches Q-04; A lecture or lab does not stay on the plan by itself unless that exception was approved; A valid pair is 3 credits plus 1 credit, 4 in total",
             "Decision dependency": "Q04; G02; R03; R06",
             "Evidence to retain": "The result of each try; The messages on the screen; The terms that were saved",
