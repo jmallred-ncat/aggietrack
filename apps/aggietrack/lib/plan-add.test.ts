@@ -101,7 +101,7 @@ function record(course: CourseRef): AddCourseRecord {
             code: `${course.subject} ${course.number}`,
             isLab: info.isLab,
             offeredIn: info.offeredIn,
-            groups: stored.map(({ isConcurrent, fromCatalog, options }) => ({ isConcurrent, fromCatalog, options })),
+            groups: stored.map(({ isConcurrent, fromCatalog, options, note }) => ({ isConcurrent, fromCatalog, options, note })),
             prerequisitesNeedAdvisorReview: coursePrerequisitesNeedAdvisorReview(
                 stored.map((group) => ({
                     isConcurrent: group.isConcurrent,

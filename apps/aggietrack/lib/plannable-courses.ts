@@ -13,6 +13,8 @@ export type PlannableCourse = {
         isConcurrent: boolean;
         fromCatalog?: boolean;
         optionIds: string[];
+        /** Catalog sentence kept beside the course options, such as a placement score. */
+        note?: string | null;
     }[];
     /** Catalog text that could not be checked. The planner search leaves the course out. */
     prerequisitesNeedAdvisorReview?: boolean;

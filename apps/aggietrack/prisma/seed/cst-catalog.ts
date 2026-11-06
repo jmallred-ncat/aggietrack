@@ -19,6 +19,7 @@ import { type PrerequisiteGroupSeed, prerequisiteGroupsFor } from "./prerequisit
  *   corequisites      → one concurrent group; a single option is also a concurrent pair
  *   prerequisites     → AND across groups, OR inside a group
  *                       (scores, standing, consent, and "or higher" stay on the group note)
+ *                       A malformed prerequisite field is left out. It is not a rule.
  *
  * Not stored (no schema field):
  *   source_url
@@ -33,7 +34,16 @@ type NcatSearchCourse = {
   prerequisites: string | null;
   corequisites: string | null;
   offered_in_codes: string[];
+  catalog_note?: string;
 };
+
+/** Description scrap that was stored in the prerequisite field is not a rule. */
+function importedPrerequisite(row: NcatSearchCourse) {
+  if (/prerequisite field appears malformed/i.test(row.catalog_note ?? "")) {
+    return null;
+  }
+  return row.prerequisites;
+}
 
 const COURSE_CODE = /^([A-Z]{2,8})\s+(\d{3}[A-Z]?)$/;
 
@@ -105,7 +115,7 @@ export const cstCatalogGroups: PrerequisiteGroupSeed[] = catalogRows.flatMap(
     const course = parseCourseCode(row.course_code);
     return [
       ...prerequisiteGroupsFor(course, row.corequisites, true),
-      ...prerequisiteGroupsFor(course, row.prerequisites, false),
+      ...prerequisiteGroupsFor(course, importedPrerequisite(row), false),
     ];
   },
 );

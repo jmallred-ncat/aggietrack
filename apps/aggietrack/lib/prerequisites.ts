@@ -3,6 +3,8 @@ export const ADVISOR_REVIEW_PREREQUISITES = "Prerequisites need advisor review";
 type PrerequisiteGroupCheck = {
     isConcurrent: boolean;
     optionIds: string[];
+    /** Catalog sentence kept beside the course options, such as a placement score. */
+    note?: string | null;
 };
 
 type PrerequisiteReviewGroup = {
@@ -54,6 +56,19 @@ export function coursePrerequisitesNeedAdvisorReview(groups: readonly Prerequisi
     return prerequisites.some((group) => prerequisiteGroupUnresolved(group));
 }
 
+/**
+ * A placement or test score offered with "or" stands in for the listed courses.
+ * The planner cannot read scores, so that alternative does not block the course.
+ * Consent and instructor approval stay a course requirement.
+ */
+export function placementAlternativeSatisfies(note: string | null | undefined) {
+    const text = note?.trim() ?? "";
+    if (!text || !/\bor\b/i.test(text)) {
+        return false;
+    }
+    return /\b(sat|act|score|placement)\b/i.test(text);
+}
+
 /** Course-option groups are combined with AND. Options inside a group are combined with OR. */
 export function coursePrerequisitesSatisfied(
     groups: PrerequisiteGroupCheck[],
@@ -61,6 +76,9 @@ export function coursePrerequisitesSatisfied(
 ) {
     return groups.every((group) => {
         if (group.isConcurrent || group.optionIds.length === 0) {
+            return true;
+        }
+        if (placementAlternativeSatisfies(group.note)) {
             return true;
         }
         return group.optionIds.some((id) => satisfiedCourseIds.has(id));

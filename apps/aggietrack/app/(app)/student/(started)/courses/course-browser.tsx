@@ -287,6 +287,7 @@ const CourseCard = memo(function CourseCard({
     const prerequisiteGroups = course.prerequisiteGroups.map((group) => ({
         isConcurrent: group.isConcurrent,
         optionIds: group.options.map((option) => option.requires.id),
+        note: group.note,
     }));
     const hasCoursePrerequisites = prerequisiteGroups.some((group) => !group.isConcurrent && group.optionIds.length > 0);
     const prerequisitesMet = (term: PlanningTerm) => {

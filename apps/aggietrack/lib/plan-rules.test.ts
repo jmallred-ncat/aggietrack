@@ -22,7 +22,7 @@ import {
   type RuleCourse,
   type RuleGroup,
 } from "./plan-rules";
-import { advisorReviewViolation, coursePrerequisitesNeedAdvisorReview } from "./prerequisites";
+import { coursePrerequisitesNeedAdvisorReview } from "./prerequisites";
 import {
   jordanSubmittedPlan,
   plannedCoursesAfterReset,
@@ -102,7 +102,7 @@ function ruleCourse(course: CourseRef): RuleCourse {
     code: displayCode(course),
     isLab: info.isLab,
     offeredIn: info.offeredIn,
-    groups: (groups.get(key) ?? []).map(({ isConcurrent, fromCatalog, options }) => ({ isConcurrent, fromCatalog, options })),
+    groups: (groups.get(key) ?? []).map(({ isConcurrent, fromCatalog, options, note }) => ({ isConcurrent, fromCatalog, options, note })),
     prerequisitesNeedAdvisorReview: coursePrerequisitesNeedAdvisorReview(
       (groups.get(key) ?? []).map((group) => ({
         isConcurrent: group.isConcurrent,
@@ -314,10 +314,10 @@ test("removing a course a later course or lab depends on reports the violation",
   assert.deepEqual(lectureOnly, []);
 });
 
-test("CST 300 cannot be added while its prerequisite text is unresolved", () => {
+test("CST 300 can be planned because the malformed catalog sentence is not a prerequisite", () => {
   const course = ruleCourse({ subject: "CST", number: "300" });
-  assert.equal(course.prerequisitesNeedAdvisorReview, true);
-  assert.ok(course.groups.every((group) => group.options.length === 0));
+  assert.equal(course.prerequisitesNeedAdvisorReview, false);
+  assert.equal(course.groups.length, 0);
 
   const violations = planRuleViolations({
     courses: [course],
@@ -326,9 +326,7 @@ test("CST 300 cannot be added while its prerequisite text is unresolved", () => 
     satisfiedCourseIds: new Set(),
     completedCourseIds: new Set(),
   });
-  assert.ok(violations.includes(advisorReviewViolation("CST 300")));
-  assert.ok(violations.every((message) => !/critical path|prerequisites,/i.test(message)));
-  assertHuman(violations);
+  assert.deepEqual(violations, []);
 
   const standing = ruleCourse({ subject: "CST", number: "317" });
   assert.equal(standing.prerequisitesNeedAdvisorReview, false);
