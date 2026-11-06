@@ -64,3 +64,79 @@ export function personInitials(name: string) {
     const letters = parts.slice(0, 2).map((part) => part[0]?.toUpperCase() ?? "").join("");
     return letters || "A";
 }
+
+export type StudentNextStep = {
+    title: string;
+    body: string;
+    action: string;
+    href: string;
+};
+
+/** One next step, using the same status words as the planner badge. */
+export function studentNextStep(plan: {
+    termLabel: string;
+    status: string;
+    registered: boolean;
+    href: string;
+} | null): StudentNextStep {
+    if (!plan) {
+        return {
+            title: "Next step",
+            body: "Open the planner, add the courses for your next term, and submit that plan for review.",
+            action: "Open the planner",
+            href: "/student/planner",
+        };
+    }
+
+    if (plan.status === "DRAFT") {
+        return {
+            title: "Next step",
+            body: `Your ${plan.termLabel} plan is a draft. Add your courses and submit it for review.`,
+            action: "Continue plan",
+            href: plan.href,
+        };
+    }
+
+    if (plan.status === "SUBMITTED") {
+        return {
+            title: "Next step",
+            body: `Your ${plan.termLabel} plan is waiting for your advisor's review.`,
+            action: "View plan",
+            href: plan.href,
+        };
+    }
+
+    if (plan.status === "RETURNED") {
+        return {
+            title: "Next step",
+            body: `Changes requested for your ${plan.termLabel} plan. Read the comment, update your courses, and submit the plan again.`,
+            action: "Update plan",
+            href: plan.href,
+        };
+    }
+
+    if (plan.status === "APPROVED" && plan.registered) {
+        return {
+            title: "Next step",
+            body: `You confirmed registration for ${plan.termLabel}.`,
+            action: "View plan",
+            href: plan.href,
+        };
+    }
+
+    if (plan.status === "APPROVED") {
+        return {
+            title: "Next step",
+            body: `Your ${plan.termLabel} plan is approved. Register with your pin, then confirm in the planner.`,
+            action: "Open approved plan",
+            href: plan.href,
+        };
+    }
+
+    return {
+        title: "Next step",
+        body: "Status unavailable. Open the planner to review this term.",
+        action: "View plan",
+        href: plan.href,
+    };
+}

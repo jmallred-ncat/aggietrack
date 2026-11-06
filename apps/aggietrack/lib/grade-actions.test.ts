@@ -1,34 +1,44 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { Grade } from "./generated/prisma/client";
+import { attemptCreditPhrase, resolveAttemptCredits } from "./attempt-credits";
 import { progressInProgressRejection } from "./transcript-write";
 
-/**
- * Integration test for add attempt + set grade workflow
- * 
- * This verifies the full flow:
- * 1. Add a new transcript attempt (creates entry in DB)
- * 2. Server returns the new entry with ID
- * 3. Update the grade on that new entry (using the returned ID)
- * 4. Both operations succeed
- */
-test("add attempt returns new entry that can be updated", () => {
-  // This is a documentation/contract test
-  // The actual implementation is tested via the app's integration
-  // Key assertions:
-  // - addTranscriptAttempt must return { success: true, entry: { id, grade, status, source, createdAt } }
-  // - The returned entry.id must be usable in updateTranscriptGrade
-  // - After add, the entry should render with a working GradeSelect
-  // - Setting a grade should save to DB and update progress/GPA immediately
-  
-  assert.ok(true, "Server action contract: addTranscriptAttempt returns new entry with ID");
+test("a named course stores catalog credits, not a forged client value", () => {
+    for (const catalogCredits of [1, 3, 4]) {
+        const resolved = resolveAttemptCredits({
+            courseId: "course-1",
+            catalogCredits,
+            clientCredits: 3,
+        });
+
+        assert.equal(resolved.ok, true);
+        if (!resolved.ok) continue;
+        assert.equal(resolved.credits, catalogCredits);
+    }
+
+    const forged = resolveAttemptCredits({
+        courseId: "lab-1",
+        catalogCredits: 1,
+        clientCredits: 6,
+    });
+    assert.equal(forged.ok, true);
+    if (forged.ok) assert.equal(forged.credits, 1);
 });
 
-test("addTranscriptAttempt return type includes entry", () => {
-  // Return type contract for successful add:
-  // { success: true, entry: { id: string, grade: Grade | null, status: TranscriptStatus, source: TranscriptSource, createdAt: Date } }
-  
-  assert.ok(true, "Return type includes entry field for optimistic UI update");
+test("missing catalog credits do not fall back to 3", () => {
+    for (const catalogCredits of [null, 0, -1, 1.5]) {
+        const resolved = resolveAttemptCredits({
+            courseId: "course-1",
+            catalogCredits,
+            clientCredits: 3,
+        });
+
+        assert.equal(resolved.ok, false);
+        if (resolved.ok) continue;
+        assert.equal(resolved.error, "Course details unavailable.");
+        assert.equal("credits" in resolved, false);
+    }
 });
 
 test("progress cannot create an in-progress attempt", () => {
@@ -40,14 +50,32 @@ test("progress cannot create an in-progress attempt", () => {
   assert.equal(Grade.C, "C");
 });
 
-test("new attempt flow: COMPLETED → set grade → immediate save", () => {
-  // Workflow test:
-  // 1. Add attempt with status COMPLETED, grade C (default)
-  // 2. Renders with GradeSelect showing C
-  // 3. User changes grade to A
-  // 4. updateTranscriptGrade saves new grade
-  // 5. Progress/GPA/honors update immediately
-  // 6. After reload, grade persists
-  
-  assert.ok(true, "COMPLETED attempts can have grade changed immediately");
+test("a custom course keeps the credits the student entered", () => {
+    for (const clientCredits of [1, 3, 4]) {
+        const resolved = resolveAttemptCredits({
+            courseId: null,
+            catalogCredits: 3,
+            clientCredits,
+        });
+
+        assert.equal(resolved.ok, true);
+        if (!resolved.ok) continue;
+        assert.equal(resolved.credits, clientCredits);
+    }
+
+    const invalid = resolveAttemptCredits({
+        courseId: null,
+        catalogCredits: null,
+        clientCredits: 9,
+    });
+    assert.equal(invalid.ok, false);
+    if (!invalid.ok) {
+        assert.notEqual(invalid.error, "3");
+    }
+});
+
+test("credit phrasing is singular for one credit", () => {
+    assert.equal(attemptCreditPhrase(1), "1 credit");
+    assert.equal(attemptCreditPhrase(3), "3 credits");
+    assert.equal(attemptCreditPhrase(4), "4 credits");
 });

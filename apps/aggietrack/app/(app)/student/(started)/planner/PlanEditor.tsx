@@ -7,7 +7,6 @@ import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/components/u
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
 import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent } from "@/components/ui/popover";
-import { toast } from "@/components/ui/toast";
 import { RuleViolationAlert } from "@/components/rule-violation-alert";
 import { courseMatchesSearch } from "@/lib/course-search";
 import type { PlannedTermStatus } from "@/lib/generated/prisma/client";
@@ -148,7 +147,14 @@ export default function PlanEditor({
         violationTitleText = "Requirement not met",
     ) {
         startTransition(async () => {
-            const result = await action();
+            let result: T;
+            try {
+                result = await action();
+            } catch {
+                setViolations([]);
+                sonner.error("The change could not be confirmed. Refresh before trying again.");
+                return;
+            }
             if (!result.success) {
                 if (result.violations && result.violations.length > 0) {
                     setViolationTitle(violationTitleText);
@@ -156,7 +162,13 @@ export default function PlanEditor({
                     return;
                 }
                 setViolations([]);
-                toast.add({ title: result.error ?? "That change could not be saved." });
+                sonner.error(result.error ?? (
+                    success === "Plan submitted for review"
+                        ? "Plan could not be submitted. Try again."
+                        : success === "Registration recorded"
+                            ? "Registration could not be recorded. Try again."
+                            : "That change could not be saved."
+                ));
                 return;
             }
             apply?.(result as T & { success: true });
@@ -165,8 +177,7 @@ export default function PlanEditor({
                 setViolations(result.violations);
             } else {
                 setViolations([]);
-                if (success === "Plan submitted for review") sonner.success(success);
-                else toast.add({ title: success });
+                sonner.success(success);
             }
             setQuery("");
             setResultsOpen(false);
@@ -194,8 +205,11 @@ export default function PlanEditor({
             }
             if (outcome.status === "failed") {
                 setViolations([]);
-                if (outcome.sonner) sonner.error(outcome.message);
-                else toast.add({ title: outcome.message });
+                sonner.error(outcome.message || (
+                    success.endsWith("removed")
+                        ? "Course could not be removed. Try again."
+                        : "Course could not be added. Try again."
+                ));
                 router.refresh();
                 return;
             }
@@ -205,7 +219,7 @@ export default function PlanEditor({
                 setViolations(outcome.result.violations);
             } else {
                 setViolations([]);
-                toast.add({ title: success });
+                sonner.success(success);
             }
             setQuery("");
             setResultsOpen(false);
@@ -224,7 +238,7 @@ export default function PlanEditor({
         <section>
             <header className="flex flex-wrap items-center justify-between gap-3">
                 <div className="flex min-w-0 flex-wrap items-baseline gap-x-3 gap-y-1">
-                    <h2 className="text-2xl font-bold not-typeset text-balance">{termLabel}</h2>
+                    <h2 className="text-2xl font-bold not-typeset text-balance">{termLabel} plan</h2>
                     <p className="text-sm text-muted-foreground tabular-nums not-typeset">{creditLabel}</p>
                 </div>
                 <Badge className="not-typeset" variant={plannedTermStatusVariant(status)}>
@@ -243,9 +257,11 @@ export default function PlanEditor({
                                 : "Waiting for an advisor to review this plan. No advisor is assigned yet."
                             : status === "RETURNED"
                                 ? "Your advisor requested changes. Read the comment, update your courses, then submit the plan again."
-                                : advisorName
-                                    ? `Add the courses you want to take, then submit the plan for ${advisorName} to review.`
-                                    : "Add the courses you want to take, then submit the plan. No advisor is assigned yet."}
+                                : status !== "DRAFT"
+                                    ? "Status unavailable."
+                                    : advisorName
+                                        ? `Add the courses you want to take, then submit the plan for ${advisorName} to review.`
+                                        : "Add the courses you want to take, then submit the plan. No advisor is assigned yet."}
             </p>
 
             <RuleViolationAlert

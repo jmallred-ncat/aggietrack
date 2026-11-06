@@ -1,5 +1,6 @@
 "use server";
 
+import { resolveAttemptCredits } from "@/lib/attempt-credits";
 import { Grade, type TranscriptStatus } from "@/lib/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireStudentProfile } from "@/lib/student";
@@ -97,7 +98,7 @@ export async function addTranscriptAttempt(input: unknown) {
         return { success: false as const, error: "Invalid attempt request." };
     }
 
-    const { courseId, subject, number, title, credits, grade, status, recommendedTermCourseId } = parsed.data;
+    const { courseId, subject, number, title, credits, grade, recommendedTermCourseId } = parsed.data;
 
     // Verify the student has access to this course (either catalog course or it's their own entry)
     if (recommendedTermCourseId) {
@@ -124,6 +125,21 @@ export async function addTranscriptAttempt(input: unknown) {
         }
     }
 
+    const catalogCredits = courseId
+        ? (await prisma.course.findUnique({
+            where: { id: courseId },
+            select: { credits: true },
+        }))?.credits ?? null
+        : null;
+    const resolvedCredits = resolveAttemptCredits({
+        courseId,
+        catalogCredits,
+        clientCredits: credits,
+    });
+    if (!resolvedCredits.ok) {
+        return { success: false as const, error: resolvedCredits.error };
+    }
+
     // Create the new transcript entry
     const newEntry = await prisma.transcriptEntry.create({
         data: {
@@ -132,7 +148,7 @@ export async function addTranscriptAttempt(input: unknown) {
             subject: courseId ? null : subject,
             number: courseId ? null : number,
             title: courseId ? null : title,
-            credits,
+            credits: resolvedCredits.credits,
             grade,
             status: "COMPLETED" satisfies TranscriptStatus,
             source: grade === Grade.TR ? "TRANSFER" : "NCAT",

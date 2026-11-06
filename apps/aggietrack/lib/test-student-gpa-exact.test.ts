@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { test } from "node:test";
 
 /**
@@ -116,15 +117,16 @@ test("adjusted GPA differs from cumulative GPA for students with retakes", () =>
   assert.ok(true, "Taylor Morgan's adjusted GPA is lower than cumulative because F counts in adjusted");
 });
 
-test("graduation honors badge displays correctly on Dashboard", () => {
-  // Badge appearance per eligibility:
-  const badgeDisplays = [
-    ">=48 resident hours: 'Summa Cum Laude pace' (default variant badge)",
-    "<48 resident hours: 'On track for Magna Cum Laude' (outline variant, muted text)",
-    "No honor (<3.25): no badge displayed",
-    "Caption: 'Honors use all attempts; requires 48 A&T credit hours'",
-  ];
-  
-  assert.ok(badgeDisplays.length === 4, "Badge displays correctly for eligible, on-track, and no-honor scenarios");
-  assert.ok(true, "Dashboard honors badge UI covers all scenarios with appropriate styling");
+test("the dashboard GPA tile stays a number and one badge", () => {
+  const page = readFileSync(new URL("../app/(app)/student/(started)/page.tsx", import.meta.url), "utf8");
+  assert.match(page, /Cumulative GPA/);
+  assert.match(page, /Recorded grades/);
+  assert.match(page, /No grades yet/);
+  assert.match(page, /Degree Completion/);
+  assert.doesNotMatch(page, /Summa Cum Laude pace/);
+  assert.doesNotMatch(page, /MedalIcon/);
+  assert.doesNotMatch(page, /Spring 2027/);
+  assert.doesNotMatch(page, /Lorem ipsum/);
+  assert.doesNotMatch(page, /View All Notes/);
+  assert.doesNotMatch(page, /Request New Meeting/);
 });

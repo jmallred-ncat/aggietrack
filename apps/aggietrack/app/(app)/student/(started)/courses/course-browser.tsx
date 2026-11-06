@@ -8,7 +8,6 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { toast } from "@/components/ui/toast";
 import type { CurriculumCourseSection } from "@/lib/catalog";
 import { CATALOG_BROWSER_LABEL, courseMatchesSearch } from "@/lib/course-search";
 import { GenEdTag, RequirementSlot, type TermSeason } from "@/lib/generated/prisma/browser";
@@ -466,7 +465,7 @@ function AddToPlannerButton({
                 if (notices.alert.length > 0) {
                     const message = notices.alert.join(" ");
                     if (message === PLAN_SAVE_FAILED || message.toLowerCase().includes("advisor review")) sonner.error(message);
-                    else toast.add({ title: message });
+                    else sonner.error(message);
                 } else if (notices.sonner.length === 0) {
                     sonner.error(PLAN_SAVE_FAILED);
                 }
@@ -480,7 +479,7 @@ function AddToPlannerButton({
             ];
             setAdded({ courseId: course.id, termLabel: term.label, locked: false });
             setConfirmOpen(false);
-            toast.add({ title: `${joinCourses(addedCodes)} added to ${term.label}` });
+            sonner.success(`${joinCourses(addedCodes)} added to ${term.label}`);
         });
     }
 

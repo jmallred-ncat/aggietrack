@@ -7,6 +7,7 @@ import {
     planTimestamp,
     plannedTermStatusLabel,
     plannedTermStatusVariant,
+    studentNextStep,
 } from "./plan-status";
 
 const rawEnum = /\b(DRAFT|SUBMITTED|APPROVED|RETURNED|IN_PROGRESS|STUDENT|ADVISOR|ADMIN)\b/;
@@ -51,4 +52,59 @@ test("timestamps use Eastern Time and do not print an ISO instant", () => {
     assert.match(label!, /Nov 5, 2026/);
     assert.match(label!, /EST/);
     assert.doesNotMatch(label!, /T03:45/);
+});
+
+test("the next step uses those same words", () => {
+    const draft = studentNextStep({
+        termLabel: "Spring 2027",
+        status: "DRAFT",
+        registered: false,
+        href: "/student/planner?term=spring",
+    });
+    const waiting = studentNextStep({
+        termLabel: "Fall 2026",
+        status: "SUBMITTED",
+        registered: false,
+        href: "/student/planner?term=fall",
+    });
+    const returned = studentNextStep({
+        termLabel: "Fall 2026",
+        status: "RETURNED",
+        registered: false,
+        href: "/student/planner?term=fall",
+    });
+    const approved = studentNextStep({
+        termLabel: "Fall 2026",
+        status: "APPROVED",
+        registered: false,
+        href: "/student/planner?term=fall",
+    });
+    const registered = studentNextStep({
+        termLabel: "Fall 2026",
+        status: "APPROVED",
+        registered: true,
+        href: "/student/planner?term=fall",
+    });
+    const unknown = studentNextStep({
+        termLabel: "Fall 2026",
+        status: "NOPE",
+        registered: false,
+        href: "/student/planner?term=fall",
+    });
+
+    assert.equal(draft.action, "Continue plan");
+    assert.match(draft.body, /draft/);
+    assert.equal(waiting.action, "View plan");
+    assert.match(waiting.body, /waiting for your advisor's review/);
+    assert.equal(returned.action, "Update plan");
+    assert.match(returned.body, /Changes requested/);
+    assert.equal(approved.action, "Open approved plan");
+    assert.match(approved.body, /approved/);
+    assert.match(registered.body, /confirmed registration/);
+    assert.match(unknown.body, /Status unavailable/);
+
+    for (const step of [draft, waiting, returned, approved, registered, unknown]) {
+        assert.equal(rawEnum.test(step.body), false, step.body);
+        assert.equal(rawEnum.test(step.action), false, step.action);
+    }
 });
