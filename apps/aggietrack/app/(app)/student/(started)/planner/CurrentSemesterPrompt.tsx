@@ -1,14 +1,6 @@
 "use client";
 
 import { Alert, AlertAction, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import {
-    AlertDialog,
-    AlertDialogContent,
-    AlertDialogDescription,
-    AlertDialogFooter,
-    AlertDialogHeader,
-    AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { runAfterConfirmCloses } from "@/lib/completion-menu";
@@ -16,13 +8,9 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
 import { declineCurrentSemester, planCurrentSemester } from "./actions";
+import { TermChoiceDialog, TermChoicePending } from "./term-choice-dialog";
 
 const termChoiceToast = "term-choice";
-
-function declineLabel(nextLabel: string, several: boolean) {
-    if (several || !nextLabel) return "Plan the next terms";
-    return "Plan the next term";
-}
 
 export default function CurrentSemesterPrompt({
     termId,
@@ -39,10 +27,7 @@ export default function CurrentSemesterPrompt({
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [lastChoice, setLastChoice] = useState<boolean | null>(null);
-    const next = nextLabel || "the next term";
-    const several = nextLabel.includes(",");
-    const accept = `Plan ${termLabel}`;
-    const decline = declineLabel(nextLabel, several);
+    const next = nextLabel || "Next term";
 
     function choose(takingCourses: boolean) {
         setError(null);
@@ -90,42 +75,23 @@ export default function CurrentSemesterPrompt({
 
     return (
         <div className="flex flex-col gap-4">
-            <AlertDialog open={open} onOpenChange={(nextOpen) => { if (!nextOpen) setOpen(false); }}>
-                <AlertDialogContent className="max-w-md sm:max-w-md">
-                    <AlertDialogHeader>
-                        <AlertDialogTitle>Are you taking courses in {termLabel}?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                            Choose the term you want to plan. You can change this later.
-                        </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                        <Button variant="ghost" disabled={pending} onClick={() => setOpen(false)}>
-                            Not now
-                        </Button>
-                        <Button variant="outline" disabled={pending} onClick={() => choose(false)}>
-                            {decline}
-                        </Button>
-                        <Button disabled={pending} onClick={() => choose(true)}>
-                            {accept}
-                        </Button>
-                    </AlertDialogFooter>
-                </AlertDialogContent>
-            </AlertDialog>
+            <TermChoiceDialog
+                open={open}
+                termLabel={termLabel}
+                nextLabel={nextLabel}
+                pending={pending}
+                onDismiss={() => setOpen(false)}
+                onPlanCurrent={() => choose(true)}
+                onPlanNext={() => choose(false)}
+            />
 
             {saving ? (
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Opening your planner</CardTitle>
-                        <CardDescription>Saving your term choice…</CardDescription>
-                    </CardHeader>
-                </Card>
+                <TermChoicePending />
             ) : open ? null : (
                 <Card>
                     <CardHeader>
-                        <CardTitle>Are you taking courses in {termLabel}?</CardTitle>
-                        <CardDescription>
-                            {termLabel} is the semester in session, and there is no plan for it yet. Plan {termLabel} if you are taking courses now. If you are not, the planner opens {next}.
-                        </CardDescription>
+                        <CardTitle>Which term do you want to plan?</CardTitle>
+                        <CardDescription>You can switch terms anytime.</CardDescription>
                     </CardHeader>
                     <CardContent className="flex flex-col gap-3">
                         {error ? (
@@ -150,10 +116,10 @@ export default function CurrentSemesterPrompt({
                         ) : null}
                         <div className="flex flex-col gap-2 sm:flex-row">
                             <Button variant="outline" disabled={pending} onClick={() => choose(false)}>
-                                {decline}
+                                {next}
                             </Button>
                             <Button disabled={pending} onClick={() => choose(true)}>
-                                {accept}
+                                {termLabel}
                             </Button>
                         </div>
                     </CardContent>
