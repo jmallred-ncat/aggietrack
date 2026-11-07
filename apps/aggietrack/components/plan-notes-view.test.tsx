@@ -168,6 +168,9 @@ test("the thread keeps written notes, status, and empty workflow events apart", 
     assert.match(status, /whitespace-pre-wrap/);
 
     const submittedAt = "2026-11-06T04:26:00.000Z";
+    const times = html.match(/<time\b[^>]*>/g) ?? [];
+    assert.ok(times.length >= 7);
+    assert.ok(times.every((tag) => tag.includes("whitespace-nowrap")));
     assert.match(html, new RegExp(`dateTime="${submittedAt}"`));
     assert.match(html, new RegExp(`title="${planNoteTimestampTitle(submittedAt)}"`));
     assert.match(html, new RegExp(planNoteTimestamp(submittedAt)!.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));

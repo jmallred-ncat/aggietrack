@@ -19,6 +19,7 @@ import {
 } from "@/lib/plan-notes";
 import { personInitials } from "@/lib/plan-status";
 import { CheckCircleIcon, PaperPlaneTiltIcon, WarningCircleIcon } from "@phosphor-icons/react";
+import { cn } from "cn";
 
 export function PlanNotesView({
     plannedTermId,
@@ -188,7 +189,7 @@ function NoteTime({
     return (
         <>
             {withSeparator ? <span aria-hidden="true"> · </span> : null}
-            <time dateTime={dateTime} title={title} className={className}>{label}</time>
+            <time dateTime={dateTime} title={title} className={cn("whitespace-nowrap", className)}>{label}</time>
         </>
     );
 }
