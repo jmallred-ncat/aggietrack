@@ -9,6 +9,10 @@ import {
     pagePlanNotes,
     planEventLabel,
     planNoteDenial,
+    planNoteEventAction,
+    planNoteTimestamp,
+    planNoteTimestampTitle,
+    planNotesAudienceDescription,
     presentPlanNote,
     sortPlanNotes,
 } from "./plan-notes";
@@ -63,11 +67,41 @@ test("notes sort oldest first and events never expose the pin or a raw kind", ()
         authorRole: "ADVISOR",
     });
     assert.equal(shown.badge, "Changes requested");
+    assert.equal(shown.eventAction, null);
     assert.equal(shown.roleLabel, "Advisor");
     assert.equal(shown.body, "Please add the lab.");
     assert.doesNotMatch(JSON.stringify(shown), /\bRETURN\b/);
+    const caption = presentPlanNote({
+        id: "n2",
+        body: "Plan submitted for review",
+        kind: "NOTE",
+        createdAt: new Date("2026-11-06T04:26:00.000Z"),
+        authorName: "Avery Cole",
+        authorRole: "STUDENT",
+    });
+    assert.equal(caption.eventAction, null);
+    assert.equal(caption.body, "Plan submitted for review");
+    assert.equal(planNoteEventAction("SUBMISSION", ""), "submitted");
+    assert.equal(planNoteEventAction("SUBMISSION", "I added a note with the submission."), null);
+    assert.equal(planNoteEventAction("APPROVAL", " "), "approved");
+    assert.equal(planNoteEventAction("RETURN", ""), "changes");
+    assert.equal(planNoteEventAction("NOTE", ""), null);
     const cursor = earlierNoteWhere({ createdAt: new Date("2026-11-06T03:45:00.000Z"), id: "n1" });
     assert.equal(cursor.OR.length, 2);
+});
+
+test("note times use Eastern Time, show the zone, and omit the current year", () => {
+    const now = new Date("2026-11-07T05:00:00.000Z");
+    assert.equal(planNoteTimestamp("2026-11-07T00:15:00.000Z", now), "Nov 6, 7:15 PM EST");
+    assert.equal(planNoteTimestampTitle("2026-11-07T00:15:00.000Z"), "Nov 6, 2026, 7:15 PM EST");
+    assert.equal(planNoteTimestamp("2025-11-07T00:15:00.000Z", now), "Nov 6, 2025, 7:15 PM EST");
+    assert.equal(planNoteTimestamp("2026-07-06T23:15:00.000Z", now), "Jul 6, 7:15 PM EDT");
+    assert.equal(planNoteTimestamp("not-a-date", now), null);
+    const newYearEve = new Date("2027-01-01T03:30:00.000Z");
+    assert.equal(planNoteTimestamp("2027-01-01T04:30:00.000Z", newYearEve), "Dec 31, 11:30 PM EST");
+    assert.equal(planNoteTimestamp("2027-01-01T05:00:00.000Z", newYearEve), "Jan 1, 2027, 12:00 AM EST");
+    assert.equal(planNotesAudienceDescription("student"), "You and your advisor can read these notes.");
+    assert.equal(planNotesAudienceDescription("advisor"), "You and the student can read these notes.");
 });
 
 test("the same request posts one note", async () => {
