@@ -1,6 +1,6 @@
 import { getWorkspaceSession } from "@/lib/auth";
 import { withSharedDatabase } from "@/lib/shared-database";
-import { callAggieTrack } from "@/lib/test-students";
+import { callAggieTrack, fixtureChoiceById, fixtureLoadResult, testStudentByEmail } from "@/lib/test-students";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -24,6 +24,13 @@ export async function POST(request: Request) {
           throw new Error("Plan notes could not be reset.");
         }
         return Response.json({ deleted });
+      }
+      if (typeof body.fixture === "string") {
+        const account = testStudentByEmail(email);
+        if (!account || account.role !== "student") throw new Error("That is not a test student.");
+        if (!fixtureChoiceById(body.fixture)) throw new Error("That is not a transcript fixture.");
+        const loaded = fixtureLoadResult(await callAggieTrack("/api/test-students/load-fixture", account.email, { fixture: body.fixture }));
+        return Response.json(loaded);
       }
       if (body.fault === "fail" || body.fault === "delay" || body.fault === "off") {
         const armed = await callAggieTrack("/api/test-students/write-fault", email, { fault: body.fault, seconds: body.seconds });

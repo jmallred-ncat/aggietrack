@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { hashPassword } from "better-auth/crypto";
 import { PlannedTermStatus, TranscriptStatus, UserRole } from "./generated/prisma/client";
 import { plannedAttempts } from "./frozen-transcript";
+import { describeFixtureLoad } from "./transcript-fixtures";
 import { prisma } from "./prisma";
 import { plannerWriteFaultValue } from "./planner-write";
 import { testPlanNoteDeleteWhere } from "./test-plan-notes";
@@ -385,6 +386,68 @@ export async function resetTestStudent(request: Request, email: string) {
   const userId = await ensureUser(student, password, true);
   await writeFrozen(userId, student, catalogYearId, advisorId);
   return { email: student.email, name: `${student.firstName} ${student.lastName}` };
+}
+
+/** Replaces one fixture student's transcript. The browser sends a fixture id, not courses. */
+export async function loadTestTranscriptFixture(request: Request, email: string, fixtureId: string) {
+  guardTestStudents(request, email, true);
+  const described = describeFixtureLoad(email, fixtureId);
+  if (!described.ok) throw new TestStudentError(described.error, 400);
+
+  await resetTestStudent(request, described.email);
+
+  const student = testStudentByEmail(described.email);
+  if (!student) throw new TestStudentError("That is not a test student.", 400);
+
+  await prisma.$transaction(async (tx) => {
+    const profile = await tx.studentProfile.findFirst({
+      where: { user: { email: student.email, role: UserRole.STUDENT } },
+      select: { id: true, userId: true },
+    });
+    if (!profile) throw new TestStudentError("That student is not ready yet.", 400);
+
+    await tx.plannedCourse.deleteMany({ where: { plannedTerm: { studentId: profile.id } } });
+    await tx.plannedTerm.deleteMany({ where: { studentId: profile.id } });
+    await tx.advisingNote.deleteMany({ where: { studentId: profile.id } });
+    await tx.transcriptEntry.deleteMany({ where: { studentId: profile.id } });
+    await tx.session.deleteMany({ where: { userId: profile.userId } });
+
+    if (described.attempts.length === 0) return;
+
+    const found = await tx.course.findMany({
+      where: { OR: described.attempts.map((attempt) => ({ subject: attempt.subject, number: attempt.number })) },
+      select: { id: true, subject: true, number: true, credits: true },
+    });
+    const byCode = new Map(found.map((course) => [`${course.subject} ${course.number}`, course]));
+    const started = Date.UTC(2024, 0, 1);
+    const rows = described.attempts.map((attempt, index) => {
+      const code = `${attempt.subject} ${attempt.number}`;
+      const course = byCode.get(code);
+      if (!course) throw new TestStudentError(`${code} is not in the catalog. The student was restored to the frozen story.`, 500);
+      if (course.credits !== attempt.credits) {
+        throw new TestStudentError(`${code} is ${course.credits} credits in the catalog, and this fixture expects ${attempt.credits}. The student was restored to the frozen story.`, 500);
+      }
+      return {
+        studentId: profile.id,
+        courseId: course.id,
+        credits: course.credits,
+        grade: attempt.grade,
+        status: attempt.status,
+        source: attempt.source,
+        createdAt: new Date(started + index * 86_400_000),
+      };
+    });
+    await tx.transcriptEntry.createMany({ data: rows });
+  });
+
+  return {
+    email: described.email,
+    name: described.name,
+    fixture: described.fixture,
+    attempts: described.summary.attempts,
+    completedCourses: described.summary.completedCourses,
+    earnedCredits: described.summary.earnedCredits,
+  };
 }
 
 /** Deletes shared notes on fixture student plans. The request body is ignored. */

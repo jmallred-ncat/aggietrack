@@ -16,7 +16,8 @@ import { offeringViolation } from "@/lib/plan-rules";
 import { ADVISOR_REVIEW_PREREQUISITES, coursePrerequisitesNeedAdvisorReview, coursePrerequisitesSatisfied } from "@/lib/prerequisites";
 import type { StudentProfileWithCatalog } from "@/lib/student";
 import { cn } from "@/lib/utils";
-import { FlaskIcon, LecternIcon, MagnifyingGlassIcon } from "@phosphor-icons/react";
+import { CourseIconLegend, CourseKindIcon, PrerequisiteMark } from "@/components/course-icon-legend";
+import { MagnifyingGlassIcon } from "@phosphor-icons/react";
 import { useDebounce } from "@uidotdev/usehooks";
 import pluralize from "pluralize";
 import { memo, useMemo, useState, useTransition } from "react";
@@ -127,6 +128,8 @@ export function CourseBrowser({
                 </p>
                 : null}
         </div>
+
+        <CourseIconLegend />
 
         {filteredSections.map((section) => (
             <RequirementCourseSection
@@ -324,16 +327,8 @@ const CourseCard = memo(function CourseCard({
                 <div className="flex w-full items-center justify-between gap-2">
                     <Badge className="font-mono">{course.subject} {course.number}</Badge>
                     <span className="flex items-center gap-2">
-                        {hasRequirements && (
-                            <span
-                                className="size-2 shrink-0 rounded-full bg-destructive"
-                                role="img"
-                                aria-label="Has a prerequisite or corequisite"
-                            />
-                        )}
-                        {course.isLab
-                            ? <FlaskIcon size={16} weight="bold" />
-                            : <LecternIcon size={16} weight="bold" />}
+                        {hasRequirements && <PrerequisiteMark />}
+                        <CourseKindIcon lab={course.isLab} />
                     </span>
                 </div>
                 <CardTitle className="line-clamp-2">{course.title}</CardTitle>
@@ -364,9 +359,7 @@ const CourseCard = memo(function CourseCard({
                                 <Badge className="font-mono text-[12px] font-medium">
                                     {course.subject} {course.number}
                                 </Badge>
-                                {course.isLab
-                                    ? <FlaskIcon size={16} weight="bold" />
-                                    : <LecternIcon size={16} weight="bold" />}
+                                <CourseKindIcon lab={course.isLab} />
                             </div>
                             {course.title}
                         </DialogTitle>

@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Badge } from "@aggietrack/ui/badge";
 import { Button } from "@aggietrack/ui/button";
+import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@aggietrack/ui/empty";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -18,7 +19,32 @@ import { toast } from "@aggietrack/ui/toast";
 import { ChoiceSelect } from "@/components/choice-select";
 import { Label } from "@aggietrack/ui/label";
 import { planNotesResetSummary, resetAllSummary, resetTestAccounts } from "@/lib/reset-students";
-import { faultChoice, faultRequest, jordanPlanReset, nextSaveChoices, nextSaveFails, nextSaveWaits, nextSaveWorks, planNotesResetAction, planNotesResetDetail, planNotesResetTitle, resetAfterUse, type TestStudentCard } from "@/lib/test-students";
+import {
+  accountsBusy,
+  faultChoice,
+  faultRequest,
+  fixtureChoiceById,
+  fixtureLoadAction,
+  fixtureLoadResult,
+  fixtureLoadedSummary,
+  fixtureReplaceDetail,
+  fixtureReplaceTitle,
+  jordanPlanReset,
+  nextSaveChoices,
+  nextSaveFails,
+  nextSaveWaits,
+  nextSaveWorks,
+  noTestStudentsDetail,
+  noTestStudentsTitle,
+  planNotesResetAction,
+  planNotesResetDetail,
+  planNotesResetTitle,
+  resetAfterUse,
+  transcriptFixtureChoices,
+  transcriptFixturePlaceholder,
+  tryBegin,
+  type TestStudentCard,
+} from "@/lib/test-students";
 
 async function postReset(email: string) {
   const response = await fetch("/api/test-students", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email }) });
@@ -47,16 +73,32 @@ async function postFault(email: string, choice: string) {
   if (!response.ok) throw new Error(typeof body.error === "string" ? body.error : "That save setting could not be saved.");
 }
 
+async function postFixture(email: string, fixtureId: string) {
+  const response = await fetch("/api/test-students", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email, fixture: fixtureId }),
+  });
+  const body = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(typeof body.error === "string" ? body.error : "That transcript could not be loaded.");
+  return fixtureLoadResult(body);
+}
+
 export function TestStudents({ students, password, notice, faults = {} }: { students: TestStudentCard[]; password: string; notice: string; faults?: Record<string, string | null> }) {
   const [pending, setPending] = useState("");
   const [arming, setArming] = useState("");
   const [pendingAll, setPendingAll] = useState(false);
   const [pendingNotes, setPendingNotes] = useState(false);
+  const [loading, setLoading] = useState("");
   const [confirmAll, setConfirmAll] = useState(false);
   const [confirmNotes, setConfirmNotes] = useState(false);
-  const notesRequest = useRef(false);
+  const [confirmFixture, setConfirmFixture] = useState<{ email: string; fixtureId: string } | null>(null);
+  const [fixtureChoice, setFixtureChoice] = useState<Record<string, string>>({});
+  const [lastLoaded, setLastLoaded] = useState<Record<string, string>>({});
+  const actionLock = useRef(false);
   const [nextSave, setNextSave] = useState<Record<string, string>>(() => Object.fromEntries(students.filter(student => student.role === "student").map(student => [student.email, faultChoice(faults[student.email])])));
   const toastedNotice = useRef(false);
+  const busy = accountsBusy({ pending, pendingAll, pendingNotes, arming, loading });
 
   useEffect(() => {
     if (!notice || toastedNotice.current) return;
@@ -65,6 +107,7 @@ export function TestStudents({ students, password, notice, faults = {} }: { stud
   }, [notice]);
 
   async function arm(student: TestStudentCard, choice: string) {
+    if (!tryBegin(actionLock)) return;
     const previous = nextSave[student.email] ?? nextSaveWorks;
     setNextSave(current => ({ ...current, [student.email]: choice }));
     setArming(student.email);
@@ -76,26 +119,35 @@ export function TestStudents({ students, password, notice, faults = {} }: { stud
       setNextSave(current => ({ ...current, [student.email]: previous }));
       toast.add({ type: "error", title: caught instanceof Error ? caught.message : "That save setting could not be saved." });
     } finally {
+      actionLock.current = false;
       setArming("");
     }
   }
 
   async function reset(student: TestStudentCard) {
+    if (!tryBegin(actionLock)) return;
     setPending(student.email);
     try {
       await postReset(student.email);
-      if (student.role === "student") setNextSave(current => ({ ...current, [student.email]: nextSaveWorks }));
+      if (student.role === "student") {
+        setNextSave(current => ({ ...current, [student.email]: nextSaveWorks }));
+        setLastLoaded(current => {
+          const next = { ...current };
+          delete next[student.email];
+          return next;
+        });
+      }
       toast.add({ type: "success", title: `${student.name} is back to the frozen place and signed out of AggieTrack.` });
     } catch (caught) {
       toast.add({ type: "error", title: caught instanceof Error ? caught.message : "That account could not be reset." });
     } finally {
+      actionLock.current = false;
       setPending("");
     }
   }
 
   async function resetNotes() {
-    if (notesRequest.current) return;
-    notesRequest.current = true;
+    if (!tryBegin(actionLock)) return;
     setConfirmNotes(false);
     setPendingNotes(true);
     try {
@@ -104,26 +156,56 @@ export function TestStudents({ students, password, notice, faults = {} }: { stud
     } catch (caught) {
       toast.add({ type: "error", title: caught instanceof Error ? caught.message : "Plan notes could not be reset." });
     } finally {
-      notesRequest.current = false;
+      actionLock.current = false;
       setPendingNotes(false);
     }
   }
 
   async function resetAll() {
+    if (!tryBegin(actionLock)) return;
     setConfirmAll(false);
     setPendingAll(true);
     try {
       const result = await resetTestAccounts(studentAccounts, postReset);
+      setLastLoaded(current => {
+        const next = { ...current };
+        for (const student of result.succeeded) delete next[student.email];
+        return next;
+      });
+      setNextSave(current => {
+        const next = { ...current };
+        for (const student of result.succeeded) next[student.email] = nextSaveWorks;
+        return next;
+      });
       toast.add({ type: result.failed.length > 0 ? "error" : "success", title: resetAllSummary(result) });
     } catch (caught) {
       toast.add({ type: "error", title: caught instanceof Error ? caught.message : "Test students could not be reset." });
     } finally {
+      actionLock.current = false;
       setPendingAll(false);
+    }
+  }
+
+  async function loadFixture(student: TestStudentCard, fixtureId: string) {
+    if (!tryBegin(actionLock)) return;
+    setConfirmFixture(null);
+    setLoading(student.email);
+    try {
+      const result = await postFixture(student.email, fixtureId);
+      setLastLoaded(current => ({ ...current, [student.email]: result.fixture }));
+      toast.add({ type: "success", title: fixtureLoadedSummary(result) });
+    } catch (caught) {
+      toast.add({ type: "error", title: caught instanceof Error ? caught.message : "That transcript could not be loaded." });
+    } finally {
+      actionLock.current = false;
+      setLoading("");
     }
   }
 
   const studentAccounts = students.filter(s => s.role === "student");
   const advisorAccounts = students.filter(s => s.role === "advisor");
+  const confirming = studentAccounts.find(student => student.email === confirmFixture?.email) ?? null;
+  const confirmingFixture = confirmFixture ? fixtureChoiceById(confirmFixture.fixtureId) : null;
 
   return <div className="not-typeset space-y-8">
     <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
@@ -133,7 +215,7 @@ export function TestStudents({ students, password, notice, faults = {} }: { stud
       </div>
       <div className="flex flex-wrap items-center gap-2 sm:justify-end">
       <AlertDialog open={confirmNotes} onOpenChange={setConfirmNotes}>
-        <AlertDialogTrigger render={<Button variant="outline" disabled={pendingNotes || pendingAll || !password} />}>
+        <AlertDialogTrigger render={<Button variant="outline" disabled={busy || !password} />}>
           {pendingNotes ? "Resetting…" : planNotesResetAction}
         </AlertDialogTrigger>
         <AlertDialogContent className="max-w-md sm:max-w-md">
@@ -148,10 +230,10 @@ export function TestStudents({ students, password, notice, faults = {} }: { stud
         </AlertDialogContent>
       </AlertDialog>
       <AlertDialog open={confirmAll} onOpenChange={setConfirmAll}>
-        <AlertDialogTrigger render={<Button variant="outline" disabled={pendingAll || pendingNotes || !password} />}>
+        <AlertDialogTrigger render={<Button variant="outline" disabled={busy || !password} />}>
           {pendingAll ? "Resetting…" : "Reset All Students"}
         </AlertDialogTrigger>
-        <AlertDialogContent>
+        <AlertDialogContent className="max-w-md sm:max-w-md">
           <AlertDialogHeader>
             <AlertDialogTitle>Reset all test students?</AlertDialogTitle>
             <AlertDialogDescription>
@@ -159,8 +241,8 @@ export function TestStudents({ students, password, notice, faults = {} }: { stud
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={resetAll}>Reset All</AlertDialogAction>
+            <AlertDialogCancel disabled={pendingAll}>Cancel</AlertDialogCancel>
+            <AlertDialogAction type="button" disabled={pendingAll} onClick={resetAll}>Reset All</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
@@ -172,24 +254,56 @@ export function TestStudents({ students, password, notice, faults = {} }: { stud
         <h2 className="text-xl font-semibold">Test Students</h2>
         <p className="mt-1 text-sm text-muted-foreground">Student accounts with varying levels of progress through the IT program.</p>
       </div>
-      <div className="grid gap-4 lg:grid-cols-3">
-        {studentAccounts.map(student => <section key={student.email} className="flex flex-col rounded-xl border bg-background p-4">
-          <h3 className="text-lg font-semibold">{student.name}</h3>
-          <p className="mt-1 text-sm leading-6 text-muted-foreground">{student.place}</p>
-          <dl className="mt-4 space-y-2 text-sm">
-            <div><dt className="text-muted-foreground">Email</dt><dd className="font-mono">{student.email}</dd></div>
-            <div><dt className="text-muted-foreground">Password</dt><dd className="font-mono">{password || "Not configured"}</dd></div>
-          </dl>
-          <div className="mt-4 space-y-2">
-            <Label htmlFor={`next-save-${student.email}`}>Next planner save</Label>
-            <ChoiceSelect id={`next-save-${student.email}`} label={`Next planner save for ${student.name}`} value={nextSave[student.email] ?? nextSaveWorks} options={nextSaveChoices} onChange={choice => { if (arming !== student.email && pending !== student.email) void arm(student, choice); }} className="w-full bg-background"/>
-            <p className="text-sm leading-6 text-muted-foreground">Set this before the save. It turns off after one add or remove. The live site ignores it.</p>
-          </div>
-          <p className="mt-4 text-sm leading-6">{student.email === "it.mid@example.test" ? jordanPlanReset : resetAfterUse}</p>
-          <Button className="mt-4 w-fit" disabled={pending === student.email || pendingAll || pendingNotes || !password} onClick={() => reset(student)}>{pending === student.email ? "Resetting…" : `Reset ${student.name}`}</Button>
-        </section>)}
-      </div>
+      {studentAccounts.length === 0 ? <Empty className="border border-dashed">
+        <EmptyHeader>
+          <EmptyTitle>{noTestStudentsTitle}</EmptyTitle>
+          <EmptyDescription>{noTestStudentsDetail}</EmptyDescription>
+        </EmptyHeader>
+      </Empty> : <div className="grid gap-4 lg:grid-cols-3">
+        {studentAccounts.map(student => {
+          const selected = fixtureChoice[student.email] ?? "";
+          const loaded = lastLoaded[student.email];
+          return <section key={student.email} className="flex flex-col rounded-xl border bg-background p-4">
+            <h3 className="text-lg font-semibold">{student.name}</h3>
+            <p className="mt-1 text-sm leading-6 text-muted-foreground">{student.place}</p>
+            <dl className="mt-4 space-y-2 text-sm">
+              <div><dt className="text-muted-foreground">Email</dt><dd className="font-mono">{student.email}</dd></div>
+              <div><dt className="text-muted-foreground">Password</dt><dd className="font-mono">{password || "Not configured"}</dd></div>
+            </dl>
+            <div className="mt-4 space-y-2">
+              <Label htmlFor={`next-save-${student.email}`}>Next planner save</Label>
+              <ChoiceSelect id={`next-save-${student.email}`} label={`Next planner save for ${student.name}`} value={nextSave[student.email] ?? nextSaveWorks} options={nextSaveChoices} disabled={busy || !password} onChange={choice => { void arm(student, choice); }} className="w-full bg-background"/>
+              <p className="text-sm leading-6 text-muted-foreground">Set this before the save. It turns off after one add or remove. The live site ignores it.</p>
+            </div>
+            <p className="mt-4 text-sm leading-6">{student.email === "it.mid@example.test" ? jordanPlanReset : resetAfterUse}</p>
+            <div className="mt-4 space-y-2">
+              <Label htmlFor={`fixture-${student.email}`}>Transcript fixture</Label>
+              <ChoiceSelect id={`fixture-${student.email}`} label={`Transcript fixture for ${student.name}`} value={fixtureChoiceById(selected)?.label ?? ""} placeholder={transcriptFixturePlaceholder} options={transcriptFixtureChoices.map(choice => choice.label)} disabled={busy || !password} onChange={label => {
+                const choice = transcriptFixtureChoices.find(item => item.label === label);
+                if (!choice || busy) return;
+                setFixtureChoice(current => ({ ...current, [student.email]: choice.id }));
+              }} className="w-full bg-background"/>
+              <Button variant="outline" size="sm" className="w-full sm:w-fit" disabled={!selected || busy || !password} onClick={() => setConfirmFixture({ email: student.email, fixtureId: selected })}>{loading === student.email ? "Loading…" : fixtureLoadAction}</Button>
+              {loaded ? <p className="text-sm text-muted-foreground">Last loaded: {loaded}</p> : null}
+            </div>
+            <Button className="mt-4 w-fit" disabled={busy || !password} onClick={() => reset(student)}>{pending === student.email ? "Resetting…" : `Reset ${student.name}`}</Button>
+          </section>;
+        })}
+      </div>}
     </section>
+
+    <AlertDialog open={confirming !== null && confirmingFixture !== null} onOpenChange={open => { if (!open) setConfirmFixture(null); }}>
+      <AlertDialogContent className="max-w-md sm:max-w-md">
+        <AlertDialogHeader>
+          <AlertDialogTitle>{fixtureReplaceTitle}</AlertDialogTitle>
+          <AlertDialogDescription>{confirming && confirmingFixture ? fixtureReplaceDetail(confirming.name, confirmingFixture.label) : ""}</AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogAction type="button" onClick={() => { if (confirming && confirmingFixture) void loadFixture(confirming, confirmingFixture.id); }}>{fixtureLoadAction}</AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
 
     <section className="space-y-4">
       <div>
@@ -206,7 +320,7 @@ export function TestStudents({ students, password, notice, faults = {} }: { stud
             <div><dt className="text-muted-foreground">Password</dt><dd className="font-mono">{password || "Not configured"}</dd></div>
           </dl>
           <p className="mt-4 text-sm leading-6">Reset clears sessions only (no profile or transcript).</p>
-          <Button className="mt-4 w-fit" disabled={pending === advisor.email || pendingAll || pendingNotes || !password} onClick={() => reset(advisor)}>{pending === advisor.email ? "Resetting…" : `Reset ${advisor.name}`}</Button>
+          <Button className="mt-4 w-fit" disabled={busy || !password} onClick={() => reset(advisor)}>{pending === advisor.email ? "Resetting…" : `Reset ${advisor.name}`}</Button>
         </section>)}
       </div>
     </section>

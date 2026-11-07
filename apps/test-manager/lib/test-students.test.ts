@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { aggietrackRequest, assignedToSarah, faultChoice, faultRequest, jordanPlanReset, nextSaveFails, nextSaveWaits, nextSaveWorks, notAssignedToTestStudent, planNotesResetDetail, planNotesResetTitle, plannerFaultMap, resetAfterUse, testAdvisorCards, testStudentByEmail, testStudentCards } from "./test-students";
+import { accountsBusy, aggietrackRequest, assignedToSarah, faultChoice, faultRequest, fixtureForward, fixtureLoadedSummary, fixtureLoadResult, fixtureReplaceDetail, fixtureReplaceTitle, jordanPlanReset, nextSaveFails, nextSaveWaits, nextSaveWorks, noTestStudentsDetail, noTestStudentsTitle, notAssignedToTestStudent, planNotesResetDetail, planNotesResetTitle, plannerFaultMap, resetAfterUse, testAdvisorCards, testStudentByEmail, testStudentCards, transcriptFixtureChoices, tryBegin } from "./test-students";
 
 test("the testing site shows the Information Technology students and the reset instruction", () => {
   assert.deepEqual(testStudentCards.map(student => student.email), [
@@ -58,4 +58,51 @@ test("plan note reset calls AggieTrack with no account ids", async () => {
   assert.match(planNotesResetDetail, /transcripts/);
   assert.match(planNotesResetDetail, /If there are no notes, nothing changes/);
   assert.doesNotMatch(planNotesResetDetail, /\b(NOTE|RETURN|SUBMISSION|APPROVAL|SUBMITTED|DRAFT|RETURNED)\b/);
+});
+
+test("a fixture load sends the id only and keeps the six names", async () => {
+  assert.deepEqual(transcriptFixtureChoices.map(choice => choice.label), [
+    "No credits yet",
+    "3 credits",
+    "6 credits",
+    "120 credits",
+    "Failed grade",
+    "Repeat",
+  ]);
+  const request = aggietrackRequest("/api/test-students/load-fixture", { origin: "http://127.0.0.1:3000", secret: "shared-secret" }, "it.start@example.test", fixtureForward({ fixture: "repeat", courses: ["CST 999"] }));
+  assert.equal(request.url, "http://127.0.0.1:3000/api/test-students/load-fixture");
+  assert.deepEqual(await request.json(), { email: "it.start@example.test", fixture: "repeat" });
+  assert.deepEqual(fixtureForward({ fixture: "credits-3", courses: ["CST 999"], email: "advisor.1@example.test" }), { fixture: "credits-3" });
+  assert.equal(fixtureReplaceTitle, "Replace this transcript?");
+  const detail = fixtureReplaceDetail("Avery Cole", "Repeat");
+  assert.match(detail, /Avery Cole/);
+  assert.match(detail, /Repeat/);
+  assert.match(detail, /transcript/);
+  assert.match(detail, /Planned courses and notes/);
+  assert.match(detail, /signed out/);
+  assert.match(detail, /load another fixture/);
+  assert.equal(fixtureLoadedSummary({ name: "Avery Cole", fixture: "3 credits", attempts: 1, completedCourses: 1, earnedCredits: 3 }), "Loaded 3 credits for Avery Cole. 1 completed course · 3 earned credits.");
+  assert.equal(fixtureLoadedSummary({ name: "Avery Cole", fixture: "Repeat", attempts: 2, completedCourses: 1, earnedCredits: 3 }), "Loaded Repeat for Avery Cole. 2 attempts on 1 course · 3 earned credits.");
+  assert.equal(fixtureLoadedSummary({ name: "Jordan Hale", fixture: "No credits yet", attempts: 0, completedCourses: 0, earnedCredits: 0 }), "Loaded No credits yet for Jordan Hale. 0 completed courses · 0 earned credits.");
+  assert.deepEqual(fixtureLoadResult({ name: "Avery Cole", fixture: "Failed grade", attempts: 2, completedCourses: 1, earnedCredits: 3, courses: ["CST 120"] }), {
+    email: "",
+    name: "Avery Cole",
+    fixture: "Failed grade",
+    attempts: 2,
+    completedCourses: 1,
+    earnedCredits: 3,
+  });
+  assert.throws(() => fixtureLoadResult({ name: "Avery Cole", fixture: "Made up", attempts: 1, completedCourses: 1, earnedCredits: 3 }));
+  assert.equal(noTestStudentsTitle, "No test students");
+  assert.equal(noTestStudentsDetail, "Fictional test students will appear here when this preview app is configured.");
+});
+
+test("one test-account action blocks the next until it finishes", () => {
+  const lock = { current: false };
+  assert.equal(tryBegin(lock), true);
+  assert.equal(tryBegin(lock), false);
+  assert.equal(accountsBusy({ pending: "", pendingAll: false, pendingNotes: false, arming: "", loading: "it.start@example.test" }), true);
+  assert.equal(accountsBusy({ pending: "", pendingAll: false, pendingNotes: false, arming: "", loading: "" }), false);
+  lock.current = false;
+  assert.equal(tryBegin(lock), true);
 });
