@@ -26,6 +26,7 @@ import {
   fixtureChoiceById,
   fixtureConfirmAction,
   fixtureLoadAction,
+  fixtureLoadingAction,
   fixtureLoadResult,
   fixtureLoadedSummary,
   fixtureReplaceDetail,
@@ -300,10 +301,10 @@ export function TestStudents({ students, password, notice, faults = {} }: { stud
                 if (!choice || busy) return;
                 setFixtureChoice(current => ({ ...current, [student.email]: choice.id }));
               }} className="w-full bg-background"/>
-              <Button variant="outline" size="sm" className="w-full sm:w-auto" disabled={!selected || busy || !password} onClick={() => setConfirmFixture({ email: student.email, fixtureId: selected })}>{loading === student.email ? "Loading…" : fixtureLoadAction}</Button>
+              <Button variant="outline" size="sm" className="w-full" disabled={!selected || busy || !password} onClick={() => setConfirmFixture({ email: student.email, fixtureId: selected })}>{loading === student.email ? fixtureLoadingAction : fixtureLoadAction}</Button>
               {loaded ? <p className="text-sm text-muted-foreground">Last loaded: {loaded}</p> : null}
             </div>
-            <Button className="mt-4 w-full sm:w-auto" disabled={busy || !password} onClick={() => reset(student)}>{pending === student.email ? "Resetting…" : `Reset ${student.name}`}</Button>
+            <Button className="mt-4 w-full" disabled={busy || !password} onClick={() => reset(student)}>{pending === student.email ? "Resetting…" : `Reset ${student.name}`}</Button>
           </section>;
         })}
       </div>}

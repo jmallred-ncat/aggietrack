@@ -40,6 +40,7 @@ export const transcriptFixtureChoices = [
 export const transcriptFixturePlaceholder = "Choose a fixture";
 export const fixtureReplaceTitle = "Replace this transcript?";
 export const fixtureLoadAction = "Load fixture";
+export const fixtureLoadingAction = "Loading fixture…";
 export const fixtureConfirmAction = "Replace transcript";
 export const noTestStudentsTitle = "No test students";
 export const noTestStudentsDetail = "Fictional test students will appear here when this preview app is configured.";
@@ -53,7 +54,7 @@ export function fixtureChoiceById(id: string) {
 }
 
 export function fixtureReplaceDetail(name: string, fixture: string) {
-  return `${name}'s courses, grades, plans and notes will be replaced with the ${fixture} fixture, and they'll be signed out. You can reset the account afterward.`;
+  return `${name}'s courses and grades will be replaced with the ${fixture} fixture. Their plans and notes will be deleted, and they'll be signed out. You can reset the account afterward.`;
 }
 
 export function fixtureLoadedSummary(result: { name: string; fixture: string; attempts: number; courses: number; completedCourses: number; earnedCredits: number }) {
