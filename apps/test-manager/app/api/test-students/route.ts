@@ -17,6 +17,14 @@ export async function POST(request: Request) {
     try {
       const body = await request.json();
       const email = typeof body.email === "string" ? body.email : "";
+      if (body.notes === true) {
+        const result = await callAggieTrack("/api/test-students/reset-plan-notes");
+        const deleted = result.deleted;
+        if (typeof deleted !== "number" || !Number.isInteger(deleted) || deleted < 0) {
+          throw new Error("Plan notes could not be reset.");
+        }
+        return Response.json({ deleted });
+      }
       if (body.fault === "fail" || body.fault === "delay" || body.fault === "off") {
         const armed = await callAggieTrack("/api/test-students/write-fault", email, { fault: body.fault, seconds: body.seconds });
         return Response.json(armed);

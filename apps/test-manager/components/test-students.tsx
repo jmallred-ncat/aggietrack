@@ -17,13 +17,22 @@ import {
 import { toast } from "@aggietrack/ui/toast";
 import { ChoiceSelect } from "@/components/choice-select";
 import { Label } from "@aggietrack/ui/label";
-import { resetAllSummary, resetTestAccounts } from "@/lib/reset-students";
-import { faultChoice, faultRequest, jordanPlanReset, nextSaveChoices, nextSaveFails, nextSaveWaits, nextSaveWorks, resetAfterUse, type TestStudentCard } from "@/lib/test-students";
+import { planNotesResetSummary, resetAllSummary, resetTestAccounts } from "@/lib/reset-students";
+import { faultChoice, faultRequest, jordanPlanReset, nextSaveChoices, nextSaveFails, nextSaveWaits, nextSaveWorks, planNotesResetAction, planNotesResetDetail, planNotesResetTitle, resetAfterUse, type TestStudentCard } from "@/lib/test-students";
 
 async function postReset(email: string) {
   const response = await fetch("/api/test-students", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email }) });
   const body = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(typeof body.error === "string" ? body.error : "That account could not be reset.");
+}
+
+async function postResetNotes() {
+  const response = await fetch("/api/test-students", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ notes: true }) });
+  const body = await response.json().catch(() => ({}));
+  if (!response.ok || typeof body.deleted !== "number") {
+    throw new Error(typeof body.error === "string" ? body.error : "Plan notes could not be reset.");
+  }
+  return body.deleted as number;
 }
 
 async function postFault(email: string, choice: string) {
@@ -42,7 +51,10 @@ export function TestStudents({ students, password, notice, faults = {} }: { stud
   const [pending, setPending] = useState("");
   const [arming, setArming] = useState("");
   const [pendingAll, setPendingAll] = useState(false);
+  const [pendingNotes, setPendingNotes] = useState(false);
   const [confirmAll, setConfirmAll] = useState(false);
+  const [confirmNotes, setConfirmNotes] = useState(false);
+  const notesRequest = useRef(false);
   const [nextSave, setNextSave] = useState<Record<string, string>>(() => Object.fromEntries(students.filter(student => student.role === "student").map(student => [student.email, faultChoice(faults[student.email])])));
   const toastedNotice = useRef(false);
 
@@ -81,6 +93,22 @@ export function TestStudents({ students, password, notice, faults = {} }: { stud
     }
   }
 
+  async function resetNotes() {
+    if (notesRequest.current) return;
+    notesRequest.current = true;
+    setConfirmNotes(false);
+    setPendingNotes(true);
+    try {
+      const deleted = await postResetNotes();
+      toast.add({ type: "success", title: planNotesResetSummary(deleted) });
+    } catch (caught) {
+      toast.add({ type: "error", title: caught instanceof Error ? caught.message : "Plan notes could not be reset." });
+    } finally {
+      notesRequest.current = false;
+      setPendingNotes(false);
+    }
+  }
+
   async function resetAll() {
     setConfirmAll(false);
     setPendingAll(true);
@@ -98,13 +126,29 @@ export function TestStudents({ students, password, notice, faults = {} }: { stud
   const advisorAccounts = students.filter(s => s.role === "advisor");
 
   return <div className="not-typeset space-y-8">
-    <div className="flex items-start justify-between gap-4">
+    <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
       <div>
         <h1 className="text-2xl font-semibold">Test Accounts</h1>
         <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">These accounts sign in on AggieTrack. They are shared, so the next person does not inherit someone else&apos;s data.</p>
       </div>
+      <div className="flex flex-wrap items-center gap-2 sm:justify-end">
+      <AlertDialog open={confirmNotes} onOpenChange={setConfirmNotes}>
+        <AlertDialogTrigger render={<Button variant="outline" disabled={pendingNotes || pendingAll || !password} />}>
+          {pendingNotes ? "Resetting…" : planNotesResetAction}
+        </AlertDialogTrigger>
+        <AlertDialogContent className="max-w-md sm:max-w-md">
+          <AlertDialogHeader>
+            <AlertDialogTitle>{planNotesResetTitle}</AlertDialogTitle>
+            <AlertDialogDescription>{planNotesResetDetail}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={pendingNotes}>Cancel</AlertDialogCancel>
+            <AlertDialogAction type="button" disabled={pendingNotes} onClick={resetNotes}>{planNotesResetAction}</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
       <AlertDialog open={confirmAll} onOpenChange={setConfirmAll}>
-        <AlertDialogTrigger render={<Button variant="outline" disabled={pendingAll || !password} />}>
+        <AlertDialogTrigger render={<Button variant="outline" disabled={pendingAll || pendingNotes || !password} />}>
           {pendingAll ? "Resetting…" : "Reset All Students"}
         </AlertDialogTrigger>
         <AlertDialogContent>
@@ -120,8 +164,9 @@ export function TestStudents({ students, password, notice, faults = {} }: { stud
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      </div>
     </div>
-    
+
     <section className="space-y-4">
       <div>
         <h2 className="text-xl font-semibold">Test Students</h2>
@@ -141,7 +186,7 @@ export function TestStudents({ students, password, notice, faults = {} }: { stud
             <p className="text-sm leading-6 text-muted-foreground">Set this before the save. It turns off after one add or remove. The live site ignores it.</p>
           </div>
           <p className="mt-4 text-sm leading-6">{student.email === "it.mid@example.test" ? jordanPlanReset : resetAfterUse}</p>
-          <Button className="mt-4 w-fit" disabled={pending === student.email || pendingAll || !password} onClick={() => reset(student)}>{pending === student.email ? "Resetting…" : `Reset ${student.name}`}</Button>
+          <Button className="mt-4 w-fit" disabled={pending === student.email || pendingAll || pendingNotes || !password} onClick={() => reset(student)}>{pending === student.email ? "Resetting…" : `Reset ${student.name}`}</Button>
         </section>)}
       </div>
     </section>
@@ -161,7 +206,7 @@ export function TestStudents({ students, password, notice, faults = {} }: { stud
             <div><dt className="text-muted-foreground">Password</dt><dd className="font-mono">{password || "Not configured"}</dd></div>
           </dl>
           <p className="mt-4 text-sm leading-6">Reset clears sessions only (no profile or transcript).</p>
-          <Button className="mt-4 w-fit" disabled={pending === advisor.email || pendingAll || !password} onClick={() => reset(advisor)}>{pending === advisor.email ? "Resetting…" : `Reset ${advisor.name}`}</Button>
+          <Button className="mt-4 w-fit" disabled={pending === advisor.email || pendingAll || pendingNotes || !password} onClick={() => reset(advisor)}>{pending === advisor.email ? "Resetting…" : `Reset ${advisor.name}`}</Button>
         </section>)}
       </div>
     </section>

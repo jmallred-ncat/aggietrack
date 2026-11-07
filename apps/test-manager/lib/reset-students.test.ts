@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { resetAllSummary, resetTestAccounts, type ResetTarget } from "./reset-students";
+import { planNotesResetSummary, resetAllSummary, resetTestAccounts, type ResetTarget } from "./reset-students";
 
 const students: ResetTarget[] = [
   { email: "it.start@example.test", name: "Avery Cole" },
@@ -46,4 +46,10 @@ test("reset all succeeds on the second pass when reset replaces frozen data", as
   assert.equal(resetAllSummary(first), "Reset 7 of 7 students");
   assert.equal(resetAllSummary(second), "Reset 7 of 7 students");
   assert.deepEqual([...store.values()], [2, 2, 2, 2, 2, 2, 2]);
+});
+
+test("plan note reset names the count and stays quiet when nothing is there", () => {
+  assert.equal(planNotesResetSummary(0), "No plan notes were on the test accounts.");
+  assert.equal(planNotesResetSummary(1), "Removed 1 plan note from the test accounts.");
+  assert.equal(planNotesResetSummary(4), "Removed 4 plan notes from the test accounts.");
 });

@@ -28,6 +28,9 @@ export const testAccountCards = [...testStudentCards, ...testAdvisorCards];
 
 export const resetAfterUse = "Reset this student after every use.";
 export const jordanPlanReset = "Reset Jordan Hale puts his Spring 2027 plan back to Waiting for review.";
+export const planNotesResetTitle = "Reset plan notes?";
+export const planNotesResetAction = "Reset plan notes";
+export const planNotesResetDetail = "This removes the shared notes on plans that belong to the test students on this page, including notes a test advisor wrote on those plans. Plans, courses, statuses, transcripts, and accounts stay as they are. Notes for anyone else stay. If there are no notes, nothing changes.";
 
 export const nextSaveWorks = "Next save works";
 export const nextSaveFails = "Next save fails";
@@ -68,7 +71,7 @@ export function testStudentByEmail(email: string) {
   return testAccountCards.find(account => account.email === normalized) ?? null;
 }
 
-export function aggietrackRequest(path: "/api/test-students/ensure" | "/api/test-students/reset" | "/api/test-students/write-fault", config: { origin: string; secret: string }, email?: string, extra?: Record<string, unknown>) {
+export function aggietrackRequest(path: "/api/test-students/ensure" | "/api/test-students/reset" | "/api/test-students/reset-plan-notes" | "/api/test-students/write-fault", config: { origin: string; secret: string }, email?: string, extra?: Record<string, unknown>) {
   return new Request(new URL(path, config.origin), {
     method: "POST",
     headers: { Authorization: `Bearer ${config.secret}`, "Content-Type": "application/json" },
@@ -77,7 +80,7 @@ export function aggietrackRequest(path: "/api/test-students/ensure" | "/api/test
   });
 }
 
-export async function callAggieTrack(path: "/api/test-students/ensure" | "/api/test-students/reset" | "/api/test-students/write-fault", email?: string, extra?: Record<string, unknown>) {
+export async function callAggieTrack(path: "/api/test-students/ensure" | "/api/test-students/reset" | "/api/test-students/reset-plan-notes" | "/api/test-students/write-fault", email?: string, extra?: Record<string, unknown>) {
   const config = testStudentConfig();
   if (!config.ready) throw new Error("Set TEST_STUDENT_PASSWORD and TEST_STUDENT_RESET_SECRET on this site and on AggieTrack. Leave them unset on the live site.");
   const student = email ? testStudentByEmail(email) : null;

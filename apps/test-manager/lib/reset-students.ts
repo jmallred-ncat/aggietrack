@@ -25,3 +25,9 @@ export function resetAllSummary(result: ResetAllResult) {
   if (result.failed.length === 0) return `Reset ${result.succeeded.length} of ${result.total} students`;
   return `Reset ${result.succeeded.length} of ${result.total} students. Failed: ${result.failed.map(student => student.name).join(", ")}`;
 }
+
+export function planNotesResetSummary(deleted: number) {
+  if (deleted === 0) return "No plan notes were on the test accounts.";
+  if (deleted === 1) return "Removed 1 plan note from the test accounts.";
+  return `Removed ${deleted} plan notes from the test accounts.`;
+}

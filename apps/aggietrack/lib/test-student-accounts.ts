@@ -4,6 +4,7 @@ import { PlannedTermStatus, TranscriptStatus, UserRole } from "./generated/prism
 import { plannedAttempts } from "./frozen-transcript";
 import { prisma } from "./prisma";
 import { plannerWriteFaultValue } from "./planner-write";
+import { testPlanNoteDeleteWhere } from "./test-plan-notes";
 import { assignedAdvisorEmail, authorizeTestStudents, bearerSecret, jordanSubmittedPlan, sarahMartinezEmail, testAccountByEmail, testAdvisorByEmail, testStudentByEmail, testStudents, testAdvisors, type FrozenCourse, type TestStudent, type TestAdvisor } from "./test-students";
 
 const frozenAt = new Date("2026-01-15T00:00:00.000Z");
@@ -384,4 +385,14 @@ export async function resetTestStudent(request: Request, email: string) {
   const userId = await ensureUser(student, password, true);
   await writeFrozen(userId, student, catalogYearId, advisorId);
   return { email: student.email, name: `${student.firstName} ${student.lastName}` };
+}
+
+/** Deletes shared notes on fixture student plans. The request body is ignored. */
+export async function resetTestPlanNotes(request: Request) {
+  guardTestStudents(request);
+  const where = testPlanNoteDeleteWhere();
+  return prisma.$transaction(async (tx) => {
+    const result = await tx.planNote.deleteMany({ where });
+    return { deleted: result.count };
+  });
 }
