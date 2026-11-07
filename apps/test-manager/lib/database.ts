@@ -14,7 +14,9 @@ export const sectionDefinitions = seed.sections.map(section => {
 });
 
 const idFormat = "prefix-pad2";
+const previousFullCopy = "human-2026-11-06-in-progress";
 const copyRevision = "human-2026-11-07-term-choice";
+const termChoiceProcedureIds = new Set(["T-01", "T-56", "T-79"]);
 const voiceFields: Record<string, string[]> = {
   Tests: ["Test / scenario", "Preconditions", "Inputs / data", "Procedure", "Expected result", "Pass criterion", "Evidence to retain"],
   "Risks & Decisions": ["Issue / risk", "Source gap or constraint", "Proposed control / decision"],
@@ -54,11 +56,34 @@ export async function normalizeStoredIds(db: PrismaClient = getPrisma()) {
   }, { timeout: 60000 });
 }
 
+/** Replace only T01, T56, and T-79 procedures. Every other field stays, including user prose and execution. */
+async function applyTermChoiceProcedures(tx: Prisma.TransactionClient) {
+  const tests = seed.sections.find(section => section.name === "Tests");
+  if (!tests) return;
+  for (const row of tests.rows) {
+    const id = normalizeId(String(row.id));
+    if (!termChoiceProcedureIds.has(id)) continue;
+    const current = await tx.workbookRecord.findUnique({ where: { section_id: { section: "Tests", id } } });
+    if (!current) continue;
+    const values = { ...(current.values as Values) };
+    const procedure = rewriteRecordValues(row.values as Values).Procedure ?? "";
+    if (values.Procedure === procedure) continue;
+    values.Procedure = procedure;
+    await tx.workbookRecord.update({ where: { section_id: { section: "Tests", id } }, data: { values } });
+  }
+}
+
 export async function applyHumanCopy(db: PrismaClient = getPrisma()) {
   await db.$transaction(async tx => {
-    if ((await tx.importMetadata.findUnique({ where: { key: "copy-revision" } }))?.value === copyRevision) return;
+    const stored = (await tx.importMetadata.findUnique({ where: { key: "copy-revision" } }))?.value;
+    if (stored === copyRevision) return;
     if (!await tx.importMetadata.findUnique({ where: { key: "seed" } })) {
       await tx.importMetadata.create({ data: { key: "copy-revision", value: copyRevision } });
+      return;
+    }
+    if (stored === previousFullCopy) {
+      await applyTermChoiceProcedures(tx);
+      await tx.importMetadata.update({ where: { key: "copy-revision" }, data: { value: copyRevision } });
       return;
     }
     for (const section of seed.sections) {
