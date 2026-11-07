@@ -1,10 +1,11 @@
+import { DashboardTiles } from "@/components/dashboard-tiles";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty";
 import { academicTermLabel, semesterInSession } from "@/lib/academic-term";
 import { computeDegreeProgress } from "@/lib/degree-progress";
-import { computeGpa } from "@/lib/gpa";
+import { computeGpa, computeHonors } from "@/lib/gpa";
 import { coursesAreInProgress, dashboardCoursePlan, plannedTermStatusLabel, plannedTermStatusVariant, studentNextStep } from "@/lib/plan-status";
 import { prisma } from "@/lib/prisma";
 import { getTranscript } from "@/lib/transcript";
@@ -49,6 +50,7 @@ export default async function Dashboard() {
         }),
     ]);
     const gpa = computeGpa(transcript);
+    const honors = computeHonors(transcript);
     const semester = semesterInSession(terms, now);
     const semesterPlan = plans
         .filter((plan) =>
@@ -92,29 +94,15 @@ export default async function Dashboard() {
             </p>
         </header>
 
-        <section className="grid gap-4 sm:grid-cols-2">
-            <Card>
-                <CardHeader>
-                    <CardTitle>Degree Completion</CardTitle>
-                </CardHeader>
-                <CardContent className="flex flex-col items-start gap-2">
-                    <p className="text-2xl font-semibold tabular-nums">
-                        {progress.earnedCredits} of {progress.totalCredits} Credits ({progress.percentage}%)
-                    </p>
-                    <Badge>Completed requirements</Badge>
-                    <Badge variant="outline">{target ? `Target: ${academicTermLabel(target)}` : "Target not set"}</Badge>
-                </CardContent>
-            </Card>
-            <Card>
-                <CardHeader>
-                    <CardTitle>Cumulative GPA</CardTitle>
-                </CardHeader>
-                <CardContent className="flex flex-col items-start gap-2">
-                    <p className="text-2xl font-semibold tabular-nums">{gpa !== null ? gpa.toFixed(2) : "—"}</p>
-                    <Badge variant="outline">{gpa !== null ? "Recorded grades" : "No grades yet"}</Badge>
-                </CardContent>
-            </Card>
-        </section>
+        <DashboardTiles
+            earnedCredits={progress.earnedCredits}
+            totalCredits={progress.totalCredits}
+            percentage={progress.percentage}
+            targetLabel={target ? academicTermLabel(target) : null}
+            gpa={gpa}
+            honor={honors.honor}
+            honorEligible={honors.eligible}
+        />
 
         <Card>
             <CardHeader>
