@@ -1,7 +1,8 @@
 import { randomUUID } from "node:crypto";
 import { hashPassword } from "better-auth/crypto";
-import { PlannedTermStatus, TranscriptStatus, UserRole } from "./generated/prisma/client";
+import { PlannedTermStatus, Prisma, TranscriptStatus, UserRole } from "./generated/prisma/client";
 import { plannedAttempts } from "./frozen-transcript";
+import { describeFixtureLoad, runFixtureLoad, type FixtureAttempt } from "./transcript-fixtures";
 import { prisma } from "./prisma";
 import { plannerWriteFaultValue } from "./planner-write";
 import { testPlanNoteDeleteWhere } from "./test-plan-notes";
@@ -45,14 +46,16 @@ function isUniqueConflict(error: unknown) {
   return typeof error === "object" && error !== null && "code" in error && (error as { code?: string }).code === "P2002";
 }
 
-async function ensureUser(account: TestStudent | TestAdvisor, password: string, refreshPassword: boolean) {
+type Db = Prisma.TransactionClient | typeof prisma;
+
+async function ensureUser(account: TestStudent | TestAdvisor, password: string, refreshPassword: boolean, db: Db = prisma) {
   const hash = await hashPassword(password);
   const role = "role" in account ? account.role : UserRole.STUDENT;
-  let existing = await prisma.user.findUnique({ where: { email: account.email }, include: { accounts: true } });
+  let existing = await db.user.findUnique({ where: { email: account.email }, include: { accounts: true } });
   if (!existing) {
     const id = randomUUID();
     try {
-      await prisma.user.create({
+      await db.user.create({
         data: {
           id,
           name: `${account.firstName} ${account.lastName}`,
@@ -67,26 +70,26 @@ async function ensureUser(account: TestStudent | TestAdvisor, password: string, 
       return id;
     } catch (error) {
       if (!isUniqueConflict(error)) throw error;
-      existing = await prisma.user.findUnique({ where: { email: account.email }, include: { accounts: true } });
+      existing = await db.user.findUnique({ where: { email: account.email }, include: { accounts: true } });
       if (!existing) throw error;
     }
   }
 
-  await prisma.user.update({
+  await db.user.update({
     where: { id: existing.id },
     data: { emailVerified: true, firstName: account.firstName, lastName: account.lastName, name: `${account.firstName} ${account.lastName}`, role },
   });
   if (refreshPassword) {
     const credential = existing.accounts.find(item => item.providerId === "credential");
-    if (credential) await prisma.account.update({ where: { id: credential.id }, data: { password: hash } });
+    if (credential) await db.account.update({ where: { id: credential.id }, data: { password: hash } });
     else {
       try {
-        await prisma.account.create({ data: { id: randomUUID(), accountId: existing.id, providerId: "credential", userId: existing.id, password: hash } });
+        await db.account.create({ data: { id: randomUUID(), accountId: existing.id, providerId: "credential", userId: existing.id, password: hash } });
       } catch (error) {
         if (!isUniqueConflict(error)) throw error;
-        const again = await prisma.account.findFirst({ where: { userId: existing.id, providerId: "credential" } });
+        const again = await db.account.findFirst({ where: { userId: existing.id, providerId: "credential" } });
         if (!again) throw error;
-        await prisma.account.update({ where: { id: again.id }, data: { password: hash } });
+        await db.account.update({ where: { id: again.id }, data: { password: hash } });
       }
     }
   }
@@ -385,6 +388,117 @@ export async function resetTestStudent(request: Request, email: string) {
   const userId = await ensureUser(student, password, true);
   await writeFrozen(userId, student, catalogYearId, advisorId);
   return { email: student.email, name: `${student.firstName} ${student.lastName}` };
+}
+
+async function fixtureCatalogMismatches(attempts: readonly FixtureAttempt[]) {
+  if (attempts.length === 0) return [];
+  const found = await prisma.course.findMany({
+    where: { OR: attempts.map((attempt) => ({ subject: attempt.subject, number: attempt.number })) },
+    select: { subject: true, number: true, credits: true },
+  });
+  const byCode = new Map(found.map((course) => [`${course.subject} ${course.number}`, course]));
+  const mismatches: string[] = [];
+  const seen = new Set<string>();
+  for (const attempt of attempts) {
+    const code = `${attempt.subject} ${attempt.number}`;
+    if (seen.has(code)) continue;
+    seen.add(code);
+    const course = byCode.get(code);
+    if (!course) mismatches.push(`${code} is not in the catalog. The account was not changed.`);
+    else if (course.credits !== attempt.credits) {
+      mismatches.push(`${code} is ${course.credits} credits in the catalog, and this fixture expects ${attempt.credits}. The account was not changed.`);
+    }
+  }
+  return mismatches;
+}
+
+/** Replaces one fixture student's transcript. The browser sends a fixture id, not courses. */
+export async function loadTestTranscriptFixture(request: Request, email: string, fixtureId: string) {
+  guardTestStudents(request, email, true);
+  const described = describeFixtureLoad(email, fixtureId);
+  const existing = described.ok
+    ? await prisma.user.findUnique({ where: { email: described.email }, select: { role: true } })
+    : null;
+  const mismatches = described.ok ? await fixtureCatalogMismatches(described.attempts) : [];
+  const decision = await runFixtureLoad({
+    email,
+    fixtureId,
+    existingRole: existing?.role ?? null,
+    catalogMismatches: mismatches,
+    replace: async () => {
+      if (!described.ok) throw new TestStudentError("That is not a test student.", 400);
+      const student = testStudentByEmail(described.email);
+      if (!student) throw new TestStudentError("That is not a test student.", 400);
+      const password = guardTestStudents(request, described.email, true);
+      let catalogYearId: string;
+      try {
+        catalogYearId = await infoCatalogYearId();
+      } catch (error) {
+        if (error instanceof TestStudentError) {
+          throw new TestStudentError(`${error.message} The account was not changed.`, error.status);
+        }
+        throw error;
+      }
+      await prisma.$transaction(async (tx) => {
+        const current = await tx.user.findUnique({ where: { email: student.email }, select: { role: true } });
+        if (current && current.role !== UserRole.STUDENT) {
+          throw new TestStudentError("That account is not a test student.", 400);
+        }
+        const advisorEmail = assignedAdvisorEmail(student.email);
+        const advisor = advisorEmail ? testAdvisorByEmail(advisorEmail) : null;
+        if (advisorEmail && !advisor) throw new TestStudentError("Sarah Martinez is not a test advisor.", 500);
+        const advisorId = advisor ? await ensureUser(advisor, password, false, tx) : null;
+        const userId = await ensureUser(student, password, true, tx);
+        const profile = await tx.studentProfile.upsert({
+          where: { userId },
+          create: { userId, catalogYearId, standing: student.standing, startConfirmedAt: frozenAt, advisorId },
+          update: { catalogYearId, standing: student.standing, startConfirmedAt: frozenAt, advisorId, expectedGradTermId: null, notTakingTermId: null, bannerId: null, plannerWriteFault: null },
+          select: { id: true },
+        });
+        const found = described.attempts.length === 0 ? [] : await tx.course.findMany({
+          where: { OR: described.attempts.map((attempt) => ({ subject: attempt.subject, number: attempt.number })) },
+          select: { id: true, subject: true, number: true, credits: true },
+        });
+        const byCode = new Map(found.map((course) => [`${course.subject} ${course.number}`, course]));
+        const started = Date.UTC(2024, 0, 1);
+        const rows = described.attempts.map((attempt, index) => {
+          const code = `${attempt.subject} ${attempt.number}`;
+          const course = byCode.get(code);
+          if (!course) throw new TestStudentError(`${code} is not in the catalog. The account was not changed.`, 500);
+          if (course.credits !== attempt.credits) {
+            throw new TestStudentError(`${code} is ${course.credits} credits in the catalog, and this fixture expects ${attempt.credits}. The account was not changed.`, 500);
+          }
+          return {
+            studentId: profile.id,
+            courseId: course.id,
+            credits: course.credits,
+            grade: attempt.grade,
+            status: attempt.status,
+            source: attempt.source,
+            createdAt: new Date(started + index * 86_400_000),
+          };
+        });
+        await tx.plannedCourse.deleteMany({ where: { plannedTerm: { studentId: profile.id } } });
+        await tx.plannedTerm.deleteMany({ where: { studentId: profile.id } });
+        await tx.advisingAppointment.deleteMany({ where: { studentId: profile.id } });
+        await tx.advisingNote.deleteMany({ where: { studentId: profile.id } });
+        await tx.transcriptEntry.deleteMany({ where: { studentId: profile.id } });
+        await tx.session.deleteMany({ where: { userId } });
+        if (rows.length > 0) await tx.transcriptEntry.createMany({ data: rows });
+      });
+      return {
+        email: described.email,
+        name: described.name,
+        fixture: described.fixture,
+        attempts: described.summary.attempts,
+        courses: described.summary.courses,
+        completedCourses: described.summary.completedCourses,
+        earnedCredits: described.summary.earnedCredits,
+      };
+    },
+  });
+  if (!decision.result) throw new TestStudentError(decision.error ?? "That transcript could not be loaded.", decision.status);
+  return decision.result;
 }
 
 /** Deletes shared notes on fixture student plans. The request body is ignored. */
