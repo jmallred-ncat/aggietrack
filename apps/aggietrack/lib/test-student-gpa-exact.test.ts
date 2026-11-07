@@ -117,16 +117,23 @@ test("adjusted GPA differs from cumulative GPA for students with retakes", () =>
   assert.ok(true, "Taylor Morgan's adjusted GPA is lower than cumulative because F counts in adjusted");
 });
 
-test("the dashboard GPA tile stays a number and one badge", () => {
+test("the dashboard restores the circle and honors tiles without a hardcoded target", () => {
   const page = readFileSync(new URL("../app/(app)/student/(started)/page.tsx", import.meta.url), "utf8");
-  assert.match(page, /Cumulative GPA/);
-  assert.match(page, /Recorded grades/);
-  assert.match(page, /No grades yet/);
-  assert.match(page, /Degree Completion/);
-  assert.doesNotMatch(page, /Summa Cum Laude pace/);
-  assert.doesNotMatch(page, /MedalIcon/);
-  assert.doesNotMatch(page, /Spring 2027/);
-  assert.doesNotMatch(page, /Lorem ipsum/);
-  assert.doesNotMatch(page, /View All Notes/);
-  assert.doesNotMatch(page, /Request New Meeting/);
+  const tiles = readFileSync(new URL("../components/dashboard-tiles.tsx", import.meta.url), "utf8");
+  assert.match(page, /computeHonors\(transcript\)/);
+  assert.match(page, /target \? academicTermLabel\(target\) : null/);
+  assert.match(page, /honor=\{honors\.honor\}/);
+  assert.match(page, /honorEligible=\{honors\.eligible\}/);
+  assert.match(tiles, /CircularProgress/);
+  assert.match(tiles, /size=\{120\}/);
+  assert.match(tiles, /MedalIcon/);
+  assert.match(tiles, /Degree Completion/);
+  assert.match(tiles, />GPA</);
+  assert.match(tiles, /No GPA yet/);
+  assert.match(tiles, /\$\{honor\} pace/);
+  assert.match(tiles, /On track for \$\{honor\}/);
+  assert.match(tiles, /Target: \{targetLabel\}/);
+  assert.doesNotMatch(tiles, /Recorded grades|No grades yet|Target not set|Behind target|Completed requirements/);
+  assert.doesNotMatch(page, /Recorded grades|Target not set|Spring 2027|Lorem ipsum|View All Notes|Request New Meeting/);
+  assert.doesNotMatch(`${page}\n${tiles}`, /On track for \{term\}|Behind target/);
 });
