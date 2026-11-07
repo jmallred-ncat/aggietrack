@@ -80,7 +80,74 @@ export type PresentedNote = {
     roleLabel: string;
     eventLabel: string | null;
     badge: string | null;
+    /** Set only when the row has no user-written message. Free text stays a note. */
+    eventAction: PlanNoteEventAction | null;
 };
+
+export type PlanNoteEventAction = "submitted" | "approved" | "changes";
+
+const PLAN_NOTE_TIME_ZONE = "America/New_York";
+
+export function planNotesAudienceDescription(audience: "student" | "advisor") {
+    return audience === "advisor"
+        ? "You and the student can read these notes."
+        : "You and your advisor can read these notes.";
+}
+
+/** Empty workflow rows are events. A written body, including text that looks like a caption, stays a note. */
+export function planNoteEventAction(kind: string, body: string): PlanNoteEventAction | null {
+    if (body.trim().length > 0) return null;
+    if (kind === "SUBMISSION") return "submitted";
+    if (kind === "APPROVAL") return "approved";
+    if (kind === "RETURN") return "changes";
+    return null;
+}
+
+export function planNoteEventPhrase(action: PlanNoteEventAction) {
+    if (action === "submitted") return "submitted the plan";
+    if (action === "approved") return "approved the plan";
+    return "requested changes";
+}
+
+function noteInstant(value: Date | string | null | undefined) {
+    if (!value) return null;
+    const date = value instanceof Date ? value : new Date(value);
+    if (Number.isNaN(date.getTime())) return null;
+    return date;
+}
+
+function zonedYear(date: Date) {
+    return new Intl.DateTimeFormat("en-US", {
+        timeZone: PLAN_NOTE_TIME_ZONE,
+        year: "numeric",
+    }).format(date);
+}
+
+function formatNoteTime(date: Date, includeYear: boolean) {
+    return new Intl.DateTimeFormat("en-US", {
+        timeZone: PLAN_NOTE_TIME_ZONE,
+        month: "short",
+        day: "numeric",
+        ...(includeYear ? { year: "numeric" as const } : {}),
+        hour: "numeric",
+        minute: "2-digit",
+        timeZoneName: "short",
+    }).format(date);
+}
+
+/** Eastern clock time. The year is included only when it differs from `now` in America/New_York. */
+export function planNoteTimestamp(value: Date | string | null | undefined, now: Date = new Date()) {
+    const date = noteInstant(value);
+    if (!date) return null;
+    return formatNoteTime(date, zonedYear(date) !== zonedYear(now));
+}
+
+/** Full Eastern date, including the year, for the time element's title. */
+export function planNoteTimestampTitle(value: Date | string | null | undefined) {
+    const date = noteInstant(value);
+    if (!date) return null;
+    return formatNoteTime(date, true);
+}
 
 export function presentPlanNote(note: {
     id: string;
@@ -99,6 +166,7 @@ export function presentPlanNote(note: {
         roleLabel: planNoteRoleLabel(note.authorRole),
         eventLabel: planEventLabel(kind),
         badge: kind === "RETURN" ? "Changes requested" : null,
+        eventAction: planNoteEventAction(kind, note.body),
     };
 }
 
