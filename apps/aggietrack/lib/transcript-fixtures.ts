@@ -174,10 +174,45 @@ export function fixtureSummary(id: TranscriptFixtureId) {
 
     return {
         attempts: attempts.length,
+        courses: byCourse.size,
         completedCourses,
         earnedCredits,
         gpa,
     };
+}
+
+/**
+ * Decides whether a fixture load may write.
+ * A stored account at an allowlisted email is rejected when its role is not STUDENT.
+ * Catalog mismatches are rejected here too. Neither path calls the replacement.
+ */
+export function fixtureLoadGate(input: {
+    email: string;
+    fixtureId: string;
+    existingRole: string | null;
+    catalogMismatches: readonly string[];
+}) {
+    const described = describeFixtureLoad(input.email, input.fixtureId);
+    if (!described.ok) return { write: false as const, status: 400, error: described.error };
+    if (input.existingRole && input.existingRole !== "STUDENT") {
+        return { write: false as const, status: 400, error: "That account is not a test student." };
+    }
+    const mismatch = input.catalogMismatches[0];
+    if (mismatch) return { write: false as const, status: 500, error: mismatch };
+    return { write: true as const, described };
+}
+
+/** The load route uses this so a rejected role or catalog never reaches the replacement. */
+export async function runFixtureLoad<T>(input: {
+    email: string;
+    fixtureId: string;
+    existingRole: string | null;
+    catalogMismatches: readonly string[];
+    replace: () => Promise<T>;
+}) {
+    const gate = fixtureLoadGate(input);
+    if (!gate.write) return { status: gate.status, error: gate.error, result: null };
+    return { status: 200 as const, error: null, result: await input.replace() };
 }
 
 export type FixtureLedger = {

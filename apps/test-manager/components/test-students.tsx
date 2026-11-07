@@ -24,12 +24,14 @@ import {
   faultChoice,
   faultRequest,
   fixtureChoiceById,
+  fixtureConfirmAction,
   fixtureLoadAction,
   fixtureLoadResult,
   fixtureLoadedSummary,
   fixtureReplaceDetail,
   fixtureReplaceTitle,
   jordanPlanReset,
+  nextSaveAfterFixture,
   nextSaveChoices,
   nextSaveFails,
   nextSaveWaits,
@@ -80,7 +82,11 @@ async function postFixture(email: string, fixtureId: string) {
     body: JSON.stringify({ email, fixture: fixtureId }),
   });
   const body = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(typeof body.error === "string" ? body.error : "That transcript could not be loaded.");
+  if (!response.ok) {
+    const failure = new Error(typeof body.error === "string" ? body.error : "That transcript could not be loaded.") as Error & { accountChanged: boolean };
+    failure.accountChanged = body.accountChanged === true;
+    throw failure;
+  }
   return fixtureLoadResult(body);
 }
 
@@ -190,11 +196,22 @@ export function TestStudents({ students, password, notice, faults = {} }: { stud
     if (!tryBegin(actionLock)) return;
     setConfirmFixture(null);
     setLoading(student.email);
+    const previousSave = nextSave[student.email] ?? nextSaveWorks;
     try {
       const result = await postFixture(student.email, fixtureId);
       setLastLoaded(current => ({ ...current, [student.email]: result.fixture }));
+      setNextSave(current => ({ ...current, [student.email]: nextSaveAfterFixture(previousSave, { ok: true, accountChanged: true }) }));
       toast.add({ type: "success", title: fixtureLoadedSummary(result) });
     } catch (caught) {
+      const accountChanged = caught instanceof Error && "accountChanged" in caught && caught.accountChanged === true;
+      if (accountChanged) {
+        setLastLoaded(current => {
+          const next = { ...current };
+          delete next[student.email];
+          return next;
+        });
+        setNextSave(current => ({ ...current, [student.email]: nextSaveAfterFixture(previousSave, { ok: false, accountChanged: true }) }));
+      }
       toast.add({ type: "error", title: caught instanceof Error ? caught.message : "That transcript could not be loaded." });
     } finally {
       actionLock.current = false;
@@ -283,10 +300,10 @@ export function TestStudents({ students, password, notice, faults = {} }: { stud
                 if (!choice || busy) return;
                 setFixtureChoice(current => ({ ...current, [student.email]: choice.id }));
               }} className="w-full bg-background"/>
-              <Button variant="outline" size="sm" className="w-full sm:w-fit" disabled={!selected || busy || !password} onClick={() => setConfirmFixture({ email: student.email, fixtureId: selected })}>{loading === student.email ? "Loading…" : fixtureLoadAction}</Button>
+              <Button variant="outline" size="sm" className="w-full sm:w-auto" disabled={!selected || busy || !password} onClick={() => setConfirmFixture({ email: student.email, fixtureId: selected })}>{loading === student.email ? "Loading…" : fixtureLoadAction}</Button>
               {loaded ? <p className="text-sm text-muted-foreground">Last loaded: {loaded}</p> : null}
             </div>
-            <Button className="mt-4 w-fit" disabled={busy || !password} onClick={() => reset(student)}>{pending === student.email ? "Resetting…" : `Reset ${student.name}`}</Button>
+            <Button className="mt-4 w-full sm:w-auto" disabled={busy || !password} onClick={() => reset(student)}>{pending === student.email ? "Resetting…" : `Reset ${student.name}`}</Button>
           </section>;
         })}
       </div>}
@@ -300,7 +317,7 @@ export function TestStudents({ students, password, notice, faults = {} }: { stud
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel>Cancel</AlertDialogCancel>
-          <AlertDialogAction type="button" onClick={() => { if (confirming && confirmingFixture) void loadFixture(confirming, confirmingFixture.id); }}>{fixtureLoadAction}</AlertDialogAction>
+          <AlertDialogAction type="button" variant="destructive" onClick={() => { if (confirming && confirmingFixture) void loadFixture(confirming, confirmingFixture.id); }}>{fixtureConfirmAction}</AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>

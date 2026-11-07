@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { test } from "node:test";
 import { Grade } from "./generated/prisma/client";
 import { authorizeTestStudents, stateAfterReset, testStudentByEmail } from "./test-students";
@@ -8,6 +9,7 @@ import {
     describeFixtureLoad,
     fixtureAttempts,
     fixtureSummary,
+    runFixtureLoad,
     transcriptFixtureById,
     transcriptFixtures,
     type FixtureLedger,
@@ -48,6 +50,7 @@ test("fixtures use required catalog courses and do not invent credit counts", ()
         ["CST", "130", Grade.A],
         ["CST", "120", Grade.F],
     ]);
+    assert.equal(failed.summary.courses, 2);
     assert.equal(failed.summary.completedCourses, 1);
     assert.equal(failed.summary.attempts, 2);
     assert.equal(failed.summary.earnedCredits, 3);
@@ -57,6 +60,7 @@ test("fixtures use required catalog courses and do not invent credit counts", ()
     assert.deepEqual(fixtureAttempts("repeat").map((attempt) => attempt.grade), [Grade.F, Grade.B]);
     assert.equal(fixtureAttempts("repeat").every((attempt) => attempt.subject === "CST" && attempt.number === "112"), true);
     assert.equal(repeat.attempts, 2);
+    assert.equal(repeat.courses, 1);
     assert.equal(repeat.completedCourses, 1);
     assert.equal(repeat.earnedCredits, 3);
     assert.equal(repeat.gpa, 3);
@@ -175,4 +179,71 @@ test("reset still restores the frozen story", () => {
     assert.deepEqual(stateAfterReset(avery).transcript, []);
     assert.ok(stateAfterReset(taylor).transcript.length > fixtureAttempts("repeat").length);
     assert.equal(fixtureAttempts("none").length, 0);
+});
+
+test("the load route rejects a wrong role and a catalog mismatch before replacement", async () => {
+    let writes = 0;
+    const replace = async () => {
+        writes += 1;
+        return "wrote";
+    };
+    const advisor = await runFixtureLoad({
+        email: "it.start@example.test",
+        fixtureId: "failed",
+        existingRole: "ADVISOR",
+        catalogMismatches: [],
+        replace,
+    });
+    assert.equal(advisor.status, 400);
+    assert.equal(advisor.result, null);
+    assert.equal(writes, 0);
+
+    const admin = await runFixtureLoad({
+        email: "it.mid@example.test",
+        fixtureId: "credits-3",
+        existingRole: "ADMIN",
+        catalogMismatches: [],
+        replace,
+    });
+    assert.equal(admin.result, null);
+    assert.equal(writes, 0);
+
+    const mismatch = await runFixtureLoad({
+        email: "it.late@example.test",
+        fixtureId: "repeat",
+        existingRole: "STUDENT",
+        catalogMismatches: ["CST 112 is 1 credits in the catalog, and this fixture expects 3. The account was not changed."],
+        replace,
+    });
+    assert.equal(mismatch.result, null);
+    assert.match(mismatch.error ?? "", /The account was not changed/);
+    assert.equal(writes, 0);
+
+    const created = await runFixtureLoad({
+        email: "it.start@example.test",
+        fixtureId: "none",
+        existingRole: null,
+        catalogMismatches: [],
+        replace,
+    });
+    assert.equal(created.result, "wrote");
+    assert.equal(writes, 1);
+
+    const route = readFileSync("app/api/test-students/load-fixture/route.ts", "utf8");
+    assert.match(route, /loadTestTranscriptFixture/);
+    assert.equal(route.includes("resetTestStudent"), false);
+    assert.match(route, /accountChanged: false/);
+    const accounts = readFileSync("lib/test-student-accounts.ts", "utf8");
+    const loader = accounts.slice(
+        accounts.indexOf("export async function loadTestTranscriptFixture"),
+        accounts.indexOf("export async function resetTestPlanNotes"),
+    );
+    assert.equal(loader.includes("resetTestStudent"), false);
+    assert.match(loader, /runFixtureLoad/);
+    assert.match(loader, /\$transaction/);
+    const reset = accounts.slice(
+        accounts.indexOf("export async function resetTestStudent"),
+        accounts.indexOf("async function fixtureCatalogMismatches"),
+    );
+    assert.match(reset, /ensureUser\(student, password, true\)/);
 });

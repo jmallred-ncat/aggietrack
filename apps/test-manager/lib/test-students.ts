@@ -40,6 +40,7 @@ export const transcriptFixtureChoices = [
 export const transcriptFixturePlaceholder = "Choose a fixture";
 export const fixtureReplaceTitle = "Replace this transcript?";
 export const fixtureLoadAction = "Load fixture";
+export const fixtureConfirmAction = "Replace transcript";
 export const noTestStudentsTitle = "No test students";
 export const noTestStudentsDetail = "Fictional test students will appear here when this preview app is configured.";
 
@@ -52,27 +53,38 @@ export function fixtureChoiceById(id: string) {
 }
 
 export function fixtureReplaceDetail(name: string, fixture: string) {
-  return `This replaces ${name}'s transcript with ${fixture}. Their courses, grades, and progress are overwritten. Planned courses and notes on their plans are removed, and they are signed out of AggieTrack. Reset the account or load another fixture to change it again.`;
+  return `${name}'s courses, grades, plans and notes will be replaced with the ${fixture} fixture, and they'll be signed out. You can reset the account afterward.`;
 }
 
-export function fixtureLoadedSummary(result: { name: string; fixture: string; attempts: number; completedCourses: number; earnedCredits: number }) {
+export function fixtureLoadedSummary(result: { name: string; fixture: string; attempts: number; courses: number; completedCourses: number; earnedCredits: number }) {
   const credits = `${result.earnedCredits} earned credits`;
-  if (result.attempts === result.completedCourses) {
-    const courses = result.completedCourses === 1 ? "1 completed course" : `${result.completedCourses} completed courses`;
-    return `Loaded ${result.fixture} for ${result.name}. ${courses} · ${credits}.`;
+  if (result.attempts === result.courses && result.courses === result.completedCourses) {
+    const completed = result.completedCourses === 1 ? "1 completed course" : `${result.completedCourses} completed courses`;
+    return `Loaded ${result.fixture} for ${result.name}. ${completed} · ${credits}.`;
   }
-  const courses = result.completedCourses === 1 ? "1 course" : `${result.completedCourses} courses`;
-  return `Loaded ${result.fixture} for ${result.name}. ${result.attempts} attempts on ${courses} · ${credits}.`;
+  const courses = result.courses === 1 ? "1 course" : `${result.courses} courses`;
+  if (result.completedCourses === result.courses) {
+    return `Loaded ${result.fixture} for ${result.name}. ${result.attempts} attempts on ${courses} · ${credits}.`;
+  }
+  const completed = result.completedCourses === 1 ? "1 completed course" : `${result.completedCourses} completed courses`;
+  return `Loaded ${result.fixture} for ${result.name}. ${result.attempts} attempts on ${courses} · ${completed} · ${credits}.`;
+}
+
+/** Success clears the armed planner save. A failed load clears it only when the account actually changed. */
+export function nextSaveAfterFixture(previous: string, outcome: { ok: boolean; accountChanged: boolean }) {
+  if (outcome.ok || outcome.accountChanged) return nextSaveWorks;
+  return previous;
 }
 
 export function fixtureLoadResult(body: unknown) {
   if (!body || typeof body !== "object") throw new Error("That transcript could not be loaded.");
   const row = body as Record<string, unknown>;
   const attempts = row.attempts;
+  const courses = row.courses;
   const completedCourses = row.completedCourses;
   const earnedCredits = row.earnedCredits;
   const count = (value: unknown): value is number => typeof value === "number" && Number.isInteger(value) && value >= 0;
-  if (typeof row.name !== "string" || typeof row.fixture !== "string" || !count(attempts) || !count(completedCourses) || !count(earnedCredits)) {
+  if (typeof row.name !== "string" || typeof row.fixture !== "string" || !count(attempts) || !count(courses) || !count(completedCourses) || !count(earnedCredits)) {
     throw new Error("That transcript could not be loaded.");
   }
   if (!transcriptFixtureChoices.some((choice) => choice.label === row.fixture)) {
@@ -83,6 +95,7 @@ export function fixtureLoadResult(body: unknown) {
     name: row.name,
     fixture: row.fixture,
     attempts,
+    courses,
     completedCourses,
     earnedCredits,
   };

@@ -12,9 +12,9 @@ export async function POST(request: Request) {
         return Response.json(result);
     } catch (error) {
         if (error instanceof TestStudentError) {
-            return Response.json({ error: error.message }, { status: error.status });
+            return Response.json({ error: error.message, accountChanged: false }, { status: error.status });
         }
         console.error("Transcript fixture error:", error);
-        return Response.json({ error: "That transcript could not be loaded." }, { status: 500 });
+        return Response.json({ error: "That transcript could not be loaded.", accountChanged: false }, { status: 500 });
     }
 }
