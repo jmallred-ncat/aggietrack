@@ -5,6 +5,7 @@ import { mkdirSync, readFileSync, rmSync, symlinkSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { test } from "node:test";
+import { migrateEnvForScratch } from "./advising-test-target";
 
 const appRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
 const prismaBin = join(appRoot, "node_modules/.bin/prisma");
@@ -102,15 +103,7 @@ function restoreMigration(held: string, probe: string, name: string) {
 
 function runPrisma(probe: string, url: string, args: string[]) {
     assertLocalDatabase(url);
-    const env = { ...process.env };
-    for (const key of Object.keys(env)) {
-        if (key.includes("DATABASE") || key.startsWith("PG") || key.includes("POSTGRES") || key === "SEED_ON_DEPLOY") {
-            delete env[key];
-        }
-    }
-    env.DATABASE_URL = url;
-    env.DIRECT_URL = url;
-    env.DATABASE_URL_UNPOOLED = url;
+    const env = migrateEnvForScratch(url, process.env);
     try {
         const stdout = execFileSync(prismaBin, [...args, "--config", join(probe, "prisma7.config.ts")], {
             cwd: probe,

@@ -197,7 +197,7 @@ Use these strings verbatim unless a later Wanda review amends them. `{Name}` is 
 84. Buttons: **Keep session** (outline, initial focus), **Cancel session** (`destructive`). Pending: **Canceling session…**
 85. Advisor blank/whitespace note: do **not** close the dialog. `DismissibleAlert` title **Add a note**. Description **Explain why you are canceling this session.** Focus the textarea; `aria-invalid`.
 86. Note too long: title **Note is too long**. Description **Keep your note to 2,000 characters or fewer.**
-87. Success toast: the student sees **Session canceled**. The advisor sees **Session canceled. {studentName} can see your note.** `{studentName}` is the name stored on that session. Do not invent a name, and do not show this toast when the cancel did not save.
+87. Success toast: the student sees **Session canceled**. The advisor sees **Session canceled. {studentName} can see your note.** only when `{studentName}` is the identified student who can read the note. An empty, deleted, or unknown name, including the **Former user** placeholder, uses **Session canceled. Your note was saved.** Do not invent a recipient, and do not show either toast when the cancel did not save.
 88. After success the session leaves Upcoming and appears under Canceled, with the note visible to the student (and the advisor).
 
 ### Reschedule
