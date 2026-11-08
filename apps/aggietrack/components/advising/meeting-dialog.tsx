@@ -34,7 +34,7 @@ export function MeetingFormHeader({ children }: { children: ReactNode }) {
 export function MeetingFooter({ children }: { children: ReactNode }) {
     return (
         <AlertDialogFooter className="mx-0 mb-0 block rounded-b-xl border-t bg-muted/50 p-0 sm:flex-col">
-            <div className="flex flex-col-reverse gap-2 px-6 py-4 @min-[23rem]:flex-row @min-[23rem]:justify-end">
+            <div className="flex flex-col gap-2 px-6 py-4 @min-[23rem]:flex-row @min-[23rem]:justify-end">
                 {children}
             </div>
         </AlertDialogFooter>
@@ -44,7 +44,7 @@ export function MeetingFooter({ children }: { children: ReactNode }) {
 export function MeetingFormFooter({ children }: { children: ReactNode }) {
     return (
         <DialogFooter className="mx-0 mb-0 block rounded-b-xl border-t bg-muted/50 p-0 sm:flex-col">
-            <div className="flex flex-col-reverse gap-2 px-6 py-4 @min-[23rem]:flex-row @min-[23rem]:justify-end">
+            <div className="flex flex-col gap-2 px-6 py-4 @min-[23rem]:flex-row @min-[23rem]:justify-end">
                 {children}
             </div>
         </DialogFooter>

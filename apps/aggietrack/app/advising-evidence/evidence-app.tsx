@@ -11,19 +11,27 @@ import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/components/u
 import {
     advisorAvailability,
     advisorEmpty,
+    advisorZoom,
     studentBooked,
     studentCanceled,
     studentLong,
     studentOpen,
+    studentPast,
     studentRescheduled,
     studentUnassigned,
     studentZoom,
 } from "@/lib/advising-fixtures";
+import { issueCopy } from "@/lib/advising-time";
+import AdvisingLoading from "@/app/(app)/student/(started)/advising/loading";
+import AppointmentsLoading from "@/app/(app)/advisor/appointments/loading";
 import type { MeetingResult, OpenSlotChoice } from "@/lib/advising-types";
 import { ThemeLock } from "./theme-lock";
 
 const ok = async (): Promise<MeetingResult> => ({ ok: true });
-const openChoices = async (): Promise<OpenSlotChoice[]> => studentOpen.slots;
+const openChoices = async (sessionId: string): Promise<OpenSlotChoice[]> => {
+    const current = sessionId === "session-confirmed" ? "slot-30" : sessionId === "session-moved" ? "slot-20" : null;
+    return studentOpen.slots.filter((slot) => slot.id !== current);
+};
 const staleFail: MeetingResult = {
     ok: false,
     code: "stale",
@@ -40,7 +48,7 @@ const bookedFail: MeetingResult = {
     ok: false,
     code: "booked",
     title: "This time has a booked session",
-    description: "Avery Cole is booked on Tuesday, November 10, 2026, 3:00–3:20 PM EST. Cancel or reschedule that session first. Removing other open times does not change the booking.",
+    description: "Avery Cole is booked on Tuesday, November 10, 2026, 2:00–2:30 PM EST. Cancel or reschedule that session first. Removing other open times does not change the booking.",
     sessionId: "session-confirmed",
 };
 
@@ -72,6 +80,14 @@ function sceneView(scene: string) {
             return { role: "STUDENT" as const, name: "Avery Cole", crumb: "Advising", board: <StudentBoard view={studentUnassigned} actions={studentActions} /> };
         case "student-canceled":
             return { role: "STUDENT" as const, name: "Avery Cole", crumb: "Advising", board: <StudentBoard view={studentCanceled} actions={studentActions} /> };
+        case "student-past":
+            return { role: "STUDENT" as const, name: "Avery Cole", crumb: "Advising", board: <StudentBoard view={studentPast} actions={studentActions} /> };
+        case "loading-student":
+            return { role: "STUDENT" as const, name: "Avery Cole", crumb: "Advising", board: <AdvisingLoading /> };
+        case "loading-advisor":
+            return { role: "ADVISOR" as const, name: "Sarah Martinez", crumb: "Appointments", board: <AppointmentsLoading /> };
+        case "dst-labels":
+            return { role: "ADVISOR" as const, name: "Sarah Martinez", crumb: "Appointments", board: <DstLabels /> };
         case "student-reschedule":
             return { role: "STUDENT" as const, name: "Avery Cole", crumb: "Advising", board: <StudentBoard view={studentRescheduled} actions={studentActions} /> };
         case "student-zoom":
@@ -82,6 +98,8 @@ function sceneView(scene: string) {
         case "reschedule-fail":
         case "availability-conflict":
             return { role: "ADVISOR" as const, name: "Sarah Martinez", crumb: "Appointments", board: <AdvisorBoard view={advisorAvailability} actions={advisorActions} nowIso="2026-11-08T15:00:00.000Z" /> };
+        case "advisor-zoom":
+            return { role: "ADVISOR" as const, name: "Sarah Martinez", crumb: "Appointments", board: <AdvisorBoard view={advisorZoom} actions={advisorActions} nowIso="2026-11-08T15:00:00.000Z" /> };
         case "advisor-empty":
             return { role: "ADVISOR" as const, name: "Sarah Martinez", crumb: "Appointments", board: <AdvisorBoard view={advisorEmpty} actions={advisorActions} nowIso="2026-11-08T15:00:00.000Z" /> };
         case "student-dashboard":
@@ -89,7 +107,9 @@ function sceneView(scene: string) {
         case "advisor-dashboard":
             return { role: "ADVISOR" as const, name: "Sarah Martinez", crumb: "Dashboard", board: <AdvisorDashboardFixture /> };
         case "session-unavailable":
-            return { role: "STUDENT" as const, name: "Avery Cole", crumb: "Advising", board: <UnavailableFixture /> };
+            return { role: "STUDENT" as const, name: "Avery Cole", crumb: "Advising", board: <UnavailableFixture home="/student/advising" back="Back to advising" /> };
+        case "session-unavailable-advisor":
+            return { role: "ADVISOR" as const, name: "Sarah Martinez", crumb: "Appointments", board: <UnavailableFixture home="/advisor/appointments" back="Back to appointments" /> };
         case "conflict":
         case "pending":
             return { role: "STUDENT" as const, name: "Avery Cole", crumb: "Advising", board: <StudentBoard view={studentOpen} actions={studentActions} /> };
@@ -98,12 +118,25 @@ function sceneView(scene: string) {
     }
 }
 
-function UnavailableFixture() {
+function UnavailableFixture({ home, back }: { home: string; back: string }) {
     return (
         <div className="not-typeset flex flex-col gap-4 py-6">
             <h1 className="text-3xl font-bold text-balance sm:text-4xl">This session is unavailable</h1>
             <p>It does not exist or you do not have access to it.</p>
-            <Button nativeButton={false} variant="outline" render={<a href="/student/advising">Back to advising</a>} />
+            <Button nativeButton={false} variant="outline" render={<a href={home}>{back}</a>} />
+        </div>
+    );
+}
+
+function DstLabels() {
+    const gap = issueCopy("gap", 30);
+    return (
+        <div className="not-typeset flex flex-col gap-4 py-6">
+            <h1 className="text-3xl font-bold">Controlled time labels</h1>
+            <p className="text-sm text-muted-foreground">These labels come from the time helpers. 2:30 AM is not in the 7:00 AM to 9:00 PM list, so this is not a picker selection.</p>
+            <MeetingTime dateLabel="Sunday, November 1, 2026" timeLabel="1:30–1:45 AM EDT" iso="2026-11-01T05:30:00.000Z" full="Sunday, November 1, 2026, 1:30–1:45 AM EDT" />
+            <p className="text-base font-medium">{gap.title}</p>
+            <p className="text-sm text-muted-foreground">{gap.description}</p>
         </div>
     );
 }

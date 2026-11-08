@@ -14,6 +14,7 @@ import {
     isMeetingDuration,
     issueCopy,
     meetingStamp,
+    pointStamp,
     rangesOverlap,
     type SlotDraft,
 } from "./advising-time";
@@ -158,6 +159,10 @@ type SessionRow = {
     }>;
 };
 
+function instantFrom(stamp: ReturnType<typeof meetingStamp>, instant: Date) {
+    return { dateLabel: stamp.date, timeLabel: stamp.time, iso: instant.toISOString(), full: stamp.full };
+}
+
 function toCard(row: SessionRow, viewer: "student" | "advisor", now: Date): MeetingCard {
     const stamp = meetingStamp(row.startsAt, row.endsAt);
     const ended = row.endsAt.getTime() <= now.getTime();
@@ -177,22 +182,20 @@ function toCard(row: SessionRow, viewer: "student" | "advisor", now: Date): Meet
     for (const event of row.events) {
         const phrase = phraseFor(event.kind, event.actorName);
         if (!phrase) continue;
-        const eventStamp = meetingStamp(event.createdAt, event.createdAt);
-        let support: string | null = null;
-        if (event.kind === "RESCHEDULED" && event.fromStartsAt && event.fromEndsAt && event.toStartsAt && event.toEndsAt) {
-            const from = meetingStamp(event.fromStartsAt, event.fromEndsAt);
-            const to = meetingStamp(event.toStartsAt, event.toEndsAt);
-            support = `From ${from.full} to ${to.full}.`;
-        }
+        const eventStamp = pointStamp(event.createdAt);
+        const moved = event.kind === "RESCHEDULED" && event.fromStartsAt && event.fromEndsAt && event.toStartsAt && event.toEndsAt;
         notices.push({
             id: event.id,
             name: event.actorName,
             roleLabel: roleLabel(event.actorRole),
             phrase,
-            support,
+            support: null,
             body: event.body,
+            dateLabel: eventStamp.date,
             timeLabel: eventStamp.time,
             iso: event.createdAt.toISOString(),
+            from: moved ? instantFrom(meetingStamp(event.fromStartsAt!, event.fromEndsAt!), event.fromStartsAt!) : null,
+            to: moved ? instantFrom(meetingStamp(event.toStartsAt!, event.toEndsAt!), event.toStartsAt!) : null,
         });
     }
     return {

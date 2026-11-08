@@ -26,6 +26,14 @@ export type StudentActions = {
     choices: (sessionId: string) => Promise<OpenSlotChoice[]>;
 };
 
+function lengthHelper(view: StudentAdvisingView) {
+    const saved = view.sessionMinutes ?? 30;
+    const visible = [...view.slots, ...view.upcoming].map((item) => item.durationMinutes);
+    const mixed = visible.some((minutes) => minutes !== saved);
+    if (mixed) return "Session length is shown on each time. Times are in Eastern Time.";
+    return `Each session is ${saved} minutes. Times are in Eastern Time.`;
+}
+
 export function StudentBoard({
     view,
     actions,
@@ -87,11 +95,11 @@ export function StudentBoard({
                         <SessionCard key={card.id} card={card}>
                             {card.canChange ? (
                                 <>
-                                    <Button type="button" variant="outline" className="order-2 h-11 sm:order-1 sm:h-8" aria-label={`Cancel session with ${card.personName} on ${card.dateLabel} at ${card.timeLabel}`} onClick={() => { setCanceling(card); setCancelNote(""); }}>
-                                        Cancel session
-                                    </Button>
-                                    <Button type="button" className="order-1 h-11 sm:order-2 sm:h-8" aria-label={`Reschedule session with ${card.personName} on ${card.dateLabel} at ${card.timeLabel}`} onClick={() => openReschedule(card)}>
+                                    <Button type="button" className="h-11 sm:order-2 sm:h-8" aria-label={`Reschedule session with ${card.personName} on ${card.dateLabel} at ${card.timeLabel}`} onClick={() => openReschedule(card)}>
                                         Reschedule session
+                                    </Button>
+                                    <Button type="button" variant="outline" className="h-11 sm:order-1 sm:h-8" aria-label={`Cancel session with ${card.personName} on ${card.dateLabel} at ${card.timeLabel}`} onClick={() => { setCanceling(card); setCancelNote(""); }}>
+                                        Cancel session
                                     </Button>
                                 </>
                             ) : null}
@@ -104,7 +112,7 @@ export function StudentBoard({
                 <section className="flex flex-col gap-4">
                     <header className="space-y-2">
                         <h2 className="text-2xl font-bold">Book a session</h2>
-                        <p className="text-sm text-muted-foreground">Each session is {view.sessionMinutes ?? 30} minutes. Times are in Eastern Time.</p>
+                        <p className="text-sm text-muted-foreground">{lengthHelper(view)}</p>
                     </header>
                     {view.slots.length === 0 ? (
                         <Empty className="border border-dashed">

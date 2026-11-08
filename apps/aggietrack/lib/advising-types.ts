@@ -1,3 +1,10 @@
+export type MeetingInstant = {
+    dateLabel: string;
+    timeLabel: string;
+    iso: string;
+    full: string;
+};
+
 export type MeetingNotice = {
     id: string;
     name: string;
@@ -5,8 +12,11 @@ export type MeetingNotice = {
     phrase: string;
     support: string | null;
     body: string | null;
+    dateLabel: string;
     timeLabel: string;
     iso: string;
+    from?: MeetingInstant | null;
+    to?: MeetingInstant | null;
 };
 
 export type MeetingCard = {

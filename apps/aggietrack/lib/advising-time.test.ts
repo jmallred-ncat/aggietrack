@@ -6,6 +6,7 @@ import {
     easternInstant,
     easternParts,
     meetingStamp,
+    pointStamp,
 } from "./advising-time";
 
 describe("eastern advising time", () => {
@@ -40,6 +41,10 @@ describe("eastern advising time", () => {
         assert.equal(stamp.full, "Tuesday, November 10, 2026, 2:00–2:20 PM EST");
         assert.equal(stamp.time, "2:00–2:20 PM EST");
         assert.equal(stamp.slotLabel, "2:00–2:20 PM");
+        const noticed = pointStamp(new Date("2026-11-08T14:00:00.000Z"));
+        assert.equal(noticed.full, "Sunday, November 8, 2026, 9:00 AM EST");
+        assert.equal(noticed.time, "9:00 AM EST");
+        assert.equal(noticed.time.includes("–"), false);
     });
 
     it("keeps a short window from inventing a session", () => {

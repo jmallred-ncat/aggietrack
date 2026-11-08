@@ -164,6 +164,13 @@ export function AdvisorBoard({
                     <>
                         <Card className="hidden overflow-hidden py-0 xl:block">
                             <Table className="table-fixed">
+                                <colgroup>
+                                    <col className="w-[38%]" />
+                                    <col className="w-[22%]" />
+                                    <col className="w-[12%]" />
+                                    <col className="w-[14%]" />
+                                    <col className="w-[14%]" />
+                                </colgroup>
                                 <TableHeader>
                                     <TableRow>
                                         <TableHead>Date</TableHead>
@@ -176,7 +183,7 @@ export function AdvisorBoard({
                                 <TableBody>
                                     {view.rows.map((row) => (
                                         <TableRow key={row.id}>
-                                            <TableCell className="align-top whitespace-normal">{row.dateLabel}</TableCell>
+                                            <TableCell className="align-top whitespace-nowrap">{row.dateLabel}</TableCell>
                                             <TableCell className="align-top whitespace-nowrap">{row.timeLabel}</TableCell>
                                             <TableCell className="align-top tabular-nums">{row.durationLabel}</TableCell>
                                             <TableCell className="align-top">
@@ -192,7 +199,7 @@ export function AdvisorBoard({
                         <div className="flex flex-col gap-4 xl:hidden">
                             {view.rows.map((row) => (
                                 <Card key={row.id} className="min-w-0 gap-3 p-4">
-                                    <p className="text-base font-medium">{row.dateLabel}</p>
+                                    <p className="whitespace-nowrap text-base font-medium">{row.dateLabel}</p>
                                     <p className="whitespace-nowrap text-sm">{row.timeLabel}</p>
                                     <p className="text-sm tabular-nums text-muted-foreground">{row.durationLabel}</p>
                                     <Badge variant={row.statusTone}>{row.statusLabel}</Badge>
@@ -404,21 +411,21 @@ function SessionSection({
             <h2 className="text-2xl font-bold">{title}</h2>
             {cards.map((card) => (
                 <SessionCard key={card.id} card={card}>
-                    {card.zoomUrl ? null : onZoom ? <p className="order-first w-full text-sm text-muted-foreground sm:w-auto">No Zoom link yet</p> : null}
+                    {card.zoomUrl ? null : onZoom ? <p className="w-full text-sm text-muted-foreground sm:order-3 sm:w-auto">No Zoom link yet</p> : null}
                     {card.canChange && onCancel && onMove ? (
                         <>
-                            <Button type="button" variant="outline" className="order-2 h-11 sm:order-1 sm:h-8" aria-label={`Cancel session with ${card.personName} on ${card.dateLabel} at ${card.timeLabel}`} onClick={() => onCancel(card)}>Cancel session</Button>
-                            <Button type="button" className="order-1 h-11 sm:order-2 sm:h-8" aria-label={`Reschedule session with ${card.personName} on ${card.dateLabel} at ${card.timeLabel}`} onClick={() => onMove(card)}>Reschedule session</Button>
+                            <Button type="button" className="h-11 sm:order-2 sm:h-8" aria-label={`Reschedule session with ${card.personName} on ${card.dateLabel} at ${card.timeLabel}`} onClick={() => onMove(card)}>Reschedule session</Button>
+                            <Button type="button" variant="outline" className="h-11 sm:order-1 sm:h-8" aria-label={`Cancel session with ${card.personName} on ${card.dateLabel} at ${card.timeLabel}`} onClick={() => onCancel(card)}>Cancel session</Button>
                         </>
                     ) : null}
                     {onZoom ? (
                         card.zoomUrl ? (
                             <>
-                                <Button type="button" variant="outline" className="order-3 h-11 sm:h-8" onClick={() => onZoom(card)}>Edit Zoom link</Button>
-                                <Button type="button" variant="outline" className="order-4 h-11 sm:h-8" onClick={() => onRemoveZoom?.(card)}>Remove Zoom link</Button>
+                                <Button type="button" variant="outline" className="h-11 sm:order-4 sm:h-8" onClick={() => onZoom(card)}>Edit Zoom link</Button>
+                                <Button type="button" variant="outline" className="h-11 sm:order-5 sm:h-8" onClick={() => onRemoveZoom?.(card)}>Remove Zoom link</Button>
                             </>
                         ) : (
-                            <Button type="button" className="order-3 h-11 sm:h-8" onClick={() => onZoom(card)}>Add Zoom link</Button>
+                            <Button type="button" className="h-11 sm:order-4 sm:h-8" onClick={() => onZoom(card)}>Add Zoom link</Button>
                         )
                     ) : null}
                 </SessionCard>

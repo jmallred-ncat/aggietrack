@@ -22,6 +22,7 @@ const confirmed: MeetingCard = {
             phrase: "Avery Cole booked this session.",
             support: null,
             body: "I want to talk about my spring plan.",
+            dateLabel: "Sunday, November 8, 2026",
             timeLabel: "9:00 AM EST",
             iso: "2026-11-08T14:00:00.000Z",
         },
@@ -86,6 +87,7 @@ export const studentCanceled: StudentAdvisingView = {
                 phrase: "Sarah Martinez canceled this session.",
                 support: null,
                 body: "I have a faculty meeting at that time. Please book another open time.",
+                dateLabel: "Sunday, November 8, 2026",
                 timeLabel: "10:15 AM EST",
                 iso: "2026-11-08T15:15:00.000Z",
             },
@@ -98,6 +100,7 @@ export const studentRescheduled: StudentAdvisingView = {
     ...studentBooked,
     upcoming: [{
         ...confirmed,
+        id: "session-moved",
         timeLabel: "3:00–3:20 PM EST",
         fullTimestamp: "Tuesday, November 10, 2026, 3:00–3:20 PM EST",
         iso: "2026-11-10T20:00:00.000Z",
@@ -110,10 +113,23 @@ export const studentRescheduled: StudentAdvisingView = {
                 name: "Sarah Martinez",
                 roleLabel: "Advisor",
                 phrase: "Sarah Martinez rescheduled this session.",
-                support: "From Tuesday, November 10, 2026, 2:00–2:30 PM EST to Tuesday, November 10, 2026, 3:00–3:20 PM EST.",
+                support: null,
                 body: "A faculty meeting now overlaps the original time. Please use this new time.",
+                dateLabel: "Sunday, November 8, 2026",
                 timeLabel: "10:40 AM EST",
                 iso: "2026-11-08T15:40:00.000Z",
+                from: {
+                    dateLabel: "Tuesday, November 10, 2026",
+                    timeLabel: "2:00–2:30 PM EST",
+                    iso: "2026-11-10T19:00:00.000Z",
+                    full: "Tuesday, November 10, 2026, 2:00–2:30 PM EST",
+                },
+                to: {
+                    dateLabel: "Tuesday, November 10, 2026",
+                    timeLabel: "3:00–3:20 PM EST",
+                    iso: "2026-11-10T20:00:00.000Z",
+                    full: "Tuesday, November 10, 2026, 3:00–3:20 PM EST",
+                },
             },
         ],
     }],
@@ -133,6 +149,7 @@ export const studentZoom: StudentAdvisingView = {
                 phrase: "Sarah Martinez added a Zoom link.",
                 support: null,
                 body: null,
+                dateLabel: "Sunday, November 8, 2026",
                 timeLabel: "11:00 AM EST",
                 iso: "2026-11-08T16:00:00.000Z",
             },
@@ -161,7 +178,7 @@ export const advisorAvailability: AdvisorAppointmentsView = {
     durationMinutes: 30,
     rows: [
         {
-            id: "open-30",
+            id: "booked-30",
             dateLabel: "Tuesday, November 10, 2026",
             timeLabel: "2:00–2:30 PM EST",
             fullTimestamp: "Tuesday, November 10, 2026, 2:00–2:30 PM EST",
@@ -169,14 +186,14 @@ export const advisorAvailability: AdvisorAppointmentsView = {
             durationMinutes: 30,
             dateValue: "2026-11-10",
             startValue: "14:00",
-            statusLabel: "Open",
-            statusTone: "outline",
-            studentName: null,
-            sessionId: null,
-            canChange: true,
+            statusLabel: "Booked",
+            statusTone: "default",
+            studentName: "Avery Cole",
+            sessionId: "session-confirmed",
+            canChange: false,
         },
         {
-            id: "booked-20",
+            id: "open-20",
             dateLabel: "Tuesday, November 10, 2026",
             timeLabel: "3:00–3:20 PM EST",
             fullTimestamp: "Tuesday, November 10, 2026, 3:00–3:20 PM EST",
@@ -184,11 +201,11 @@ export const advisorAvailability: AdvisorAppointmentsView = {
             durationMinutes: 20,
             dateValue: "2026-11-10",
             startValue: "15:00",
-            statusLabel: "Booked",
-            statusTone: "default",
-            studentName: "Avery Cole",
-            sessionId: "session-confirmed",
-            canChange: false,
+            statusLabel: "Open",
+            statusTone: "outline",
+            studentName: null,
+            sessionId: null,
+            canChange: true,
         },
     ],
     upcoming: [{
@@ -197,6 +214,34 @@ export const advisorAvailability: AdvisorAppointmentsView = {
     }],
     canceled: [],
     earlier: [],
+};
+
+export const studentPast: StudentAdvisingView = {
+    advisorName: "Sarah Martinez",
+    sessionMinutes: 30,
+    slots: [],
+    upcoming: [],
+    canceled: [],
+    earlier: [{
+        ...confirmed,
+        id: "session-past",
+        statusLabel: "Past",
+        statusTone: "outline",
+        canChange: false,
+        started: false,
+        dateLabel: "Tuesday, October 20, 2026",
+        timeLabel: "2:00–2:30 PM EDT",
+        fullTimestamp: "Tuesday, October 20, 2026, 2:00–2:30 PM EDT",
+        iso: "2026-10-20T18:00:00.000Z",
+    }],
+};
+
+export const advisorZoom: AdvisorAppointmentsView = {
+    ...advisorAvailability,
+    upcoming: [{
+        ...advisorAvailability.upcoming[0]!,
+        zoomUrl: "https://ncat.zoom.us/j/123456789012345?pwd=abcdefghijklmnopqrstuvwxyz",
+    }],
 };
 
 export const advisorEmpty: AdvisorAppointmentsView = {

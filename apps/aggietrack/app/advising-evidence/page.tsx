@@ -33,7 +33,7 @@ const studentProfile = {
 
 function sceneMeta(scene: string) {
     if (scene === "advisor-dashboard") return { role: "ADVISOR" as const, name: "Sarah Martinez", crumb: "Dashboard" };
-    if (scene.startsWith("advisor") || scene === "reschedule-fail" || scene === "availability-conflict") {
+    if (scene.startsWith("advisor") || scene === "reschedule-fail" || scene === "availability-conflict" || scene === "loading-advisor" || scene === "dst-labels" || scene === "session-unavailable-advisor") {
         return { role: "ADVISOR" as const, name: "Sarah Martinez", crumb: "Appointments" };
     }
     if (scene === "student-dashboard") return { role: "STUDENT" as const, name: "Avery Cole", crumb: "Dashboard" };

@@ -92,6 +92,14 @@ export function formatClockValue(value: string) {
     return formatClock(parsed.hour, parsed.minute);
 }
 
+/** A notice is one instant. It has a date and a clock, not a start–end range. */
+export function pointStamp(instant: Date) {
+    const parts = easternParts(instant);
+    const date = `${parts.weekday}, ${MONTHS[parts.month - 1]} ${parts.day}, ${parts.year}`;
+    const time = `${formatClock(parts.hour, parts.minute)} ${parts.zone}`;
+    return { date, time, full: `${date}, ${time}` };
+}
+
 export function meetingStamp(start: Date, end: Date) {
     const startParts = easternParts(start);
     const endParts = easternParts(end);

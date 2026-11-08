@@ -10,18 +10,8 @@ import type { MeetingCard } from "@/lib/advising-types";
 import { personInitials } from "@/lib/plan-status";
 import type { ReactNode } from "react";
 
-function StampText({ text }: { text: string }) {
-    const pattern = /(\d{1,2}:\d{2}(?:\s?(?:AM|PM))?(?:\s?[A-Z]{2,4})?–\d{1,2}:\d{2}(?:\s?(?:AM|PM))?(?:\s?[A-Z]{2,4})?)/g;
-    const nodes: ReactNode[] = [];
-    let last = 0;
-    for (const match of text.matchAll(pattern)) {
-        const index = match.index ?? 0;
-        if (index > last) nodes.push(text.slice(last, index));
-        nodes.push(<span key={index} className="whitespace-nowrap">{match[0]}</span>);
-        last = index + match[0].length;
-    }
-    if (last < text.length) nodes.push(text.slice(last));
-    return <>{nodes}</>;
+function NoticeWhen({ dateLabel, timeLabel, iso, full }: { dateLabel: string; timeLabel: string; iso: string; full: string }) {
+    return <MeetingTime dateLabel={dateLabel} timeLabel={timeLabel} iso={iso} full={full} className="text-xs text-muted-foreground" />;
 }
 
 export function SessionCard({ card, children }: { card: MeetingCard; children?: ReactNode }) {
@@ -40,7 +30,7 @@ export function SessionCard({ card, children }: { card: MeetingCard; children?: 
                         <Button
                             nativeButton={false}
                             variant="outline"
-                            className="h-11 w-full sm:h-8 sm:w-auto"
+                            className="h-11 w-full sm:h-8 sm:w-auto sm:self-start"
                             render={<a href={card.zoomUrl} target="_blank" rel="noopener noreferrer" aria-label="Open Zoom link (opens in a new tab)" />}
                         >
                             Open Zoom
@@ -52,7 +42,7 @@ export function SessionCard({ card, children }: { card: MeetingCard; children?: 
                         {card.notices.map((notice) => (
                             <li key={notice.id}>
                                 <Message align="start" className="min-w-0 items-start gap-3">
-                                    <MessageAvatar className="size-8 shrink-0">
+                                    <MessageAvatar className="size-8 shrink-0 self-start mt-0.5">
                                         <Avatar aria-hidden="true" className="size-8">
                                             <AvatarFallback className="text-xs font-medium">{personInitials(notice.name)}</AvatarFallback>
                                         </Avatar>
@@ -61,10 +51,15 @@ export function SessionCard({ card, children }: { card: MeetingCard; children?: 
                                         <MessageHeader className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 px-0">
                                             <span className="text-sm font-semibold text-foreground">{notice.name}</span>
                                             {notice.roleLabel ? <span className="text-xs text-muted-foreground">{notice.roleLabel}</span> : null}
-                                            <time dateTime={notice.iso} className="text-xs whitespace-nowrap text-muted-foreground">{notice.timeLabel}</time>
+                                            <NoticeWhen dateLabel={notice.dateLabel} timeLabel={notice.timeLabel} iso={notice.iso} full={`${notice.dateLabel}, ${notice.timeLabel}`} />
                                         </MessageHeader>
                                         <p className="text-sm leading-6 text-foreground">{notice.phrase}</p>
-                                        {notice.support ? <p className="text-sm leading-6 text-muted-foreground"><StampText text={notice.support} /></p> : null}
+                                        {notice.from && notice.to ? (
+                                            <div className="text-sm leading-6 text-muted-foreground">
+                                                <p>From <MeetingTime dateLabel={notice.from.dateLabel} timeLabel={notice.from.timeLabel} iso={notice.from.iso} full={notice.from.full} /></p>
+                                                <p>To <MeetingTime dateLabel={notice.to.dateLabel} timeLabel={notice.to.timeLabel} iso={notice.to.iso} full={notice.to.full} /></p>
+                                            </div>
+                                        ) : null}
                                         {notice.body ? <p className="text-sm leading-6 whitespace-pre-wrap text-foreground [overflow-wrap:anywhere]">{notice.body}</p> : null}
                                     </MessageContent>
                                 </Message>
