@@ -57,8 +57,8 @@ export default async function AppointmentsPage() {
             nowIso={new Date().toISOString()}
             actions={{
                 saveDuration: saveDurationAction,
-                addWindow: (input) => addAvailabilityAction(input),
-                addOne: (input) => addAvailabilityAction(input),
+                addWindow: addAvailabilityAction,
+                addOne: addAvailabilityAction,
                 move: moveOpenSlotAction,
                 remove: removeOpenSlotAction,
                 cancel: cancelSessionAction,
