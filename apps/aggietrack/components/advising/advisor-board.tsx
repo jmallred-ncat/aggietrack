@@ -1,5 +1,6 @@
 "use client";
 
+import { AdvisorAvailability, appointmentsHref, type AvailabilityActions } from "@/components/advising/advisor-availability";
 import { MeetingAlert, MeetingPending } from "@/components/advising/meeting-status";
 import {
     MeetingAlertContent,
@@ -41,6 +42,7 @@ import {
 } from "@/lib/advising-time";
 import type { AdvisorAppointmentsView, AvailabilityRow, MeetingCard, MeetingResult, OpenSlotChoice } from "@/lib/advising-types";
 import { zoomFailure } from "@/lib/advising-zoom";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type ReactNode, type RefObject } from "react";
 
@@ -71,17 +73,30 @@ function dateFromValue(value: string) {
 export function AdvisorBoard({
     view,
     actions,
+    scheduleActions,
     nowIso,
     loadFailed = false,
+    mode = "sessions",
+    search = "",
+    sessionId = "",
 }: {
     view: AdvisorAppointmentsView;
     actions: AdvisorActions;
+    scheduleActions?: AvailabilityActions;
     nowIso: string;
     loadFailed?: boolean;
+    mode?: "sessions" | "availability";
+    search?: string;
+    sessionId?: string;
 }) {
     const router = useRouter();
     const flow = useMeetingAction();
-    const [length, setLength] = useState(String(view.durationMinutes));
+    useEffect(() => {
+        if (mode !== "sessions" || !sessionId) return;
+        const node = document.getElementById(`session-${sessionId}`);
+        node?.scrollIntoView({ block: "center" });
+        if (node instanceof HTMLElement) node.focus();
+    }, [mode, sessionId]);
     const [windowOpen, setWindowOpen] = useState(false);
     const [oneOpen, setOneOpen] = useState(false);
     const [editing, setEditing] = useState<AvailabilityRow | null>(null);
@@ -96,9 +111,13 @@ export function AdvisorBoard({
         <div className="not-typeset flex flex-col gap-6 py-6" aria-busy={flow.pending ? true : undefined}>
             <header className="space-y-2">
                 <h1 className="text-3xl font-bold text-balance sm:text-4xl">Appointments</h1>
-                <p className="max-w-prose text-sm text-balance text-muted-foreground">Set how long each session lasts, add the times students can book, and manage upcoming sessions.</p>
+                {mode === "sessions" ? <p className="max-w-prose text-sm text-balance text-muted-foreground">Review upcoming, canceled, and past sessions.</p> : null}
                 <p className="text-sm text-muted-foreground">Times are shown in Eastern Time (EST or EDT).</p>
             </header>
+            <nav aria-label="Appointments" className="flex flex-wrap gap-2">
+                <Button nativeButton={false} variant={mode === "sessions" ? "default" : "outline"} className="h-11" render={<Link href={appointmentsHref(search, { view: null })} aria-current={mode === "sessions" ? "page" : undefined} />}>Sessions</Button>
+                <Button nativeButton={false} variant={mode === "availability" ? "default" : "outline"} className="h-11" render={<Link href={appointmentsHref(search, { view: "availability" })} aria-current={mode === "availability" ? "page" : undefined} />}>Availability</Button>
+            </nav>
             {loadFailed ? (
                 <DismissibleAlert
                     stacked
@@ -110,114 +129,13 @@ export function AdvisorBoard({
             {flow.alert ? <MeetingAlert alert={flow.alert} onRefresh={() => router.refresh()} /> : null}
             {flow.pending ? <MeetingPending pending={flow.pending} slow={flow.slow} titleRef={flow.titleRef} /> : null}
 
-            <section className="flex flex-col gap-4">
-                <h2 className="text-2xl font-bold">Session length</h2>
-                <div className="flex max-w-sm flex-col gap-2">
-                    <Label htmlFor="session-length">Session length</Label>
-                    <Select value={length} onValueChange={(value) => { if (value) setLength(value); }}>
-                        <SelectTrigger id="session-length" className="w-full">
-                            <SelectValue>{durationLabel(Number(length))}</SelectValue>
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectGroup>
-                                {MEETING_DURATIONS.map((minutes) => (
-                                    <SelectItem key={minutes} value={String(minutes)}>{durationLabel(minutes)}</SelectItem>
-                                ))}
-                            </SelectGroup>
-                        </SelectContent>
-                    </Select>
-                    <p className="text-sm text-muted-foreground">This length applies to new times you add. Existing times and booked sessions stay as they are.</p>
-                    <Button
-                        type="button"
-                        className="h-11 sm:h-8 sm:w-auto"
-                        disabled={flow.pending !== null}
-                        onClick={() => flow.begin(
-                            () => undefined,
-                            { title: "Saving session length…", description: "Saving your request…" },
-                            "Session length saved",
-                            () => actions.saveDuration(Number(length)),
-                        )}
-                    >
-                        {flow.pending?.title === "Saving session length…" ? "Saving session length…" : "Save session length"}
-                    </Button>
-                </div>
-            </section>
+            {mode === "availability" && scheduleActions ? (
+                <AdvisorAvailability model={view.availability} nowIso={nowIso} search={search} actions={scheduleActions} />
+            ) : null}
 
-            <section className="flex flex-col gap-4">
-                <header className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                    <h2 className="text-2xl font-bold">Availability</h2>
-                    <div className="flex flex-col gap-2 sm:flex-row">
-                        <Button type="button" className="h-11 sm:h-8" onClick={() => setWindowOpen(true)}>Add a window of times</Button>
-                        <Button type="button" variant="outline" className="h-11 sm:h-8" onClick={() => setOneOpen(true)}>Add one time</Button>
-                    </div>
-                </header>
-                {view.rows.length === 0 ? (
-                    <Empty className="border border-dashed">
-                        <EmptyHeader>
-                            <EmptyTitle>No open times yet</EmptyTitle>
-                            <EmptyDescription>Add a window or a single time so your assigned students can book.</EmptyDescription>
-                        </EmptyHeader>
-                        <EmptyContent>
-                            <Button type="button" onClick={() => setWindowOpen(true)}>Add a window of times</Button>
-                        </EmptyContent>
-                    </Empty>
-                ) : (
-                    <>
-                        <Card className="hidden overflow-hidden py-0 xl:block">
-                            <Table className="table-fixed">
-                                <colgroup>
-                                    <col className="w-[38%]" />
-                                    <col className="w-[22%]" />
-                                    <col className="w-[12%]" />
-                                    <col className="w-[14%]" />
-                                    <col className="w-[14%]" />
-                                </colgroup>
-                                <TableHeader>
-                                    <TableRow>
-                                        <TableHead>Date</TableHead>
-                                        <TableHead>Time</TableHead>
-                                        <TableHead>Length</TableHead>
-                                        <TableHead>Status</TableHead>
-                                        <TableHead>Action</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {view.rows.map((row) => (
-                                        <TableRow key={row.id}>
-                                            <TableCell className="align-top whitespace-nowrap">{row.dateLabel}</TableCell>
-                                            <TableCell className="align-top whitespace-nowrap">{row.timeLabel}</TableCell>
-                                            <TableCell className="align-top tabular-nums">{row.durationLabel}</TableCell>
-                                            <TableCell className="align-top">
-                                                <Badge variant={row.statusTone}>{row.statusLabel}</Badge>
-                                                {row.studentName ? <p className="mt-1 text-sm text-pretty">{row.studentName}</p> : null}
-                                            </TableCell>
-                                            <TableCell className="align-top"><RowActions row={row} onEdit={setEditing} onRemove={setRemoving} /></TableCell>
-                                        </TableRow>
-                                    ))}
-                                </TableBody>
-                            </Table>
-                        </Card>
-                        <div className="flex flex-col gap-4 xl:hidden">
-                            {view.rows.map((row) => (
-                                <Card key={row.id} className="min-w-0 gap-3 p-4">
-                                    <p className="whitespace-nowrap text-base font-medium">{row.dateLabel}</p>
-                                    <p className="whitespace-nowrap text-sm">{row.timeLabel}</p>
-                                    <p className="text-sm tabular-nums text-muted-foreground">{row.durationLabel}</p>
-                                    <Badge variant={row.statusTone}>{row.statusLabel}</Badge>
-                                    {row.studentName ? <p className="text-sm text-pretty">{row.studentName}</p> : null}
-                                    <div className="flex flex-col gap-2">
-                                        <RowActions row={row} onEdit={setEditing} onRemove={setRemoving} wide />
-                                    </div>
-                                </Card>
-                            ))}
-                        </div>
-                    </>
-                )}
-            </section>
-
-            <SessionSection title="Upcoming sessions" cards={view.upcoming} empty="upcoming" onCancel={setCanceling} onMove={setMoving} onZoom={setZoomCard} onRemoveZoom={setRemoveZoomCard} />
-            {view.canceled.length > 0 ? <SessionSection title="Canceled sessions" cards={view.canceled} /> : null}
-            {view.earlier.length > 0 ? <SessionSection title="Past sessions" cards={view.earlier} /> : null}
+            {mode === "sessions" ? <SessionSection title="Upcoming sessions" cards={view.upcoming} empty="upcoming" onCancel={setCanceling} onMove={setMoving} onZoom={setZoomCard} onRemoveZoom={setRemoveZoomCard} /> : null}
+            {mode === "sessions" && view.canceled.length > 0 ? <SessionSection title="Canceled sessions" cards={view.canceled} /> : null}
+            {mode === "sessions" && view.earlier.length > 0 ? <SessionSection title="Past sessions" cards={view.earlier} /> : null}
 
             {windowOpen ? <TimeDialog
                 open={windowOpen}

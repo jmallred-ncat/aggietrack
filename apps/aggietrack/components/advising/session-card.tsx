@@ -16,7 +16,7 @@ function NoticeWhen({ dateLabel, timeLabel, iso, full }: { dateLabel: string; ti
 
 export function SessionCard({ card, notice, children }: { card: MeetingCard; notice?: ReactNode; children?: ReactNode }) {
     return (
-        <Card id={`session-${card.id}`} className="min-w-0">
+        <Card id={`session-${card.id}`} tabIndex={-1} className="min-w-0">
             <CardHeader className="min-w-0 gap-2">
                 <CardTitle className="text-base font-medium text-pretty">{card.personName}</CardTitle>
                 <Badge variant={card.statusTone}>{card.statusLabel}</Badge>

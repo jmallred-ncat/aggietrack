@@ -70,6 +70,14 @@ enum MeetingSlotStatus {
   BOOKED
 }
 
+/// How an open time was created. Existing rows default to MANUAL so a term publish cannot delete them.
+enum MeetingSlotSource {
+  MANUAL
+  MANUAL_WINDOW
+  TERM_PATTERN
+  TERM_OVERRIDE
+}
+
 enum MeetingSessionStatus {
   CONFIRMED
   CANCELED

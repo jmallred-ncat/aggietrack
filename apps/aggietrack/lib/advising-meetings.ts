@@ -29,6 +29,9 @@ import type {
     StudentAdvisingView,
     UpcomingAdvising,
 } from "./advising-types";
+import { dateBlockedByPublished, loadAdvisorAvailability, publishedCoversSlot } from "./advising-publish";
+import { parseScheduleConfig } from "./advising-schedule";
+import { academicTermLabel } from "./academic-term";
 import { normalizeZoomUrl, zoomFailure } from "./advising-zoom";
 import { personName } from "./plan-status";
 
@@ -68,6 +71,8 @@ function isExclusion(error: unknown) {
 
 function postgresState(error: unknown) {
     if (!error || typeof error !== "object") return "";
+    const code = "code" in error && typeof error.code === "string" ? error.code : "";
+    if (code === "P2034" || code === "23P01" || code === "40001" || code === "40P01") return code;
     const message = "message" in error && typeof error.message === "string" ? error.message : "";
     const meta = "meta" in error && error.meta && typeof error.meta === "object" ? error.meta : null;
     const metaCode = meta && "code" in meta && typeof meta.code === "string" ? meta.code : "";
@@ -297,7 +302,7 @@ export async function loadStudentAdvising(db: Db, userId: string, now = new Date
     };
 }
 
-export async function loadAdvisorAppointments(db: Db, userId: string, now = new Date()): Promise<AdvisorAppointmentsView | null> {
+export async function loadAdvisorAppointments(db: Db, userId: string, now = new Date(), termId?: string | null): Promise<AdvisorAppointmentsView | null> {
     const user = await db.user.findUnique({ where: { id: userId } });
     if (!user || user.role !== "ADVISOR") return null;
     const [settings, slots, sessions] = await Promise.all([
@@ -333,6 +338,7 @@ export async function loadAdvisorAppointments(db: Db, userId: string, now = new 
     return {
         durationMinutes: settings?.durationMinutes ?? 30,
         rows,
+        availability: await loadAdvisorAvailability(db, userId, now, termId),
         ...splitSessions(sessions, "advisor", now),
     };
 }
@@ -410,7 +416,7 @@ function clashFailure(clash: NonNullable<Awaited<ReturnType<typeof slotClash>>>)
     return openOverlap();
 }
 
-async function insertSlots(tx: Tx, advisorId: string, slots: SlotDraft[]) {
+async function insertSlots(tx: Tx, advisorId: string, slots: SlotDraft[], source: "MANUAL" | "MANUAL_WINDOW") {
     for (const slot of slots) {
         const clash = await slotClash(tx, advisorId, slot);
         if (clash) throw new MeetingRefusal(clashFailure(clash));
@@ -422,6 +428,7 @@ async function insertSlots(tx: Tx, advisorId: string, slots: SlotDraft[]) {
             endsAt: slot.endsAt,
             durationMinutes: slot.durationMinutes,
             status: "OPEN" as const,
+            source,
         })),
     });
 }
@@ -455,20 +462,41 @@ export function availabilityFields(input: { date?: unknown; start?: unknown; end
 export async function addAvailability(
     db: Db,
     userId: string,
-    input: { date: string; start: string; end?: string },
+    input: { date: string; start: string; end?: string; durationMinutes?: number; termId?: string },
     now = new Date(),
 ): Promise<MeetingResult> {
     const { date, start, end } = availabilityFields(input);
     return settle(() => withLocks(db, [`advisor:${userId}`], async (tx) => {
         const advisor = await requireAdvisor(tx, userId);
         const settings = await tx.advisorMeetingSettings.findUnique({ where: { advisorId: advisor.id } });
-        const duration = settings?.durationMinutes ?? 30;
+        const duration = typeof input.durationMinutes === "number" ? input.durationMinutes : (settings?.durationMinutes ?? 30);
+        if (!isMeetingDuration(duration)) throw new MeetingRefusal(validationFailure("duration", duration));
+        if (input.termId) {
+            const term = await tx.academicTerm.findUnique({ where: { id: input.termId } });
+            const draft = await tx.advisorTermDraft.findUnique({ where: { advisorId_termId: { advisorId: advisor.id, termId: input.termId } } });
+            const parsed = draft ? parseScheduleConfig(draft.config) : null;
+            const label = term ? academicTermLabel(term) : "this semester";
+            if (!term) throw new MeetingRefusal(failure("validation", "Choose a date in this semester", `Pick a day inside ${label}, or choose that semester first.`));
+            const first = parsed?.firstDay ?? civilDateValue(term.startsOn);
+            const last = parsed?.lastDay ?? civilDateValue(term.endsOn);
+            if (date < first || date > last) {
+                throw new MeetingRefusal(failure("validation", "Choose a date in this semester", `Pick a day inside ${label}, or choose that semester first.`));
+            }
+        }
+        const blocked = await dateBlockedByPublished(tx, advisor.id, date);
+        if (blocked) {
+            throw new MeetingRefusal(failure(
+                "unavailable-date",
+                "That date is marked unavailable",
+                `${blocked.dateLabel} is unavailable on your published schedule. Remove that date and publish again before adding a time.`,
+            ));
+        }
         const built = end
             ? buildWindowSlots({ date, start, end, durationMinutes: duration, now })
             : buildSingleSlot({ date, start, durationMinutes: duration, now });
         if (!built.ok) throw new MeetingRefusal(validationFailure(built.issue, duration, start, end));
         const slots = "slots" in built ? built.slots : [built.slot];
-        await insertSlots(tx, advisor.id, slots);
+        await insertSlots(tx, advisor.id, slots, end ? "MANUAL_WINDOW" : "MANUAL");
         return { ok: true };
     }));
 }
@@ -485,6 +513,9 @@ export async function moveOpenSlot(
         await requireAdvisor(tx, userId);
         const current = await tx.meetingAvailability.findUnique({ where: { id: slotId } });
         if (!current || current.advisorId !== userId) throw new MeetingRefusal(unavailable());
+        if (current.source === "TERM_PATTERN" || current.source === "TERM_OVERRIDE") {
+            throw new MeetingRefusal(failure("draft-only", "Change this time when you publish?", "Students can still book the original time until you publish."));
+        }
         if (current.status !== "OPEN") {
             const clash = await slotClash(tx, userId, { startsAt: current.startsAt, endsAt: current.endsAt, durationMinutes: current.durationMinutes });
             throw new MeetingRefusal(clash ? clashFailure(clash) : stale());
@@ -514,6 +545,9 @@ export async function removeOpenSlot(db: Db, userId: string, slotId: string): Pr
             include: { session: { include: { student: { include: { user: true } } } } },
         });
         if (!current || current.advisorId !== userId) throw new MeetingRefusal(unavailable());
+        if (current.source === "TERM_PATTERN" || current.source === "TERM_OVERRIDE") {
+            throw new MeetingRefusal(failure("draft-only", "Remove this time when you publish?", "Students can still book this time until you publish. After you publish, this time will not be offered."));
+        }
         if (current.status !== "OPEN") throw new MeetingRefusal(clashFailure(current));
         await tx.meetingAvailability.delete({ where: { id: current.id } });
         return { ok: true };
@@ -536,8 +570,11 @@ export async function bookSlot(db: Db, userId: string, slotId: string, topic: st
     return settle(async () => {
         const preview = await db.user.findUnique({ where: { id: userId }, include: { studentProfile: true } });
         if (!preview?.studentProfile) return signedOut();
+        const slotPreview = await db.meetingAvailability.findUnique({ where: { id: slotId }, select: { advisorId: true } });
         const note = cleanNote(topic, false, "");
-        return withLocks(db, [`student:${preview.studentProfile.id}`, `slot:${slotId}`], async (tx) => {
+        const keys = [`student:${preview.studentProfile.id}`, `slot:${slotId}`];
+        if (slotPreview) keys.push(`advisor:${slotPreview.advisorId}`);
+        return withLocks(db, keys, async (tx) => {
             const { user, profile } = await requireStudent(tx, userId);
             if (!profile.advisorId) throw new MeetingRefusal(stale());
             const slot = await tx.meetingAvailability.findUnique({ where: { id: slotId } });
@@ -622,11 +659,16 @@ export async function cancelSession(db: Db, userId: string, sessionId: string, n
                 where: { id: session.id },
                 data: { status: "CANCELED", canceledAt: now, availabilityId: null },
             });
-            if (session.availability && session.availability.startsAt.getTime() > now.getTime()) {
-                await tx.meetingAvailability.update({
-                    where: { id: session.availability.id },
-                    data: { status: "OPEN" },
-                });
+            if (session.availability) {
+                const reopen = await publishedCoversSlot(tx, session.availability, now);
+                if (reopen) {
+                    await tx.meetingAvailability.update({
+                        where: { id: session.availability.id },
+                        data: { status: "OPEN" },
+                    });
+                } else {
+                    await tx.meetingAvailability.delete({ where: { id: session.availability.id } });
+                }
             }
             await tx.meetingEvent.create({
                 data: {
@@ -691,11 +733,16 @@ export async function rescheduleSession(
                     durationMinutes: slot.durationMinutes,
                 },
             });
-            if (session.availability.startsAt.getTime() > now.getTime()) {
-                await tx.meetingAvailability.update({
-                    where: { id: session.availability.id },
-                    data: { status: "OPEN" },
-                });
+            if (session.availability) {
+                const reopen = await publishedCoversSlot(tx, session.availability, now);
+                if (reopen) {
+                    await tx.meetingAvailability.update({
+                        where: { id: session.availability.id },
+                        data: { status: "OPEN" },
+                    });
+                } else {
+                    await tx.meetingAvailability.delete({ where: { id: session.availability.id } });
+                }
             }
             await tx.meetingEvent.create({
                 data: {

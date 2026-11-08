@@ -1,4 +1,19 @@
-import type { AdvisorAppointmentsView, MeetingCard, OpenSlotChoice, StudentAdvisingView } from "./advising-types";
+import { emptySchedule } from "./advising-schedule";
+import type { AdvisorAppointmentsView, AdvisorAvailabilityModel, MeetingCard, OpenSlotChoice, StudentAdvisingView } from "./advising-types";
+
+const blankAvailability: AdvisorAvailabilityModel = {
+    terms: [{ id: "fall-2026", label: "Fall 2026", startsOn: "2026-08-19", endsOn: "2026-12-11", runLabel: "Fall 2026 runs Wednesday, August 19, 2026\u2013Friday, December 11, 2026." }],
+    selectedTermId: "fall-2026",
+    status: null,
+    statusLabel: null,
+    statusHelper: null,
+    config: emptySchedule({ startsOn: "2026-08-19", endsOn: "2026-12-11" }),
+    publishedDuration: 30,
+    datesUnavailable: false,
+    runLabel: "Fall 2026 runs Wednesday, August 19, 2026\u2013Friday, December 11, 2026.",
+    revision: "0",
+    openTimes: [],
+};
 
 const confirmed: MeetingCard = {
     id: "session-confirmed",
@@ -176,6 +191,7 @@ export const studentLong: StudentAdvisingView = {
 
 export const advisorAvailability: AdvisorAppointmentsView = {
     durationMinutes: 30,
+    availability: blankAvailability,
     rows: [
         {
             id: "booked-30",
@@ -246,6 +262,7 @@ export const advisorZoom: AdvisorAppointmentsView = {
 
 export const advisorEmpty: AdvisorAppointmentsView = {
     durationMinutes: 30,
+    availability: { ...blankAvailability, openTimes: [] },
     rows: [],
     upcoming: [],
     canceled: [],

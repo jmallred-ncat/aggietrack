@@ -15,6 +15,8 @@ import {
     saveDuration,
     saveZoom,
 } from "@/lib/advising-meetings";
+import { discardTermDraft, publishTerm, reviewTerm, saveTermDraft } from "@/lib/advising-publish";
+import type { ScheduleConfig } from "@/lib/advising-schedule";
 import type { MeetingResult, OpenSlotChoice } from "@/lib/advising-types";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -39,7 +41,7 @@ async function run(work: (userId: string) => Promise<MeetingResult>): Promise<Me
         return { ok: false, code: "signed-out", title: "Sign in to continue", description: "Your session ended. Sign in again before making changes." };
     }
     const result = await work(userId);
-    if (result.ok) refresh();
+    if (result.ok || (!result.ok && result.code === "review")) refresh();
     return result;
 }
 
@@ -69,9 +71,25 @@ export async function saveDurationAction(minutes: number): Promise<MeetingResult
     return result;
 }
 
-export async function addAvailabilityAction(input: { date: string; start: string; end?: string }): Promise<MeetingResult> {
+export async function addAvailabilityAction(input: { date: string; start: string; end?: string; durationMinutes?: number; termId?: string }): Promise<MeetingResult> {
     const fields = availabilityFields(input);
-    return run((userId) => addAvailability(prisma, userId, fields));
+    return run((userId) => addAvailability(prisma, userId, { ...fields, durationMinutes: input.durationMinutes, termId: input.termId }));
+}
+
+export async function saveTermDraftAction(termId: string, config: ScheduleConfig): Promise<MeetingResult> {
+    return run((userId) => saveTermDraft(prisma, userId, termId, config));
+}
+
+export async function discardTermDraftAction(termId: string): Promise<MeetingResult> {
+    return run((userId) => discardTermDraft(prisma, userId, termId));
+}
+
+export async function reviewTermAction(termId: string, config: ScheduleConfig): Promise<MeetingResult> {
+    return run((userId) => reviewTerm(prisma, userId, termId, config));
+}
+
+export async function publishTermAction(termId: string, token: string): Promise<MeetingResult> {
+    return run((userId) => publishTerm(prisma, userId, termId, token));
 }
 
 export async function moveOpenSlotAction(slotId: string, input: { date: string; start: string }): Promise<MeetingResult> {

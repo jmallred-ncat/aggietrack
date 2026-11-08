@@ -9,6 +9,9 @@ model AcademicTerm {
   plannedTerms       PlannedTerm[]
   graduatingStudents StudentProfile[] @relation("ExpectedGraduation")
   studentsNotTaking  StudentProfile[] @relation("NotTakingTerm")
+  meetingSlots       MeetingAvailability[]
+  advisorSchedules   AdvisorTermSchedule[]
+  advisorDrafts      AdvisorTermDraft[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

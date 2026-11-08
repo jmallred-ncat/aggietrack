@@ -48,6 +48,10 @@ model MeetingAvailability {
   endsAt          DateTime
   durationMinutes Int
   status          MeetingSlotStatus @default(OPEN)
+  /// MANUAL rows predate term schedules and stay protected from term publish.
+  source          MeetingSlotSource @default(MANUAL)
+  termId          String?
+  term            AcademicTerm?     @relation(fields: [termId], references: [id], onDelete: Restrict)
   /// The confirmed booking, when this time is taken. Canceled sessions release this link.
   session         MeetingSession?
 
@@ -56,6 +60,42 @@ model MeetingAvailability {
 
   @@index([advisorId, startsAt])
   @@index([advisorId, status, startsAt])
+  @@index([advisorId, termId, startsAt])
+}
+
+/// One published weekly schedule for an advisor and semester. config is the source of truth.
+model AdvisorTermSchedule {
+  id          String       @id @default(cuid())
+  advisorId   String
+  advisor     User         @relation("AdvisorTermSchedules", fields: [advisorId], references: [id], onDelete: Cascade)
+  termId      String
+  term        AcademicTerm @relation(fields: [termId], references: [id], onDelete: Restrict)
+  config      Json
+  version     Int          @default(1)
+  publishedAt DateTime     @default(now())
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([advisorId, termId])
+  @@index([advisorId])
+}
+
+/// At most one unpublished draft of a semester. Students never read this row.
+model AdvisorTermDraft {
+  id        String       @id @default(cuid())
+  advisorId String
+  advisor   User         @relation("AdvisorTermDrafts", fields: [advisorId], references: [id], onDelete: Cascade)
+  termId    String
+  term      AcademicTerm @relation(fields: [termId], references: [id], onDelete: Restrict)
+  config    Json
+  version   Int          @default(1)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([advisorId, termId])
+  @@index([advisorId])
 }
 
 /// A booked advising session. The advisor stays the one on this row after the student is reassigned.

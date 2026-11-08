@@ -1,3 +1,5 @@
+import type { ScheduleConfig, ScheduleReview } from "./advising-schedule";
+
 export type MeetingInstant = {
     dateLabel: string;
     timeLabel: string;
@@ -61,6 +63,8 @@ export type AvailabilityRow = {
     studentName: string | null;
     sessionId: string | null;
     canChange: boolean;
+    pendingLabel?: string | null;
+    sourceLabel?: string;
 };
 
 export type StudentAdvisingView = {
@@ -72,12 +76,35 @@ export type StudentAdvisingView = {
     earlier: MeetingCard[];
 };
 
+export type AdvisorTermChoice = {
+    id: string;
+    label: string;
+    startsOn: string | null;
+    endsOn: string | null;
+    runLabel: string | null;
+};
+
+export type AdvisorAvailabilityModel = {
+    terms: AdvisorTermChoice[];
+    selectedTermId: string | null;
+    status: "draft" | "published" | "changes" | null;
+    statusLabel: string | null;
+    statusHelper: string | null;
+    config: ScheduleConfig;
+    publishedDuration: number | null;
+    datesUnavailable: boolean;
+    runLabel: string | null;
+    revision: string;
+    openTimes: AvailabilityRow[];
+};
+
 export type AdvisorAppointmentsView = {
     durationMinutes: number;
     rows: AvailabilityRow[];
     upcoming: MeetingCard[];
     canceled: MeetingCard[];
     earlier: MeetingCard[];
+    availability: AdvisorAvailabilityModel;
 };
 
 export type MeetingFailure = {
@@ -86,6 +113,8 @@ export type MeetingFailure = {
     title: string;
     description: string;
     sessionId?: string;
+    review?: ScheduleReview;
+    field?: string;
 };
 
 export type MeetingResult = { ok: true; sessionId?: string; studentName?: string } | MeetingFailure;

@@ -431,3 +431,61 @@ test("a canceled row makes the canonical release fail before the repair can run"
         rmSync(heldRepair, { recursive: true, force: true });
     }
 });
+
+const termScheduleName = "20261108223000_advisor_term_schedules";
+const meetingsSha = "5c0f74162fb115a969f5708972e9bc50a3803c1ecdac6ff0a8da7786013923df";
+const repairSha = "2ca21fa621db6477273200f3540b1b350644d54b3660ddb4eab6b7a24f9fa6d5";
+
+test("the term schedule migration keeps existing times and history", { skip: ready ? false : "local PostgreSQL superuser is not available", timeout: 120_000 }, () => {
+    const added = sqlText(termScheduleName);
+    assert.equal(createHash("sha256").update(sqlText("20261108120000_advisor_meetings")).digest("hex"), meetingsSha);
+    assert.equal(createHash("sha256").update(sqlText(releaseName)).digest("hex"), canonicalSha);
+    assert.equal(createHash("sha256").update(sqlText(repairName)).digest("hex"), repairSha);
+    assert.equal(added.split("\n").some((line) => /^\s*(UPDATE|DELETE)\b/i.test(line)), false);
+    const name = "aggietrack_repair_term";
+    const url = databaseUrl(name);
+    const probe = makeProbe(name);
+    const held = hideMigration(probe, termScheduleName);
+    try {
+        recreate(name);
+        const before = runPrisma(probe, url, ["migrate", "deploy"]);
+        assert.equal(before.code, 0, before.text);
+        assert.equal(psql(url, `SELECT count(*) FROM "_prisma_migrations" WHERE migration_name = '${termScheduleName}'`), "0");
+        seedPeople(url);
+        psql(url, `
+            INSERT INTO "AcademicTerm" (id, season, year, "startsOn", "endsOn", "updatedAt")
+            VALUES ('term-r', 'FALL', 2026, '2026-08-19 12:00:00', '2026-12-11 12:00:00', NOW());
+            INSERT INTO "MeetingAvailability" (id, "advisorId", "startsAt", "endsAt", "durationMinutes", status, "updatedAt")
+            VALUES ('slot-kept', 'advisor-r', '2026-11-20 19:00:00', '2026-11-20 19:30:00', 30, 'BOOKED', NOW());
+            INSERT INTO "MeetingSession" (id, "studentId", "advisorId", "availabilityId", "startsAt", "endsAt", "durationMinutes", status, topic, "updatedAt")
+            VALUES ('session-kept', 'sp-r', 'advisor-r', 'slot-kept', '2026-11-20 19:00:00', '2026-11-20 19:30:00', 30, 'CONFIRMED', 'Degree plan', NOW());
+            INSERT INTO "MeetingEvent" (id, "sessionId", "actorId", "actorName", "actorRole", kind, body)
+            VALUES ('event-kept', 'session-kept', 'student-r', 'Probe Student', 'STUDENT', 'BOOKED', 'Degree plan');
+        `);
+        const snapshot = psql(url, `
+            SELECT slot."startsAt"::text || '|' || slot."endsAt"::text || '|' || slot.status || '|' || session.status || '|' || session."availabilityId" || '|' || session.topic || '|' || event.body
+            FROM "MeetingAvailability" slot
+            JOIN "MeetingSession" session ON session.id = 'session-kept'
+            JOIN "MeetingEvent" event ON event.id = 'event-kept'
+            WHERE slot.id = 'slot-kept'
+        `);
+        restoreMigration(held, probe, termScheduleName);
+        const after = runPrisma(probe, url, ["migrate", "deploy"]);
+        assert.equal(after.code, 0, after.text);
+        assert.match(after.text, new RegExp(termScheduleName));
+        assert.equal(psql(url, `SELECT source || '|' || coalesce("termId", '') || '|' || "startsAt"::text || '|' || "endsAt"::text || '|' || status FROM "MeetingAvailability" WHERE id = 'slot-kept'`), `MANUAL||2026-11-20 19:00:00|2026-11-20 19:30:00|BOOKED`);
+        assert.equal(psql(url, `
+            SELECT slot."startsAt"::text || '|' || slot."endsAt"::text || '|' || slot.status || '|' || session.status || '|' || session."availabilityId" || '|' || session.topic || '|' || event.body
+            FROM "MeetingAvailability" slot
+            JOIN "MeetingSession" session ON session.id = 'session-kept'
+            JOIN "MeetingEvent" event ON event.id = 'event-kept'
+            WHERE slot.id = 'slot-kept'
+        `), snapshot);
+        assert.equal(psql(url, `SELECT count(*) FROM "AdvisorTermSchedule"`), "0");
+        assert.equal(psql(url, `SELECT count(*) FROM "AdvisorTermDraft"`), "0");
+    } finally {
+        sudoPsql(`DROP DATABASE IF EXISTS "${name}"`);
+        rmSync(probe, { recursive: true, force: true });
+        rmSync(held, { recursive: true, force: true });
+    }
+});

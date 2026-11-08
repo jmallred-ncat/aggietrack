@@ -24,6 +24,8 @@ model User {
   meetingSettings       AdvisorMeetingSettings?
   meetingSlots          MeetingAvailability[]     @relation("AdvisorAvailability")
   meetingSessions       MeetingSession[]          @relation("AdvisorSessions")
+  termSchedules         AdvisorTermSchedule[]     @relation("AdvisorTermSchedules")
+  termDrafts            AdvisorTermDraft[]        @relation("AdvisorTermDrafts")
 
   @@unique([email])
   @@map("user")
