@@ -48,6 +48,7 @@ model MeetingAvailability {
   endsAt          DateTime
   durationMinutes Int
   status          MeetingSlotStatus @default(OPEN)
+  /// The confirmed booking, when this time is taken. Canceled sessions release this link.
   session         MeetingSession?
 
   createdAt DateTime @default(now())
@@ -64,8 +65,9 @@ model MeetingSession {
   student         StudentProfile       @relation(fields: [studentId], references: [id], onDelete: Cascade)
   advisorId       String
   advisor         User                 @relation("AdvisorSessions", fields: [advisorId], references: [id], onDelete: Restrict)
-  availabilityId  String               @unique
-  availability    MeetingAvailability  @relation(fields: [availabilityId], references: [id], onDelete: Restrict)
+  /// Set only while the session is confirmed. Cancel clears it so the time can be booked or removed.
+  availabilityId  String?              @unique
+  availability    MeetingAvailability? @relation(fields: [availabilityId], references: [id], onDelete: Restrict)
   startsAt        DateTime
   endsAt          DateTime
   durationMinutes Int

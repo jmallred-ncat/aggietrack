@@ -5,14 +5,18 @@ import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "./generated/prisma/client";
 import {
     addAvailability,
+    availabilityFields,
     bookSlot,
     cancelSession,
     loadAdvisorAppointments,
     loadStudentAdvising,
+    moveOpenSlot,
     removeOpenSlot,
+    rescheduleChoices,
     rescheduleSession,
     saveDuration,
     saveZoom,
+    studentUpcoming,
 } from "./advising-meetings";
 import { meetingStamp } from "./advising-time";
 
@@ -81,7 +85,7 @@ async function cleanup(people: Awaited<ReturnType<typeof fixture>>) {
 }
 
 async function openWindow(advisorId: string, start: string, end: string, date = "2026-11-20") {
-    const result = await addAvailability(db, advisorId, { date, start, end, now });
+    const result = await addAvailability(db, advisorId, { date, start, end }, now);
     assert.equal(result.ok, true, JSON.stringify(result));
     return db.meetingAvailability.findMany({ where: { advisorId, status: "OPEN" }, orderBy: { startsAt: "asc" } });
 }
@@ -263,7 +267,7 @@ test("daylight-saving labels use the earlier fall-back instant and reject the sp
     skip(t);
     const people = await fixture();
     try {
-        const gap = await addAvailability(db, people.advisor.id, { date: "2026-03-08", start: "02:30", end: "03:00", now: new Date("2026-03-01T15:00:00.000Z") });
+        const gap = await addAvailability(db, people.advisor.id, { date: "2026-03-08", start: "02:30", end: "03:00" }, new Date("2026-03-01T15:00:00.000Z"));
         assert.equal(gap.ok, false);
         if (!gap.ok) assert.equal(gap.title, "That time does not exist");
         const earlier = new Date("2026-11-01T05:30:00.000Z");
@@ -286,6 +290,212 @@ test("daylight-saving labels use the earlier fall-back instant and reject the sp
         const empty = await loadAdvisorAppointments(db, people.otherAdvisor.id, now);
         assert.equal(empty?.rows.length, 0);
         assert.equal(empty?.upcoming.length, 0);
+    } finally {
+        await cleanup(people);
+    }
+});
+
+test("canceling releases the time for another booking and for removal", async (t) => {
+    skip(t);
+    const people = await fixture();
+    try {
+        const slots = await openWindow(people.advisor.id, "14:00", "15:00");
+        const first = await bookSlot(db, people.studentUser.id, slots[0]!.id, "Degree plan", now);
+        assert.equal(first.ok, true);
+        if (!first.ok || !first.sessionId) return;
+        const canceled = await cancelSession(db, people.studentUser.id, first.sessionId, null, now);
+        assert.equal(canceled.ok, true);
+        const history = await db.meetingSession.findUnique({ where: { id: first.sessionId }, include: { events: true } });
+        assert.equal(history?.status, "CANCELED");
+        assert.equal(history?.availabilityId, null);
+        assert.equal(history?.events.some((event) => event.kind === "CANCELED"), true);
+        assert.equal((await db.meetingAvailability.findUnique({ where: { id: slots[0]!.id } }))?.status, "OPEN");
+        const sameStudent = await bookSlot(db, people.studentUser.id, slots[0]!.id, null, now);
+        assert.equal(sameStudent.ok, true);
+        if (!sameStudent.ok || !sameStudent.sessionId) return;
+        await cancelSession(db, people.advisor.id, sameStudent.sessionId, "I need to close this time.", now);
+        const otherStudent = await bookSlot(db, people.otherStudentUser.id, slots[0]!.id, null, now);
+        assert.equal(otherStudent.ok, true);
+        if (!otherStudent.ok || !otherStudent.sessionId) return;
+        await cancelSession(db, people.otherStudentUser.id, otherStudent.sessionId, null, now);
+        const later = await bookSlot(db, people.studentUser.id, slots[1]!.id, null, now);
+        assert.equal(later.ok, true);
+        if (!later.ok || !later.sessionId) return;
+        const ontoCanceled = await rescheduleSession(db, people.studentUser.id, later.sessionId, slots[0]!.id, null, now);
+        assert.equal(ontoCanceled.ok, true);
+        assert.equal((await db.meetingSession.findUnique({ where: { id: later.sessionId } }))?.availabilityId, slots[0]!.id);
+        const removedReleased = await removeOpenSlot(db, people.advisor.id, slots[1]!.id);
+        assert.equal(removedReleased.ok, true);
+        await cancelSession(db, people.studentUser.id, later.sessionId, null, now);
+        const removed = await removeOpenSlot(db, people.advisor.id, slots[0]!.id);
+        assert.equal(removed.ok, true);
+        assert.equal(await db.meetingAvailability.findUnique({ where: { id: slots[0]!.id } }), null);
+        const kept = await db.meetingSession.findUnique({ where: { id: first.sessionId }, include: { events: true } });
+        assert.equal(kept?.status, "CANCELED");
+        assert.equal(kept?.availabilityId, null);
+        assert.equal(kept?.events.some((event) => event.kind === "CANCELED"), true);
+    } finally {
+        await cleanup(people);
+    }
+});
+
+test("a claimed slot rolls back when the session row cannot be saved", async (t) => {
+    skip(t);
+    const people = await fixture();
+    try {
+        const slots = await openWindow(people.advisor.id, "14:00", "14:30");
+        const slot = slots[0]!;
+        const elsewhere = new Date("2026-12-01T19:00:00.000Z");
+        await db.meetingSession.create({
+            data: {
+                studentId: people.otherStudent.id,
+                advisorId: people.advisor.id,
+                availabilityId: slot.id,
+                startsAt: elsewhere,
+                endsAt: new Date(elsewhere.getTime() + 30 * 60 * 1000),
+                durationMinutes: 30,
+                status: "CONFIRMED",
+            },
+        });
+        const blocked = await bookSlot(db, people.studentUser.id, slot.id, null, now);
+        assert.equal(blocked.ok, false);
+        assert.equal((await db.meetingAvailability.findUnique({ where: { id: slot.id } }))?.status, "OPEN");
+        const sessions = await db.meetingSession.count({ where: { availabilityId: slot.id } });
+        assert.equal(sessions, 1);
+    } finally {
+        await cleanup(people);
+    }
+});
+
+test("concurrent bookings of different overlapping times keep one confirmed session", async (t) => {
+    skip(t);
+    const people = await fixture();
+    try {
+        const start = new Date("2026-11-20T19:00:00.000Z");
+        const middle = new Date("2026-11-20T19:15:00.000Z");
+        const end = new Date("2026-11-20T19:30:00.000Z");
+        const later = new Date("2026-11-20T19:45:00.000Z");
+        const left = await db.meetingAvailability.create({
+            data: { advisorId: people.advisor.id, startsAt: start, endsAt: end, durationMinutes: 30, status: "OPEN" },
+        });
+        const right = await db.meetingAvailability.create({
+            data: { advisorId: people.advisor.id, startsAt: middle, endsAt: later, durationMinutes: 30, status: "OPEN" },
+        });
+        const [studentLeft, studentRight] = await Promise.all([
+            bookSlot(db, people.studentUser.id, left.id, null, now),
+            bookSlot(db, people.studentUser.id, right.id, null, now),
+        ]);
+        assert.equal([studentLeft, studentRight].filter((result) => result.ok).length, 1);
+        assert.equal(await db.meetingSession.count({ where: { studentId: people.student.id, status: "CONFIRMED" } }), 1);
+        await db.meetingSession.deleteMany({ where: { advisorId: people.advisor.id } });
+        await db.meetingAvailability.updateMany({ where: { advisorId: people.advisor.id }, data: { status: "OPEN" } });
+        const [firstStudent, secondStudent] = await Promise.all([
+            bookSlot(db, people.studentUser.id, left.id, null, now),
+            bookSlot(db, people.otherStudentUser.id, right.id, null, now),
+        ]);
+        assert.equal([firstStudent, secondStudent].filter((result) => result.ok).length, 1);
+        assert.equal(await db.meetingSession.count({ where: { advisorId: people.advisor.id, status: "CONFIRMED" } }), 1);
+        const winner = await db.meetingSession.findFirst({ where: { advisorId: people.advisor.id, status: "CONFIRMED" } });
+        const otherSlot = await db.meetingAvailability.create({
+            data: { advisorId: people.otherAdvisor.id, startsAt: start, endsAt: end, durationMinutes: 30, status: "OPEN" },
+        });
+        await assert.rejects(
+            () => db.meetingSession.create({
+                data: {
+                    studentId: winner!.studentId,
+                    advisorId: people.otherAdvisor.id,
+                    availabilityId: otherSlot.id,
+                    startsAt: start,
+                    endsAt: end,
+                    durationMinutes: 30,
+                    status: "CONFIRMED",
+                },
+            }),
+            /MeetingSession_student_no_overlap|exclusion constraint|23P01/,
+        );
+    } finally {
+        await cleanup(people);
+    }
+});
+
+test("the dashboard names the session advisor after reassignment", async (t) => {
+    skip(t);
+    const people = await fixture();
+    try {
+        const slots = await openWindow(people.advisor.id, "14:00", "14:30");
+        const booked = await bookSlot(db, people.studentUser.id, slots[0]!.id, null, now);
+        assert.equal(booked.ok, true);
+        await db.studentProfile.update({ where: { id: people.student.id }, data: { advisorId: people.otherAdvisor.id } });
+        const reassigned = await studentUpcoming(db, people.studentUser.id, now);
+        assert.equal(reassigned?.personName, "Morgan Advisor");
+        await db.studentProfile.update({ where: { id: people.student.id }, data: { advisorId: null } });
+        const unassigned = await studentUpcoming(db, people.studentUser.id, now);
+        assert.equal(unassigned?.id, reassigned?.id);
+        assert.equal(unassigned?.personName, "Morgan Advisor");
+        const page = await loadStudentAdvising(db, people.studentUser.id, now);
+        assert.equal(page?.advisorName, null);
+        assert.equal(page?.slots.length, 0);
+        assert.equal(page?.upcoming[0]?.personName, "Morgan Advisor");
+    } finally {
+        await cleanup(people);
+    }
+});
+
+test("a role change removes ownership of the original session", async (t) => {
+    skip(t);
+    const people = await fixture();
+    try {
+        const slots = await openWindow(people.advisor.id, "14:00", "15:00");
+        const booked = await bookSlot(db, people.studentUser.id, slots[0]!.id, null, now);
+        assert.equal(booked.ok, true);
+        if (!booked.ok || !booked.sessionId) return;
+        await db.user.update({ where: { id: people.studentUser.id }, data: { role: "ADVISOR" } });
+        const canceled = await cancelSession(db, people.studentUser.id, booked.sessionId, null, now);
+        assert.equal(canceled.ok, false);
+        assert.deepEqual(await rescheduleChoices(db, people.studentUser.id, booked.sessionId, now), []);
+        const moved = await rescheduleSession(db, people.studentUser.id, booked.sessionId, slots[1]!.id, null, now);
+        assert.equal(moved.ok, false);
+        assert.equal((await db.meetingSession.findUnique({ where: { id: booked.sessionId } }))?.status, "CONFIRMED");
+        await db.user.update({ where: { id: people.studentUser.id }, data: { role: "STUDENT" } });
+        const restored = await cancelSession(db, people.studentUser.id, booked.sessionId, null, now);
+        assert.equal(restored.ok, true);
+    } finally {
+        await cleanup(people);
+    }
+});
+
+test("availability writes ignore a clock supplied on the input object", async (t) => {
+    skip(t);
+    const people = await fixture();
+    try {
+        const forgedNow = new Date("2099-01-01T15:00:00.000Z");
+        const forged = { date: "2026-01-01", start: "14:00", end: "15:00", now: forgedNow };
+        const fields = availabilityFields(forged);
+        assert.equal(Object.hasOwn(fields, "now"), false);
+        assert.deepEqual(fields, { date: "2026-01-01", start: "14:00", end: "15:00" });
+        const past = await addAvailability(db, people.advisor.id, forged, now);
+        assert.equal(past.ok, false);
+        if (!past.ok) assert.equal(past.title, "That time is in the past");
+        const distant = await addAvailability(db, people.advisor.id, {
+            date: "2027-06-01",
+            start: "14:00",
+            end: "14:30",
+            now: new Date("2027-05-01T15:00:00.000Z"),
+        } as { date: string; start: string; end?: string });
+        assert.equal(distant.ok, false);
+        if (!distant.ok) assert.equal(distant.title, "That date is too far ahead");
+        const allowed = await addAvailability(
+            db,
+            people.advisor.id,
+            { date: "2027-06-01", start: "14:00", end: "14:30" },
+            new Date("2027-05-01T15:00:00.000Z"),
+        );
+        assert.equal(allowed.ok, true);
+        const slots = await db.meetingAvailability.findMany({ where: { advisorId: people.advisor.id, status: "OPEN" } });
+        const moved = await moveOpenSlot(db, people.advisor.id, slots[0]!.id, { date: "2026-01-02", start: "14:00", now: forgedNow } as { date: string; start: string }, now);
+        assert.equal(moved.ok, false);
+        if (!moved.ok) assert.equal(moved.title, "That time is in the past");
+        assert.equal((await db.meetingAvailability.findUnique({ where: { id: slots[0]!.id } }))?.startsAt.toISOString(), slots[0]!.startsAt.toISOString());
     } finally {
         await cleanup(people);
     }

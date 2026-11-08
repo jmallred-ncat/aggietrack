@@ -12,6 +12,7 @@ The review contract is [agt-17-design-rules.md](./agt-17-design-rules.md). This 
 - Zoom allowlist: `apps/aggietrack/lib/advising-zoom.ts`
 - Schema: `apps/aggietrack/prisma/advising.prisma`
 - Migration: `apps/aggietrack/prisma/migrations/20261108120000_advisor_meetings/migration.sql`
+- Follow-up: `apps/aggietrack/prisma/migrations/20261108180000_release_canceled_availability/migration.sql`
 
 `AdvisingAppointment` and `AdvisingNote` are unchanged. The migration only adds tables.
 
@@ -24,7 +25,11 @@ The review contract is [agt-17-design-rules.md](./agt-17-design-rules.md). This 
 - The full timestamp keeps the clock and zone in one `whitespace-nowrap` span. The date before that span can wrap, including inside a dialog sentence.
 - Meeting alerts stack **Dismiss message** under the title. The shared alert corner is only wide enough for one short button, and these titles are longer.
 - The advisor reschedule dialog loads open times when it opens. A controlled dialog does not get that load from `onOpenChange`.
-- Confirmed-session overlap uses a PostgreSQL `tsrange` exclusion constraint. Prisma’s `DateTime` is `timestamp` without time zone, and `tstzrange` is not immutable in an index. Deployment needs the `btree_gist` extension.
+- Confirmed-session overlap uses a PostgreSQL `tsrange` exclusion constraint. Prisma’s `DateTime` is `timestamp` without time zone, and `tstzrange` is not immutable in an index. Deployment needs the `btree_gist` extension. Stored instants are UTC. The connection timezone must stay UTC because `CURRENT_TIMESTAMP` is stored in a `timestamp` column without a zone.
+- Canceling a session keeps the session row and its events, then clears `availabilityId` and marks a future slot open. The unique link applies only while a session still points at the slot, so the time can be booked again or removed.
+- The student dashboard names the advisor stored on the session. Unassigning the student does not hide that session.
+- Server actions pass only date, start, and end into availability writes. The server clock is a separate argument used by tests. A date on the request object is ignored.
+- Ownership of an existing session requires the account’s current role as well as the matching student or advisor id.
 - Overlap copy for a fresh booking, the listed-time sentence, and **Edit this time** are the sentences used where the contract had no exact string.
 
 ## Evidence

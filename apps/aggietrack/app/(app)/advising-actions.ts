@@ -2,6 +2,7 @@
 
 import {
     addAvailability,
+    availabilityFields,
     bookSlot,
     cancelSession,
     loadAdvisorAppointments,
@@ -69,11 +70,13 @@ export async function saveDurationAction(minutes: number): Promise<MeetingResult
 }
 
 export async function addAvailabilityAction(input: { date: string; start: string; end?: string }): Promise<MeetingResult> {
-    return run((userId) => addAvailability(prisma, userId, input));
+    const fields = availabilityFields(input);
+    return run((userId) => addAvailability(prisma, userId, fields));
 }
 
 export async function moveOpenSlotAction(slotId: string, input: { date: string; start: string }): Promise<MeetingResult> {
-    return run((userId) => moveOpenSlot(prisma, userId, slotId, input));
+    const fields = availabilityFields(input);
+    return run((userId) => moveOpenSlot(prisma, userId, slotId, { date: fields.date, start: fields.start }));
 }
 
 export async function removeOpenSlotAction(slotId: string): Promise<MeetingResult> {

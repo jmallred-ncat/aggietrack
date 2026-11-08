@@ -337,10 +337,10 @@ export async function loadAdvisorAppointments(db: Db, userId: string, now = new 
 export async function studentUpcoming(db: Db, userId: string, now = new Date()): Promise<UpcomingAdvising | null> {
     const view = await loadStudentAdvising(db, userId, now);
     const first = view?.upcoming[0];
-    if (!view?.advisorName || !first) return null;
+    if (!first) return null;
     return {
         id: first.id,
-        personName: view.advisorName,
+        personName: first.personName,
         dateLabel: first.dateLabel,
         timeLabel: first.timeLabel,
         iso: first.iso,
@@ -439,20 +439,31 @@ export async function saveDuration(db: Db, userId: string, minutes: number): Pro
     }));
 }
 
+/** Date, start, and end only. A server action must not forward a client clock or any other field. */
+export function availabilityFields(input: { date?: unknown; start?: unknown; end?: unknown } | null | undefined) {
+    const source = input ?? {};
+    return {
+        date: typeof source.date === "string" ? source.date : "",
+        start: typeof source.start === "string" ? source.start : "",
+        end: typeof source.end === "string" ? source.end : undefined,
+    };
+}
+
 export async function addAvailability(
     db: Db,
     userId: string,
-    input: { date: string; start: string; end?: string; now?: Date },
+    input: { date: string; start: string; end?: string },
+    now = new Date(),
 ): Promise<MeetingResult> {
+    const { date, start, end } = availabilityFields(input);
     return settle(() => withLocks(db, [`advisor:${userId}`], async (tx) => {
         const advisor = await requireAdvisor(tx, userId);
         const settings = await tx.advisorMeetingSettings.findUnique({ where: { advisorId: advisor.id } });
         const duration = settings?.durationMinutes ?? 30;
-        const now = input.now ?? new Date();
-        const built = input.end
-            ? buildWindowSlots({ date: input.date, start: input.start, end: input.end, durationMinutes: duration, now })
-            : buildSingleSlot({ date: input.date, start: input.start, durationMinutes: duration, now });
-        if (!built.ok) throw new MeetingRefusal(validationFailure(built.issue, duration, input.start, input.end));
+        const built = end
+            ? buildWindowSlots({ date, start, end, durationMinutes: duration, now })
+            : buildSingleSlot({ date, start, durationMinutes: duration, now });
+        if (!built.ok) throw new MeetingRefusal(validationFailure(built.issue, duration, start, end));
         const slots = "slots" in built ? built.slots : [built.slot];
         await insertSlots(tx, advisor.id, slots);
         return { ok: true };
@@ -463,8 +474,10 @@ export async function moveOpenSlot(
     db: Db,
     userId: string,
     slotId: string,
-    input: { date: string; start: string; now?: Date },
+    input: { date: string; start: string },
+    now = new Date(),
 ): Promise<MeetingResult> {
+    const { date, start } = availabilityFields(input);
     return settle(() => withLocks(db, [`advisor:${userId}`], async (tx) => {
         await requireAdvisor(tx, userId);
         const current = await tx.meetingAvailability.findUnique({ where: { id: slotId } });
@@ -474,12 +487,12 @@ export async function moveOpenSlot(
             throw new MeetingRefusal(clash ? clashFailure(clash) : stale());
         }
         const built = buildSingleSlot({
-            date: input.date,
-            start: input.start,
+            date,
+            start,
             durationMinutes: current.durationMinutes,
-            now: input.now ?? new Date(),
+            now,
         });
-        if (!built.ok) throw new MeetingRefusal(validationFailure(built.issue, current.durationMinutes, input.start));
+        if (!built.ok) throw new MeetingRefusal(validationFailure(built.issue, current.durationMinutes, start));
         const clash = await slotClash(tx, userId, built.slot, current.id);
         if (clash) throw new MeetingRefusal(clashFailure(clash));
         await tx.meetingAvailability.update({
@@ -584,7 +597,7 @@ async function loadOwnedSession(tx: Tx, userId: string, sessionId: string) {
         include: { availability: true, student: true },
     });
     if (!session) throw new MeetingRefusal(unavailable());
-    const isStudent = user.studentProfile?.id === session.studentId;
+    const isStudent = user.role === "STUDENT" && user.studentProfile?.id === session.studentId;
     const isAdvisor = user.role === "ADVISOR" && user.id === session.advisorId;
     if (!isStudent && !isAdvisor) throw new MeetingRefusal(unavailable());
     return { user, session, isAdvisor };
@@ -601,11 +614,11 @@ export async function cancelSession(db: Db, userId: string, sessionId: string, n
             if (session.status !== "CONFIRMED" || session.startsAt.getTime() <= now.getTime()) throw new MeetingRefusal(unavailable());
             await tx.meetingSession.update({
                 where: { id: session.id },
-                data: { status: "CANCELED", canceledAt: now },
+                data: { status: "CANCELED", canceledAt: now, availabilityId: null },
             });
-            if (session.availability.startsAt.getTime() > now.getTime()) {
+            if (session.availability && session.availability.startsAt.getTime() > now.getTime()) {
                 await tx.meetingAvailability.update({
-                    where: { id: session.availabilityId },
+                    where: { id: session.availability.id },
                     data: { status: "OPEN" },
                 });
             }
@@ -638,7 +651,7 @@ export async function rescheduleSession(
         return withLocks(db, [`session:${sessionId}`, `slot:${slotId}`, `advisor:${owned.advisorId}`, `student:${owned.studentId}`], async (tx) => {
             const { user, session, isAdvisor } = await loadOwnedSession(tx, userId, sessionId);
             const text = cleanNote(note, isAdvisor, "Explain why you are rescheduling this session.");
-            if (session.status !== "CONFIRMED" || session.startsAt.getTime() <= now.getTime()) {
+            if (session.status !== "CONFIRMED" || !session.availabilityId || !session.availability || session.startsAt.getTime() <= now.getTime()) {
                 throw new MeetingRefusal(rescheduleFailed());
             }
             const slot = await tx.meetingAvailability.findUnique({ where: { id: slotId } });
@@ -674,7 +687,7 @@ export async function rescheduleSession(
             });
             if (session.availability.startsAt.getTime() > now.getTime()) {
                 await tx.meetingAvailability.update({
-                    where: { id: session.availabilityId },
+                    where: { id: session.availability.id },
                     data: { status: "OPEN" },
                 });
             }
@@ -744,16 +757,18 @@ export async function rescheduleChoices(db: Db, userId: string, sessionId: strin
     const user = await db.user.findUnique({ where: { id: userId }, include: { studentProfile: true } });
     const session = await db.meetingSession.findUnique({ where: { id: sessionId } });
     if (!user || !session) return [];
-    const isStudent = user.studentProfile?.id === session.studentId;
+    const isStudent = user.role === "STUDENT" && user.studentProfile?.id === session.studentId;
     const isAdvisor = user.role === "ADVISOR" && user.id === session.advisorId;
     if (!isStudent && !isAdvisor) return [];
+    if (session.status !== "CONFIRMED" || !session.availabilityId) return [];
     const horizon = isAdvisor ? ADVISOR_HORIZON_MS : STUDENT_HORIZON_MS;
+    const currentSlotId = session.availabilityId;
     const [slots, sessions] = await Promise.all([
         db.meetingAvailability.findMany({
             where: {
                 advisorId: session.advisorId,
                 status: "OPEN",
-                id: { not: session.availabilityId },
+                id: { not: currentSlotId },
                 startsAt: { gte: new Date(now.getTime() + LEAD_TIME_MS), lte: new Date(now.getTime() + horizon) },
             },
             orderBy: { startsAt: "asc" },
