@@ -597,7 +597,10 @@ async function loadOwnedSession(tx: Tx, userId: string, sessionId: string) {
     if (!user) throw new MeetingRefusal(signedOut());
     const session = await tx.meetingSession.findUnique({
         where: { id: sessionId },
-        include: { availability: true, student: true },
+        include: {
+            availability: true,
+            student: { include: { user: { select: { firstName: true, lastName: true, name: true } } } },
+        },
     });
     if (!session) throw new MeetingRefusal(unavailable());
     const isStudent = user.role === "STUDENT" && user.studentProfile?.id === session.studentId;
@@ -635,7 +638,7 @@ export async function cancelSession(db: Db, userId: string, sessionId: string, n
                     body: advisorNote,
                 },
             });
-            return { ok: true, sessionId: session.id };
+            return { ok: true, sessionId: session.id, studentName: personName(session.student.user) };
         });
     });
 }

@@ -1,5 +1,6 @@
 "use client";
 
+import { meetingSuccessText } from "@/lib/advising-copy";
 import type { MeetingFailure, MeetingResult } from "@/lib/advising-types";
 import { runAfterConfirmCloses } from "@/lib/completion-menu";
 import { useRouter } from "next/navigation";
@@ -26,7 +27,12 @@ export function useMeetingAction(options?: { refresh?: boolean }) {
         };
     }, [pending]);
 
-    function begin(close: () => void, copy: PendingCopy, success: string, action: () => Promise<MeetingResult>) {
+    function begin(
+        close: () => void,
+        copy: PendingCopy,
+        success: string | ((result: Extract<MeetingResult, { ok: true }>) => string | null),
+        action: () => Promise<MeetingResult>,
+    ) {
         if (busy.current) return;
         busy.current = true;
         setAlert(null);
@@ -36,8 +42,9 @@ export function useMeetingAction(options?: { refresh?: boolean }) {
             void (async () => {
                 try {
                     const result = await action();
+                    const message = meetingSuccessText(result, success);
                     if (!result.ok) setAlert(result);
-                    else toast.success(success);
+                    else if (message) toast.success(message);
                     if (options?.refresh !== false) router.refresh();
                 } catch {
                     setAlert({ ok: false, code: "failed", title: "Something did not save. Try again.", description: "Try again." });

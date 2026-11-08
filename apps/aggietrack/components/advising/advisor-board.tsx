@@ -27,6 +27,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
+import { advisorCancelSuccess, groupOpenSlots } from "@/lib/advising-copy";
 import {
     MEETING_DURATIONS,
     buildSingleSlot,
@@ -300,7 +301,7 @@ export function AdvisorBoard({
                 empty="Explain why you are canceling this session."
                 confirm="Cancel session"
                 pending="Canceling session…"
-                success="Session canceled"
+                success={(result) => advisorCancelSuccess(result.studentName)}
                 destructive
                 noteRef={noteRef}
                 onClose={() => setCanceling(null)}
@@ -315,7 +316,7 @@ export function AdvisorBoard({
                 onSave={(slotId, note) => moving ? actions.reschedule(moving.id, slotId, note) : Promise.resolve({ ok: true })}
                 begin={flow.begin}
             />
-            <ZoomDialog card={zoomCard} onClose={() => setZoomCard(null)} onSave={(url) => zoomCard ? actions.saveZoom(zoomCard.id, url) : Promise.resolve({ ok: true })} begin={flow.begin} />
+            <ZoomDialog key={zoomCard?.id ?? "zoom-closed"} card={zoomCard} onClose={() => setZoomCard(null)} onSave={(url) => zoomCard ? actions.saveZoom(zoomCard.id, url) : Promise.resolve({ ok: true })} begin={flow.begin} />
             <AlertDialog open={removeZoomCard !== null} onOpenChange={(open) => { if (!open) setRemoveZoomCard(null); }}>
                 <MeetingAlertContent>
                     <MeetingHeader>
@@ -410,8 +411,7 @@ function SessionSection({
         <section className="flex flex-col gap-4">
             <h2 className="text-2xl font-bold">{title}</h2>
             {cards.map((card) => (
-                <SessionCard key={card.id} card={card}>
-                    {card.zoomUrl ? null : onZoom ? <p className="w-full text-sm text-muted-foreground sm:order-3 sm:w-auto">No Zoom link yet</p> : null}
+                <SessionCard key={card.id} card={card} notice={card.zoomUrl || !onZoom ? null : <p className="text-sm text-muted-foreground">No Zoom link yet</p>}>
                     {card.canChange && onCancel && onMove ? (
                         <>
                             <Button type="button" className="h-11 sm:order-2 sm:h-8" aria-label={`Reschedule session with ${card.personName} on ${card.dateLabel} at ${card.timeLabel}`} onClick={() => onMove(card)}>Reschedule session</Button>
@@ -587,12 +587,12 @@ function NoteDialog({
     empty: string;
     confirm: string;
     pending: string;
-    success: string;
+    success: string | ((result: Extract<MeetingResult, { ok: true }>) => string | null);
     destructive?: boolean;
     noteRef: RefObject<HTMLTextAreaElement | null>;
     onClose: () => void;
     onSave: (note: string) => Promise<MeetingResult>;
-    begin: (close: () => void, copy: { title: string; description: string }, success: string, action: () => Promise<MeetingResult>) => void;
+    begin: (close: () => void, copy: { title: string; description: string }, success: string | ((result: Extract<MeetingResult, { ok: true }>) => string | null), action: () => Promise<MeetingResult>) => void;
 }) {
     const [note, setNote] = useState("");
     const [invalid, setInvalid] = useState(false);
@@ -680,11 +680,16 @@ function RescheduleDialog({
                                 <EmptyDescription>Add more availability before you reschedule, or cancel this session and leave a note.</EmptyDescription>
                             </EmptyHeader>
                         </Empty>
-                    ) : slots.map((slot) => (
-                        <Button key={slot.id} type="button" variant={slotId === slot.id ? "default" : "outline"} className="h-11 whitespace-normal" onClick={() => setSlotId(slot.id)}>
-                            <span className="whitespace-nowrap">{slot.slotLabel}</span>
-                            <span className="tabular-nums">{slot.durationLabel}</span>
-                        </Button>
+                    ) : groupOpenSlots(slots).map((group) => (
+                        <div key={group.heading} className="flex flex-col gap-2">
+                            <h3 className="text-base font-medium">{group.heading}</h3>
+                            {group.slots.map((slot) => (
+                                <Button key={slot.id} type="button" variant={slotId === slot.id ? "default" : "outline"} className="h-11 whitespace-normal" aria-label={slot.accessibleName} onClick={() => setSlotId(slot.id)}>
+                                    <span className="whitespace-nowrap">{slot.slotLabel}</span>
+                                    <span className="tabular-nums">{slot.durationLabel}</span>
+                                </Button>
+                            ))}
+                        </div>
                     ))}
                     <Label htmlFor="advisor-move-note">Why are you rescheduling?</Label>
                     <Textarea ref={noteRef} id="advisor-move-note" value={note} maxLength={2000} aria-invalid={invalid || undefined} onChange={(event) => { setNote(event.target.value); setInvalid(false); }} />

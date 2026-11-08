@@ -20,12 +20,16 @@ import {
 } from "./advising-meetings";
 import { meetingStamp } from "./advising-time";
 
-const databaseUrl = process.env.AGT17_DATABASE_URL ?? "postgresql://aggietrack_test:aggietrack_test@127.0.0.1:5432/aggietrack_agt17";
+// Require an explicit scratch database. A fallback would let `pnpm test` write the hands-on database.
+const databaseUrl = process.env.AGT17_DATABASE_URL ?? "";
 const now = new Date("2026-11-08T15:00:00.000Z");
-const db = new PrismaClient({ adapter: new PrismaPg({ connectionString: databaseUrl }) });
+const db = (databaseUrl
+    ? new PrismaClient({ adapter: new PrismaPg({ connectionString: databaseUrl }) })
+    : null) as PrismaClient;
 let ready = false;
 
 before(async () => {
+    if (!databaseUrl) return;
     try {
         await db.$queryRaw`SELECT 1`;
         await db.$queryRaw`SELECT 1 FROM "MeetingSession" LIMIT 1`;
@@ -36,7 +40,7 @@ before(async () => {
 });
 
 after(async () => {
-    await db.$disconnect();
+    if (databaseUrl) await db.$disconnect();
 });
 
 function skip(t: { skip: (message?: string) => void }) {
@@ -313,7 +317,9 @@ test("canceling releases the time for another booking and for removal", async (t
         const sameStudent = await bookSlot(db, people.studentUser.id, slots[0]!.id, null, now);
         assert.equal(sameStudent.ok, true);
         if (!sameStudent.ok || !sameStudent.sessionId) return;
-        await cancelSession(db, people.advisor.id, sameStudent.sessionId, "I need to close this time.", now);
+        const advisorCancel = await cancelSession(db, people.advisor.id, sameStudent.sessionId, "I need to close this time.", now);
+        assert.equal(advisorCancel.ok, true);
+        if (advisorCancel.ok) assert.equal(advisorCancel.studentName, "Avery Student");
         const otherStudent = await bookSlot(db, people.otherStudentUser.id, slots[0]!.id, null, now);
         assert.equal(otherStudent.ok, true);
         if (!otherStudent.ok || !otherStudent.sessionId) return;

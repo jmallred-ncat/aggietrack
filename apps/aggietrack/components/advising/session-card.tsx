@@ -14,7 +14,7 @@ function NoticeWhen({ dateLabel, timeLabel, iso, full }: { dateLabel: string; ti
     return <MeetingTime dateLabel={dateLabel} timeLabel={timeLabel} iso={iso} full={full} className="text-xs text-muted-foreground" />;
 }
 
-export function SessionCard({ card, children }: { card: MeetingCard; children?: ReactNode }) {
+export function SessionCard({ card, notice, children }: { card: MeetingCard; notice?: ReactNode; children?: ReactNode }) {
     return (
         <Card id={`session-${card.id}`} className="min-w-0">
             <CardHeader className="min-w-0 gap-2">
@@ -69,7 +69,12 @@ export function SessionCard({ card, children }: { card: MeetingCard; children?: 
                 ) : null}
                 {card.started ? <p className="text-sm text-muted-foreground">This session has already started.</p> : null}
             </CardContent>
-            {children ? <CardFooter className="flex flex-col items-stretch gap-2 sm:flex-row sm:flex-wrap sm:items-center">{children}</CardFooter> : null}
+            {notice || children ? (
+                <CardFooter className="flex flex-col items-stretch gap-2">
+                    {notice}
+                    {children ? <div className="flex flex-col items-stretch gap-2 sm:flex-row sm:flex-wrap sm:items-center">{children}</div> : null}
+                </CardFooter>
+            ) : null}
         </Card>
     );
 }

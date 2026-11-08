@@ -88,7 +88,7 @@ export type MeetingFailure = {
     sessionId?: string;
 };
 
-export type MeetingResult = { ok: true; sessionId?: string } | MeetingFailure;
+export type MeetingResult = { ok: true; sessionId?: string; studentName?: string } | MeetingFailure;
 
 export type UpcomingAdvising = {
     id: string;
