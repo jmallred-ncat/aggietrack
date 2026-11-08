@@ -28,3 +28,75 @@ model AdvisingNote {
 
   @@index([studentId])
 }
+
+/// The advisor's current default session length. Changing it does not rewrite existing slots or sessions.
+model AdvisorMeetingSettings {
+  advisorId       String @id
+  advisor         User   @relation(fields: [advisorId], references: [id], onDelete: Cascade)
+  durationMinutes Int    @default(30)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+/// One open or booked time. durationMinutes is stored on the row so a later default does not relabel it.
+model MeetingAvailability {
+  id              String            @id @default(cuid())
+  advisorId       String
+  advisor         User              @relation("AdvisorAvailability", fields: [advisorId], references: [id], onDelete: Cascade)
+  startsAt        DateTime
+  endsAt          DateTime
+  durationMinutes Int
+  status          MeetingSlotStatus @default(OPEN)
+  session         MeetingSession?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([advisorId, startsAt])
+  @@index([advisorId, status, startsAt])
+}
+
+/// A booked advising session. The advisor stays the one on this row after the student is reassigned.
+model MeetingSession {
+  id              String               @id @default(cuid())
+  studentId       String
+  student         StudentProfile       @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  advisorId       String
+  advisor         User                 @relation("AdvisorSessions", fields: [advisorId], references: [id], onDelete: Restrict)
+  availabilityId  String               @unique
+  availability    MeetingAvailability  @relation(fields: [availabilityId], references: [id], onDelete: Restrict)
+  startsAt        DateTime
+  endsAt          DateTime
+  durationMinutes Int
+  status          MeetingSessionStatus @default(CONFIRMED)
+  topic           String?
+  zoomUrl         String?
+  canceledAt      DateTime?
+  events          MeetingEvent[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([studentId, status, startsAt])
+  @@index([advisorId, status, startsAt])
+}
+
+/// Readable history. actorName is a snapshot so a later rename does not rewrite the notice.
+model MeetingEvent {
+  id           String           @id @default(cuid())
+  sessionId    String
+  session      MeetingSession   @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  actorId      String
+  actorName    String
+  actorRole    UserRole
+  kind         MeetingEventKind
+  body         String?
+  fromStartsAt DateTime?
+  fromEndsAt   DateTime?
+  toStartsAt   DateTime?
+  toEndsAt     DateTime?
+  createdAt    DateTime         @default(now())
+
+  @@index([sessionId, createdAt, id])
+}

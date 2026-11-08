@@ -1,9 +1,11 @@
+import { MeetingTime } from "@/components/advising/meeting-time";
 import { DashboardTiles } from "@/components/dashboard-tiles";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty";
 import { academicTermLabel, semesterInSession } from "@/lib/academic-term";
+import { studentUpcoming } from "@/lib/advising-meetings";
 import { computeDegreeProgress } from "@/lib/degree-progress";
 import { computeGpa, computeHonors } from "@/lib/gpa";
 import { coursesAreInProgress, dashboardCoursePlan, plannedTermStatusLabel, plannedTermStatusVariant, studentNextStep } from "@/lib/plan-status";
@@ -82,6 +84,7 @@ export default async function Dashboard() {
         }
         : null);
     const target = graduation?.expectedGradTerm;
+    const advising = await studentUpcoming(prisma, user.id, now).catch(() => null);
     const listed = dashboardCoursePlan({ semesterPlan, laterPlan: otherPlan });
     const headingTerm = listed.primary?.term ?? semester;
 
@@ -113,6 +116,21 @@ export default async function Dashboard() {
                 <Button nativeButton={false} render={<Link href={nextStep.href}>{nextStep.action}</Link>} />
             </CardContent>
         </Card>
+
+        {advising ? (
+            <Card>
+                <CardHeader>
+                    <CardTitle>Upcoming advising</CardTitle>
+                    <CardDescription>
+                        <MeetingTime dateLabel={advising.dateLabel} timeLabel={advising.timeLabel} iso={advising.iso} full={`${advising.dateLabel}, ${advising.timeLabel}`} />
+                        {` with ${advising.personName}`}
+                    </CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <Button nativeButton={false} render={<Link href={`/student/advising?session=${advising.id}`}>View session</Link>} />
+                </CardContent>
+            </Card>
+        ) : null}
 
         <section className="not-typeset flex flex-col gap-6">
             <header className="flex items-center justify-between gap-3">

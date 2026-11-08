@@ -29,8 +29,9 @@ model StudentProfile {
 
   transcript   TranscriptEntry[]
   plannedTerms PlannedTerm[]
-  appointments AdvisingAppointment[]
-  notes        AdvisingNote[]
+  appointments    AdvisingAppointment[]
+  notes           AdvisingNote[]
+  meetingSessions MeetingSession[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

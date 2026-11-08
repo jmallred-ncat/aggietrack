@@ -6,6 +6,7 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/componen
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/components/ui/empty";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { academicTermLabel } from "@/lib/academic-term";
+import { advisorUpcoming } from "@/lib/advising-meetings";
 import { advisorTermChoices } from "@/lib/advisor-roster";
 import { presentPlanNote } from "@/lib/plan-notes";
 import { countNoun, personInitials, personName, planDate, planTimestamp } from "@/lib/plan-status";
@@ -175,6 +176,7 @@ export default async function AdvisorHomePage() {
         <div className="flex flex-col gap-6 py-6">
             <DashboardHeader firstName={user.firstName} />
             <CountTiles tiles={tiles} />
+            <AdvisorUpcoming advisorId={user.id} />
             {data.students.length === 0 ? (
                 <Empty className="border border-dashed">
                     <EmptyHeader>
@@ -355,6 +357,27 @@ export default async function AdvisorHomePage() {
                 </>
             )}
         </div>
+    );
+}
+
+async function AdvisorUpcoming({ advisorId }: { advisorId: string }) {
+    const sessions = await advisorUpcoming(prisma, advisorId).catch(() => []);
+    if (sessions.length === 0) return null;
+    const shown = sessions.slice(0, 3);
+    return (
+        <section className="not-typeset flex flex-col gap-3">
+            <h2 className="text-2xl font-bold">Upcoming sessions</h2>
+            <ul className="flex flex-col gap-2">
+                {shown.map((session) => (
+                    <li key={session.id} className="flex flex-wrap items-center justify-between gap-2">
+                        <span className="text-pretty">{session.personName}</span>
+                        <time dateTime={session.iso} className="whitespace-nowrap text-sm">{session.timeLabel}</time>
+                        <Button variant="outline" nativeButton={false} render={<Link href={`/advisor/appointments?session=${session.id}`}>View</Link>} />
+                    </li>
+                ))}
+            </ul>
+            {sessions.length > 3 ? <Link href="/advisor/appointments" className="text-sm font-medium">See all appointments</Link> : null}
+        </section>
     );
 }
 

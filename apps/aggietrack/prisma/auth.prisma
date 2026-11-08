@@ -21,6 +21,9 @@ model User {
   advisingNotes         AdvisingNote[]        @relation("AdvisorNotes")
   planNotes             PlanNote[]
   appointmentsAsAdvisor AdvisingAppointment[] @relation("AdvisorAppointments")
+  meetingSettings       AdvisorMeetingSettings?
+  meetingSlots          MeetingAvailability[]     @relation("AdvisorAvailability")
+  meetingSessions       MeetingSession[]          @relation("AdvisorSessions")
 
   @@unique([email])
   @@map("user")
