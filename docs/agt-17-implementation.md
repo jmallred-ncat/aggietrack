@@ -12,7 +12,8 @@ The review contract is [agt-17-design-rules.md](./agt-17-design-rules.md). This 
 - Zoom allowlist: `apps/aggietrack/lib/advising-zoom.ts`
 - Schema: `apps/aggietrack/prisma/advising.prisma`
 - Migration: `apps/aggietrack/prisma/migrations/20261108120000_advisor_meetings/migration.sql`
-- Follow-up: `apps/aggietrack/prisma/migrations/20261108180000_release_canceled_availability/migration.sql`
+- Follow-up: `apps/aggietrack/prisma/migrations/20261108180000_release_canceled_availability/migration.sql` keeps the bytes already applied on preview. It clears a canceled link only after that column is still required, so a database that already has a canceled row fails there.
+- Repair: `apps/aggietrack/prisma/migrations/20261108193000_repair_canceled_availability/migration.sql` drops that requirement, reopens a future well-formed canceled-only slot that does not overlap another time, and then clears every canceled link. It does not insert a slot, rewrite an event, or change a confirmed link. It cannot run while the earlier migration is unfinished. The comment in that file is the read-only preflight. An empty production database is a different case: the tables are created and the earlier file matches no canceled row.
 
 `AdvisingAppointment` and `AdvisingNote` are unchanged. The migration only adds tables.
 
