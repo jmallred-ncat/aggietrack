@@ -193,7 +193,7 @@ Use these strings verbatim unless a later Wanda review amends them. `{Name}` is 
 ### Cancel
 
 82. Student title: **Cancel this session?** Description: **Your session with {advisorName} on {full timestamp} will be canceled.** Optional note label **Add a note (optional)**. Placeholder **Let your advisor know why you need to cancel.**
-83. Advisor title: **Cancel this session?** Description: **This cancels {studentName}’s session on {full timestamp}. They will see your note.** Required note label **Why are you canceling?** Placeholder **Explain the change so the student knows what to do next.** Helper **Required. The student can read this note.** Counter `{n}/2,000 characters`
+83. Advisor title: **Cancel this session?** Description: **This cancels {studentName}’s session on {full timestamp}.** Required note label **Why are you canceling?** Placeholder **Explain the change so the student knows what to do next.** Helper **Required. Add a note explaining this change.** The helper is announced with `aria-describedby`. The label stays **Why are you canceling?** Counter `{n}/2,000 characters`
 84. Buttons: **Keep session** (outline, initial focus), **Cancel session** (`destructive`). Pending: **Canceling session…**
 85. Advisor blank/whitespace note: do **not** close the dialog. `DismissibleAlert` title **Add a note**. Description **Explain why you are canceling this session.** Focus the textarea; `aria-invalid`.
 86. Note too long: title **Note is too long**. Description **Keep your note to 2,000 characters or fewer.**
@@ -203,11 +203,11 @@ Use these strings verbatim unless a later Wanda review amends them. `{Name}` is 
 ### Reschedule
 
 89. Dialog title: **Pick a new time**. Student description: **Your current session is {full timestamp}. Choose another open time with {advisorName}.** Advisor description: **{studentName} is currently booked on {full timestamp}. Choose another of your open times.**
-90. Student optional note: **Add a note (optional)**. Advisor required note: **Why are you rescheduling?** Helper **Required. The student can read this note.** Same 2,000-character pattern and blank validation as cancel (**Add a note** / **Explain why you are rescheduling this session.**).
+90. Student optional note: **Add a note (optional)**. Advisor required note label stays **Why are you rescheduling?** Helper **Required. Add a note explaining this change.**, announced with `aria-describedby`. Same 2,000-character pattern and blank validation as cancel (**Add a note** / **Explain why you are rescheduling this session.**).
 91. Buttons: **Keep current time** (outline, initial focus), **Reschedule session** (default). Pending: **Rescheduling session…**
 92. No other open times (student): Empty title **No other times are open**. Description **Cancel this session, or wait for your advisor to add more times.**
 93. No other open times (advisor): Empty title **No other times are open**. Description **Add more availability before you reschedule, or cancel this session and leave a note.**
-94. Success toast: **Session rescheduled**
+94. Success toast: **Session rescheduled**. It does not name a recipient or say who can read the note. The assigned student still sees the saved note on the session card.
 95. Failure (new time unavailable, save error, conflict): title **Session could not be rescheduled**. Description **Your original time is unchanged.** The original card must still show the old time after refresh.
 96. Visible change notice (both people): **{Name} rescheduled this session.** Supporting line: **From {old full timestamp} to {new full timestamp}.** Then the advisor/student note, if any.
 

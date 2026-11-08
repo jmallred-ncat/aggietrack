@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/components/ui/empty";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { advisorRescheduleSuccess, studentBookingNoteHelper } from "@/lib/advising-copy";
 import type { MeetingCard, MeetingResult, OpenSlotChoice, StudentAdvisingView } from "@/lib/advising-types";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -178,7 +179,7 @@ export function StudentBoard({
                         {dialogAlert ? <DismissibleAlert stacked title="Note is too long" description="Keep your note to 2,000 characters or fewer." /> : null}
                         <Label htmlFor="booking-topic">What do you want to talk about? (optional)</Label>
                         <Textarea id="booking-topic" value={topic} maxLength={2000} placeholder="Share anything that will help your advisor prepare." aria-invalid={dialogAlert ? true : undefined} onChange={(event) => setTopic(event.target.value)} />
-                        <p className="text-sm text-muted-foreground">Your advisor can read this note.</p>
+                        <p className="text-sm text-muted-foreground">{studentBookingNoteHelper}</p>
                         <p className="text-sm text-muted-foreground tabular-nums">{topic.length}/2,000 characters</p>
                     </div>
                     <MeetingFooter>
@@ -285,7 +286,7 @@ export function StudentBoard({
                                 flow.begin(
                                     () => setMoving(null),
                                     { title: "Rescheduling session…", description: "Saving your request…" },
-                                    "Session rescheduled",
+                                    advisorRescheduleSuccess,
                                     () => actions.reschedule(card.id, slotId, moveNote),
                                 );
                             }}

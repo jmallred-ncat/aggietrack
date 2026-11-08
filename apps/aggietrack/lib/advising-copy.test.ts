@@ -1,6 +1,9 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
 import test from "node:test";
-import { advisorCancelSuccess, groupOpenSlots, meetingSuccessText } from "./advising-copy";
+import { fileURLToPath } from "node:url";
+import { advisorCancelLabel, advisorCancelSuccess, advisorChangeNoteHelper, advisorRescheduleLabel, advisorRescheduleSuccess, groupOpenSlots, meetingSuccessText, studentBookingNoteHelper } from "./advising-copy";
 import { personName } from "./plan-status";
 import type { OpenSlotChoice } from "./advising-types";
 
@@ -48,4 +51,41 @@ test("advisor cancel saves the note without claiming who can see it", () => {
     assert.equal(personName(deletedUser), "Former user");
     assert.equal(meetingSuccessText({ ok: true, studentName: personName(emptyUser) }, success), saved);
     assert.equal(meetingSuccessText({ ok: true, studentName: personName(deletedUser) }, success), saved);
+});
+
+test("advisor change copy asks for a note without promising who can read it", () => {
+    const helper = "Required. Add a note explaining this change.";
+    assert.equal(advisorChangeNoteHelper, helper);
+    assert.equal(advisorCancelLabel, "Why are you canceling?");
+    assert.equal(advisorRescheduleLabel, "Why are you rescheduling?");
+    assert.equal(advisorRescheduleSuccess, "Session rescheduled");
+    assert.equal(studentBookingNoteHelper, "Your advisor can read this note.");
+    for (const sentence of [helper, advisorRescheduleSuccess, advisorCancelSuccess()]) {
+        assert.equal(sentence.includes("can see"), false);
+        assert.equal(sentence.includes("can read"), false);
+        assert.equal(sentence.includes("will see"), false);
+    }
+    const root = join(dirname(fileURLToPath(import.meta.url)), "../../..");
+    const board = readFileSync(join(root, "apps/aggietrack/components/advising/advisor-board.tsx"), "utf8");
+    const student = readFileSync(join(root, "apps/aggietrack/components/advising/student-board.tsx"), "utf8");
+    const card = readFileSync(join(root, "apps/aggietrack/components/advising/session-card.tsx"), "utf8");
+    const rules = readFileSync(join(root, "docs/agt-17-design-rules.md"), "utf8");
+    assert.match(board, /aria-describedby="advisor-change-note-help"/);
+    assert.match(board, /id="advisor-change-note-help"/);
+    assert.match(board, /aria-describedby="advisor-move-note-help"/);
+    assert.match(board, /id="advisor-move-note-help"/);
+    assert.match(board, /label=\{advisorCancelLabel\}/);
+    assert.match(board, /\{advisorRescheduleLabel\}/);
+    assert.match(board, /success=\{advisorCancelSavedSuccess\}/);
+    assert.match(board, /advisorRescheduleSuccess/);
+    assert.doesNotMatch(board, /They will see your note/);
+    assert.doesNotMatch(board, /The student can read this note/);
+    assert.doesNotMatch(board, /can see your note/);
+    assert.match(student, /studentBookingNoteHelper/);
+    assert.match(student, /advisorRescheduleSuccess/);
+    assert.match(card, /notice\.body/);
+    assert.doesNotMatch(rules, /They will see your note/);
+    assert.doesNotMatch(rules, /The student can read this note/);
+    assert.match(rules, /Required\. Add a note explaining this change\./);
+    assert.match(rules, /aria-describedby/);
 });

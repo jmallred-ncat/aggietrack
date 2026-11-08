@@ -219,6 +219,9 @@ test("reschedule rolls back on conflict and releases the old time on success", a
         assert.equal((await client().meetingAvailability.findUnique({ where: { id: slots[1]!.id } }))?.status, "OPEN");
         const moved = await rescheduleSession(client(), people.advisor.id, booked.sessionId, slots[1]!.id, "A faculty meeting was added.", now);
         assert.equal(moved.ok, true);
+        const studentMoved = await loadStudentAdvising(client(), people.studentUser.id, now);
+        const movedCard = studentMoved?.upcoming.find((card) => card.id === booked.sessionId);
+        assert.equal(movedCard?.notices.some((notice) => notice.body === "A faculty meeting was added."), true);
         const updated = await client().meetingSession.findUnique({ where: { id: booked.sessionId } });
         assert.equal(updated?.availabilityId, slots[1]!.id);
         assert.equal((await client().meetingAvailability.findUnique({ where: { id: slots[0]!.id } }))?.status, "OPEN");
@@ -340,6 +343,9 @@ test("canceling releases the time for another booking and for removal", async (t
         const advisorCancel = await cancelSession(client(), people.advisor.id, sameStudent.sessionId, "I need to close this time.", now);
         assert.equal(advisorCancel.ok, true);
         if (advisorCancel.ok) assert.equal(advisorCancel.studentName, undefined);
+        const studentCanceled = await loadStudentAdvising(client(), people.studentUser.id, now);
+        const canceledCard = studentCanceled?.canceled.find((card) => card.id === sameStudent.sessionId);
+        assert.equal(canceledCard?.notices.some((notice) => notice.body === "I need to close this time."), true);
         const otherStudent = await bookSlot(client(), people.otherStudentUser.id, slots[0]!.id, null, now);
         assert.equal(otherStudent.ok, true);
         if (!otherStudent.ok || !otherStudent.sessionId) return;

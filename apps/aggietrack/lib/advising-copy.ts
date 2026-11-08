@@ -11,6 +11,11 @@ export function groupOpenSlots(slots: readonly OpenSlotChoice[]) {
 }
 
 export const advisorCancelSavedSuccess = "Session canceled. Your note was saved.";
+export const advisorRescheduleSuccess = "Session rescheduled";
+export const advisorChangeNoteHelper = "Required. Add a note explaining this change.";
+export const advisorCancelLabel = "Why are you canceling?";
+export const advisorRescheduleLabel = "Why are you rescheduling?";
+export const studentBookingNoteHelper = "Your advisor can read this note.";
 
 /** A stored name does not show that the student can still read the note. */
 export function advisorCancelSuccess(): string {

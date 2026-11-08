@@ -27,7 +27,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
-import { advisorCancelSavedSuccess, groupOpenSlots } from "@/lib/advising-copy";
+import { advisorCancelLabel, advisorCancelSavedSuccess, advisorChangeNoteHelper, advisorRescheduleLabel, advisorRescheduleSuccess, groupOpenSlots } from "@/lib/advising-copy";
 import {
     MEETING_DURATIONS,
     buildSingleSlot,
@@ -294,10 +294,10 @@ export function AdvisorBoard({
             <NoteDialog
                 open={canceling !== null}
                 title="Cancel this session?"
-                description={<>This cancels {canceling?.personName}’s session on <MeetingStamp value={canceling?.fullTimestamp ?? ""} />. They will see your note.</>}
-                label="Why are you canceling?"
+                description={<>This cancels {canceling?.personName}’s session on <MeetingStamp value={canceling?.fullTimestamp ?? ""} />.</>}
+                label={advisorCancelLabel}
                 placeholder="Explain the change so the student knows what to do next."
-                helper="Required. The student can read this note."
+                helper={advisorChangeNoteHelper}
                 empty="Explain why you are canceling this session."
                 confirm="Cancel session"
                 pending="Canceling session…"
@@ -618,8 +618,8 @@ function NoteDialog({
                 <div className="flex flex-col gap-2 px-6 pb-4">
                     {invalid ? <DismissibleAlert stacked title="Add a note" description={empty} /> : null}
                     <Label htmlFor="advisor-change-note">{label}</Label>
-                    <Textarea ref={noteRef} id="advisor-change-note" value={note} maxLength={2000} placeholder={placeholder} aria-invalid={invalid || undefined} autoFocus onChange={(event) => { setNote(event.target.value); setInvalid(false); }} />
-                    <p className="text-sm text-muted-foreground">{helper}</p>
+                    <Textarea ref={noteRef} id="advisor-change-note" value={note} maxLength={2000} placeholder={placeholder} aria-invalid={invalid || undefined} aria-describedby="advisor-change-note-help" autoFocus onChange={(event) => { setNote(event.target.value); setInvalid(false); }} />
+                    <p id="advisor-change-note-help" className="text-sm text-muted-foreground">{helper}</p>
                     <p className="text-sm text-muted-foreground tabular-nums">{note.length}/2,000 characters</p>
                 </div>
                 <MeetingFooter>
@@ -703,9 +703,9 @@ function RescheduleDialog({
                             ))}
                         </div>
                     ))}
-                    <Label htmlFor="advisor-move-note">Why are you rescheduling?</Label>
-                    <Textarea ref={noteRef} id="advisor-move-note" value={note} maxLength={2000} aria-invalid={invalid || undefined} onChange={(event) => { setNote(event.target.value); setInvalid(false); }} />
-                    <p className="text-sm text-muted-foreground">Required. The student can read this note.</p>
+                    <Label htmlFor="advisor-move-note">{advisorRescheduleLabel}</Label>
+                    <Textarea ref={noteRef} id="advisor-move-note" value={note} maxLength={2000} aria-invalid={invalid || undefined} aria-describedby="advisor-move-note-help" onChange={(event) => { setNote(event.target.value); setInvalid(false); }} />
+                    <p id="advisor-move-note-help" className="text-sm text-muted-foreground">{advisorChangeNoteHelper}</p>
                     <p className="text-sm text-muted-foreground tabular-nums">{note.length}/2,000 characters</p>
                 </div>
                 <MeetingFooter>
@@ -720,7 +720,7 @@ function RescheduleDialog({
                                 noteRef.current?.focus();
                                 return;
                             }
-                            begin(onClose, { title: "Rescheduling session…", description: "Saving your request…" }, "Session rescheduled", () => onSave(slotId, note));
+                            begin(onClose, { title: "Rescheduling session…", description: "Saving your request…" }, advisorRescheduleSuccess, () => onSave(slotId, note));
                         }}
                     >
                         Reschedule session
