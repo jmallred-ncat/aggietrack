@@ -89,7 +89,10 @@ test("shared dialogs keep the original layer and advising removes only its own b
     for (const source of [dialog, alertDialog]) {
         assert.match(source, /supports-backdrop-filter:backdrop-blur-xs/);
         assert.match(source, /isolate z-50 bg-black\/10/);
+        assert.match(source, /cn\((?:dialog|alertDialog)OverlayClassName, className\)/);
+        assert.match(source, /overlayClassName === undefined \? \(/);
         assert.doesNotMatch(source, /z-\[60\]/);
+        assert.doesNotMatch(source, /className \?\? /);
     }
     assert.match(advising, /overlayClassName=\{advisingOverlayClassName\}/);
     assert.match(advising, /bg-black\/40/);

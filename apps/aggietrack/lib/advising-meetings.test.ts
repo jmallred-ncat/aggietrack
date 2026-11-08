@@ -339,7 +339,7 @@ test("canceling releases the time for another booking and for removal", async (t
         if (!sameStudent.ok || !sameStudent.sessionId) return;
         const advisorCancel = await cancelSession(client(), people.advisor.id, sameStudent.sessionId, "I need to close this time.", now);
         assert.equal(advisorCancel.ok, true);
-        if (advisorCancel.ok) assert.equal(advisorCancel.studentName, "Avery Student");
+        if (advisorCancel.ok) assert.equal(advisorCancel.studentName, undefined);
         const otherStudent = await bookSlot(client(), people.otherStudentUser.id, slots[0]!.id, null, now);
         assert.equal(otherStudent.ok, true);
         if (!otherStudent.ok || !otherStudent.sessionId) return;

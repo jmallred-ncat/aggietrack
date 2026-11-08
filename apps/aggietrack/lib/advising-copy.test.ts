@@ -33,20 +33,19 @@ test("availability success is Times added only after the save succeeds", () => {
     assert.equal(meetingSuccessText({ ok: false, code: "failed", title: "That time is in the past", description: "Add a time that has not started yet." }, "Times added"), null);
 });
 
-test("advisor cancel names a real recipient and does not confirm a failed save", () => {
-    const success = (result: { ok: true; studentName?: string }) => advisorCancelSuccess(result.studentName);
-    assert.equal(meetingSuccessText({ ok: true, studentName: "Avery Cole" }, success), "Session canceled. Avery Cole can see your note.");
-    assert.equal(meetingSuccessText({ ok: false, code: "failed", title: "This session is unavailable", description: "It does not exist or you do not have access to it." }, success), null);
-    for (const missing of ["", "  ", null, undefined, "Former user", "former user", "  Former   user "]) {
-        assert.equal(advisorCancelSuccess(missing), "Session canceled. Your note was saved.");
-        assert.equal(advisorCancelSuccess(missing).includes("Former user"), false);
+test("advisor cancel saves the note without claiming who can see it", () => {
+    const saved = "Session canceled. Your note was saved.";
+    assert.equal(advisorCancelSuccess(), saved);
+    assert.equal(saved.includes("can see"), false);
+    const success = () => advisorCancelSuccess();
+    for (const studentName of ["Avery Cole", "Former user", "former user", "", undefined]) {
+        assert.equal(meetingSuccessText({ ok: true, studentName }, success), saved);
     }
+    assert.equal(meetingSuccessText({ ok: false, code: "failed", title: "This session is unavailable", description: "It does not exist or you do not have access to it." }, success), null);
     const emptyUser = { firstName: "", lastName: " ", name: "" };
     const deletedUser = null;
     assert.equal(personName(emptyUser), "Former user");
     assert.equal(personName(deletedUser), "Former user");
-    assert.equal(advisorCancelSuccess(personName(emptyUser)), "Session canceled. Your note was saved.");
-    assert.equal(advisorCancelSuccess(personName(deletedUser)), "Session canceled. Your note was saved.");
-    assert.equal(meetingSuccessText({ ok: true, studentName: "Former user" }, success), "Session canceled. Your note was saved.");
-    assert.equal(meetingSuccessText({ ok: true }, success), "Session canceled. Your note was saved.");
+    assert.equal(meetingSuccessText({ ok: true, studentName: personName(emptyUser) }, success), saved);
+    assert.equal(meetingSuccessText({ ok: true, studentName: personName(deletedUser) }, success), saved);
 });

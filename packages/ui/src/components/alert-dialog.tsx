@@ -32,7 +32,7 @@ function AlertDialogOverlay({
   return (
     <AlertDialogPrimitive.Backdrop
       data-slot="alert-dialog-overlay"
-      className={className ?? alertDialogOverlayClassName}
+      className={cn(alertDialogOverlayClassName, className)}
       {...props}
     />
   )
@@ -45,12 +45,16 @@ function AlertDialogContent({
   ...props
 }: AlertDialogPrimitive.Popup.Props & {
   size?: "default" | "sm"
-  /** Replaces the shared overlay classes. Omit it to keep the shared layer defaults. */
+  /** Replaces the shared overlay classes. A normal className on AlertDialogOverlay still merges with the defaults. */
   overlayClassName?: string
 }) {
   return (
     <AlertDialogPortal>
-      <AlertDialogOverlay className={overlayClassName} />
+      {overlayClassName === undefined ? (
+        <AlertDialogOverlay />
+      ) : (
+        <AlertDialogPrimitive.Backdrop data-slot="alert-dialog-overlay" className={overlayClassName} />
+      )}
       <AlertDialogPrimitive.Popup
         data-slot="alert-dialog-content"
         data-size={size}

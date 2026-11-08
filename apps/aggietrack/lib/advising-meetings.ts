@@ -30,7 +30,6 @@ import type {
     UpcomingAdvising,
 } from "./advising-types";
 import { normalizeZoomUrl, zoomFailure } from "./advising-zoom";
-import { identifiedRecipientName } from "./advising-copy";
 import { personName } from "./plan-status";
 
 type Db = PrismaClient;
@@ -639,8 +638,7 @@ export async function cancelSession(db: Db, userId: string, sessionId: string, n
                     body: advisorNote,
                 },
             });
-            const studentName = identifiedRecipientName(personName(session.student.user));
-            return { ok: true, sessionId: session.id, studentName: studentName ?? undefined };
+            return { ok: true, sessionId: session.id };
         });
     });
 }

@@ -27,7 +27,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
-import { advisorCancelSuccess, groupOpenSlots } from "@/lib/advising-copy";
+import { advisorCancelSavedSuccess, groupOpenSlots } from "@/lib/advising-copy";
 import {
     MEETING_DURATIONS,
     buildSingleSlot,
@@ -301,7 +301,7 @@ export function AdvisorBoard({
                 empty="Explain why you are canceling this session."
                 confirm="Cancel session"
                 pending="Canceling session…"
-                success={(result) => advisorCancelSuccess(result.studentName)}
+                success={advisorCancelSavedSuccess}
                 destructive
                 noteRef={noteRef}
                 onClose={() => setCanceling(null)}
@@ -468,8 +468,20 @@ function TimeDialog({
     blocked: boolean;
 }) {
     const [date, setDate] = useState(initialDate);
+    const [dateOpen, setDateOpen] = useState(false);
     const [start, setStart] = useState(initialStart || "14:00");
     const [end, setEnd] = useState("15:00");
+    useEffect(() => {
+        if (!dateOpen) return;
+        const closeDate = (event: KeyboardEvent) => {
+            if (event.key !== "Escape") return;
+            event.preventDefault();
+            event.stopPropagation();
+            setDateOpen(false);
+        };
+        document.addEventListener("keydown", closeDate, true);
+        return () => document.removeEventListener("keydown", closeDate, true);
+    }, [dateOpen]);
     const [problem, setProblem] = useState<{ title: string; description: string } | null>(null);
     const now = new Date(nowIso);
     const built = date
@@ -495,7 +507,7 @@ function TimeDialog({
                     {problem ? <DismissibleAlert stacked title={problem.title} description={problem.description} /> : null}
                     <div className="flex flex-col gap-2">
                         <Label htmlFor={`${title}-date`}>Date</Label>
-                        <Popover>
+                        <Popover open={dateOpen} onOpenChange={setDateOpen}>
                             <PopoverTrigger render={<Button type="button" variant="outline" id={`${title}-date`} className="h-11 justify-start sm:h-8" />}>
                                 {date ? civilDateLabel(date) : "Choose a date"}
                             </PopoverTrigger>

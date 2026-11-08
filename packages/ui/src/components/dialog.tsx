@@ -33,7 +33,7 @@ function DialogOverlay({
   return (
     <DialogPrimitive.Backdrop
       data-slot="dialog-overlay"
-      className={className ?? dialogOverlayClassName}
+      className={cn(dialogOverlayClassName, className)}
       {...props}
     />
   )
@@ -47,12 +47,16 @@ function DialogContent({
   ...props
 }: DialogPrimitive.Popup.Props & {
   showCloseButton?: boolean
-  /** Replaces the shared overlay classes. Omit it to keep the shared layer defaults. */
+  /** Replaces the shared overlay classes. A normal className on DialogOverlay still merges with the defaults. */
   overlayClassName?: string
 }) {
   return (
     <DialogPortal>
-      <DialogOverlay className={overlayClassName} />
+      {overlayClassName === undefined ? (
+        <DialogOverlay />
+      ) : (
+        <DialogPrimitive.Backdrop data-slot="dialog-overlay" className={overlayClassName} />
+      )}
       <DialogPrimitive.Popup
         data-slot="dialog-content"
         className={cn(
