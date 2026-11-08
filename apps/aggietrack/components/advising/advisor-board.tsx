@@ -130,7 +130,7 @@ export function AdvisorBoard({
             {flow.pending ? <MeetingPending pending={flow.pending} slow={flow.slow} titleRef={flow.titleRef} /> : null}
 
             {mode === "availability" && scheduleActions ? (
-                <AdvisorAvailability model={view.availability} nowIso={nowIso} search={search} actions={scheduleActions} />
+                <AdvisorAvailability model={view.availability} nowIso={nowIso} search={search} actions={{ ...scheduleActions, move: actions.move, remove: actions.remove }} />
             ) : null}
 
             {mode === "sessions" ? <SessionSection title="Upcoming sessions" cards={view.upcoming} empty="upcoming" onCancel={setCanceling} onMove={setMoving} onZoom={setZoomCard} onRemoveZoom={setRemoveZoomCard} /> : null}

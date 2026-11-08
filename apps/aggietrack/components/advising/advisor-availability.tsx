@@ -1,5 +1,6 @@
 "use client";
 
+import { MeetingStamp } from "@/components/advising/meeting-time";
 import { MeetingAlert, MeetingPending } from "@/components/advising/meeting-status";
 import { MeetingAlertContent, MeetingFooter, MeetingFormContent, MeetingFormFooter, MeetingFormHeader, MeetingHeader, meetingButtonClass } from "@/components/advising/meeting-dialog";
 import { useMeetingAction } from "@/components/advising/use-meeting-action";
@@ -14,7 +15,7 @@ import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/components/u
 import { Field, FieldDescription, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { WEEKDAYS, schedulesEqual, type ReviewItem, type ScheduleConfig, type ScheduleReview } from "@/lib/advising-schedule";
+import { WEEKDAYS, adoptTermEditor, baselineAfterSave, schedulesEqual, type ReviewItem, type ScheduleConfig, type ScheduleReview } from "@/lib/advising-schedule";
 import {
     MEETING_DURATIONS,
     buildSingleSlot,
@@ -41,6 +42,8 @@ export type AvailabilityActions = {
     publish: (termId: string, token: string) => Promise<MeetingResult>;
     addWindow: (input: { date: string; start: string; end: string; durationMinutes: number; termId: string }) => Promise<MeetingResult>;
     addOne: (input: { date: string; start: string; durationMinutes: number; termId: string }) => Promise<MeetingResult>;
+    move: (slotId: string, input: { date: string; start: string }) => Promise<MeetingResult>;
+    remove: (slotId: string) => Promise<MeetingResult>;
 };
 
 export function AdvisorAvailability({
@@ -58,6 +61,7 @@ export function AdvisorAvailability({
     const flow = useMeetingAction();
     const [editor, setEditor] = useState(model.config);
     const [baseline, setBaseline] = useState(model.config);
+    const [boundTermId, setBoundTermId] = useState(model.selectedTermId);
     const [seen, setSeen] = useState(model.revision);
     const [review, setReview] = useState<ScheduleReview | null>(null);
     const [discardOpen, setDiscardOpen] = useState(false);
@@ -67,18 +71,37 @@ export function AdvisorAvailability({
     const [exception, setException] = useState<{ mode: "remove" | "change"; row: AvailabilityRow } | null>(null);
     const [dateFilter, setDateFilter] = useState("");
     const [page, setPage] = useState(0);
+    const [listScope, setListScope] = useState<"term" | "all">("term");
+    const [editingManual, setEditingManual] = useState<AvailabilityRow | null>(null);
+    const [removingManual, setRemovingManual] = useState<AvailabilityRow | null>(null);
     const clean = useRef(false);
+    const allowLeave = useRef(false);
     const held = useRef<ScheduleReview | null>(null);
     const staleTitle = useRef<HTMLHeadingElement>(null);
-    const dirty = !clean.current && !schedulesEqual(editor, baseline);
+    const termNow = useRef(model.selectedTermId);
+    const currentEditor = { termId: boundTermId, editor, baseline, revision: seen };
+    const adopted = adoptTermEditor(currentEditor, model);
+    if (adopted !== currentEditor) {
+        setBoundTermId(adopted.termId);
+        setEditor(adopted.editor);
+        setBaseline(adopted.baseline);
+        setSeen(adopted.revision);
+        if (adopted.termId !== boundTermId) {
+            setReview(null);
+            setDateFilter("");
+            setPage(0);
+            setException(null);
+            setEditingManual(null);
+            setRemovingManual(null);
+            clean.current = false;
+        }
+    }
+    termNow.current = adopted.termId;
+    const shownEditor = adopted.editor;
+    const shownBaseline = adopted.baseline;
+    const dirty = !clean.current && !schedulesEqual(shownEditor, shownBaseline);
     const termId = model.selectedTermId;
-
-    useEffect(() => {
-        if (model.revision === seen || !schedulesEqual(editor, baseline)) return;
-        setEditor(model.config);
-        setBaseline(model.config);
-        setSeen(model.revision);
-    }, [baseline, editor, model.config, model.revision, seen]);
+    const selectedTerm = model.terms.find((term) => term.id === termId) ?? null;
 
     useEffect(() => {
         if (!dirty) return;
@@ -95,11 +118,22 @@ export function AdvisorAvailability({
             event.stopPropagation();
             setLeaveHref(href);
         };
+        const formUrl = window.location.href;
+        const formPath = `${window.location.pathname}${window.location.search}`;
+        window.history.pushState({ advisingGuard: formUrl }, "", formUrl);
+        const back = () => {
+            if (allowLeave.current) return;
+            const destination = `${window.location.pathname}${window.location.search}`;
+            window.history.pushState({ advisingGuard: formUrl }, "", formUrl);
+            setLeaveHref(destination === formPath ? "__history_back__" : destination);
+        };
         window.addEventListener("beforeunload", warn);
         document.addEventListener("click", click, true);
+        window.addEventListener("popstate", back);
         return () => {
             window.removeEventListener("beforeunload", warn);
             document.removeEventListener("click", click, true);
+            window.removeEventListener("popstate", back);
         };
     }, [dirty]);
 
@@ -119,12 +153,18 @@ export function AdvisorAvailability({
     }
 
     function go(href: string) {
+        allowLeave.current = true;
         clean.current = true;
         setLeaveHref(null);
+        if (href === "__history_back__") {
+            window.history.go(-2);
+            return;
+        }
         router.push(href);
     }
 
-    const filtered = model.openTimes.filter((row) => !dateFilter || row.dateValue === dateFilter);
+    const scoped = model.openTimes.filter((row) => listScope === "all" || row.inventory !== "other");
+    const filtered = scoped.filter((row) => !dateFilter || row.dateValue === dateFilter);
     const rangeStart = filtered.length === 0 ? 0 : page * pageSize + 1;
     const visible = filtered.slice(page * pageSize, page * pageSize + pageSize);
     const rangeEnd = page * pageSize + visible.length;
@@ -140,9 +180,9 @@ export function AdvisorAvailability({
             <FieldGroup>
                 <Field>
                     <FieldLabel htmlFor="semester">Semester</FieldLabel>
-                    <Select value={termId ?? ""} onValueChange={(value) => {
-                        if (!value || value === termId) return;
-                        const href = appointmentsHref(search, { view: "availability", term: value, page: null });
+                    <Select value={termId ?? ""} disabled={flow.pending !== null} onValueChange={(value) => {
+                        if (!value || value === termId || flow.pending) return;
+                        const href = appointmentsHref(search, { view: "availability", term: value });
                         if (dirty) setLeaveHref(href);
                         else router.push(href);
                     }}>
@@ -165,17 +205,17 @@ export function AdvisorAvailability({
                 ) : null}
                 {model.datesUnavailable ? (
                     <DismissibleAlert stacked title="Semester dates are unavailable" description="This semester does not have start and end dates yet, so hours cannot be generated. Choose another semester or wait until dates are posted." />
-                ) : model.runLabel ? <p className="text-sm text-muted-foreground"><span className="whitespace-nowrap">{model.runLabel}</span></p> : null}
+                ) : model.runLabel ? <WrappedRange text={model.runLabel} className="text-sm text-muted-foreground" /> : null}
                 <div className="grid gap-4 sm:grid-cols-2">
-                    <DateField id="first" label="First day" value={editor.firstDay} disabled={model.datesUnavailable} onChange={(value) => update({ ...editor, firstDay: value })} />
-                    <DateField id="last" label="Last day" value={editor.lastDay} disabled={model.datesUnavailable} onChange={(value) => update({ ...editor, lastDay: value })} />
+                    <DateField id="first" label="First day" value={shownEditor.firstDay} disabled={model.datesUnavailable} bounds={selectedTerm} onChange={(value) => update({ ...shownEditor, firstDay: value })} />
+                    <DateField id="last" label="Last day" value={shownEditor.lastDay} disabled={model.datesUnavailable} bounds={selectedTerm} onChange={(value) => update({ ...shownEditor, lastDay: value })} />
                 </div>
                 <FieldDescription>Both days are included. They default to this semester{"\u2019"}s start and end. You can choose a narrower range inside this semester.</FieldDescription>
                 <Field>
                     <FieldLabel htmlFor="session-length">Session length</FieldLabel>
-                    <Select value={isListed(editor.durationMinutes) ? String(editor.durationMinutes) : ""} onValueChange={(value) => { if (value) update({ ...editor, durationMinutes: Number(value) }); }}>
+                    <Select value={isListed(shownEditor.durationMinutes) ? String(shownEditor.durationMinutes) : ""} onValueChange={(value) => { if (value) update({ ...shownEditor, durationMinutes: Number(value) }); }}>
                         <SelectTrigger id="session-length" className="h-11 w-full">
-                            <SelectValue placeholder="Choose a session length">{isListed(editor.durationMinutes) ? durationLabel(editor.durationMinutes) : "Choose a session length"}</SelectValue>
+                            <SelectValue placeholder="Choose a session length">{isListed(shownEditor.durationMinutes) ? durationLabel(shownEditor.durationMinutes) : "Choose a session length"}</SelectValue>
                         </SelectTrigger>
                         <SelectContent>
                             <SelectGroup>
@@ -187,27 +227,27 @@ export function AdvisorAvailability({
                 </Field>
                 <div className="flex flex-col gap-3">
                     {WEEKDAYS.map((name, index) => {
-                        const day = editor.weekdays[index] ?? { unavailable: true, windows: [] };
+                        const day = shownEditor.weekdays[index] ?? { unavailable: true, windows: [] };
                         return (
                             <Card key={name} id={`weekday-${index}`} className="gap-3 p-4">
                                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                                     <h3 className="text-base font-semibold">{name}</h3>
                                     <Button type="button" variant={day.unavailable ? "default" : "outline"} aria-pressed={day.unavailable} aria-label={`${name} is unavailable`} className="h-11" onClick={() => {
-                                        const weekdays = editor.weekdays.map((item, itemIndex) => itemIndex === index ? { ...item, unavailable: !item.unavailable } : item);
-                                        update({ ...editor, weekdays });
+                                        const weekdays = shownEditor.weekdays.map((item, itemIndex) => itemIndex === index ? { ...item, unavailable: !item.unavailable } : item);
+                                        update({ ...shownEditor, weekdays });
                                     }}>Unavailable</Button>
                                 </div>
                                 {day.unavailable ? null : day.windows.map((window, windowIndex) => (
                                     <div key={`${name}-${windowIndex}`} className="grid gap-3 sm:grid-cols-[1fr_1fr_auto]">
-                                        <ClockField id={`${name}-${windowIndex}-start`} label="Start time" value={window.start} onChange={(value) => update(changeWindow(editor, index, windowIndex, { ...window, start: value }))} />
-                                        <ClockField id={`${name}-${windowIndex}-end`} label="End time" value={window.end} onChange={(value) => update(changeWindow(editor, index, windowIndex, { ...window, end: value }))} />
-                                        <Button type="button" variant="outline" className="h-11 sm:self-end" aria-label={`Remove hours for ${name}, ${formatClockValue(window.start)}\u2013${formatClockValue(window.end)}`} onClick={() => update(changeWindow(editor, index, windowIndex, null))}>Remove hours</Button>
+                                        <ClockField id={`${name}-${windowIndex}-start`} label="Start time" value={window.start} onChange={(value) => update(changeWindow(shownEditor, index, windowIndex, { ...window, start: value }))} />
+                                        <ClockField id={`${name}-${windowIndex}-end`} label="End time" value={window.end} onChange={(value) => update(changeWindow(shownEditor, index, windowIndex, { ...window, end: value }))} />
+                                        <Button type="button" variant="outline" className="h-11 sm:self-end" aria-label={`Remove hours for ${name}, ${formatClockValue(window.start)}\u2013${formatClockValue(window.end)}`} onClick={() => update(changeWindow(shownEditor, index, windowIndex, null))}>Remove hours</Button>
                                     </div>
                                 ))}
                                 {day.unavailable ? null : (
                                     <Button type="button" variant="outline" className="h-11" aria-label={`Add hours for ${name}`} onClick={() => {
-                                        const weekdays = editor.weekdays.map((item, itemIndex) => itemIndex === index ? { ...item, windows: [...item.windows, { start: "09:00", end: "10:00" }] } : item);
-                                        update({ ...editor, weekdays });
+                                        const weekdays = shownEditor.weekdays.map((item, itemIndex) => itemIndex === index ? { ...item, windows: [...item.windows, nextWindow(item.windows)] } : item);
+                                        update({ ...shownEditor, weekdays });
                                     }}>Add hours</Button>
                                 )}
                             </Card>
@@ -217,28 +257,28 @@ export function AdvisorAvailability({
                 <div id="dates" className="flex flex-col gap-3">
                     <h3 className="text-base font-semibold">Unavailable dates</h3>
                     <p className="text-sm text-muted-foreground">After you publish, students will not see open times on these dates. Booked sessions stay as they are.</p>
-                    {editor.unavailableDates.map((date) => (
+                    {shownEditor.unavailableDates.map((date) => (
                         <div key={date} className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                            <p className="whitespace-nowrap text-sm">{civilDateLabel(date)}</p>
-                            <Button type="button" variant="outline" className="h-11" onClick={() => update({ ...editor, unavailableDates: editor.unavailableDates.filter((item) => item !== date) })}>Remove date</Button>
+                            <p className="min-w-0 text-sm"><span className="whitespace-nowrap">{civilDateLabel(date)}</span></p>
+                            <Button type="button" variant="outline" className="h-11" onClick={() => update({ ...shownEditor, unavailableDates: shownEditor.unavailableDates.filter((item) => item !== date) })}>Remove date</Button>
                         </div>
                     ))}
-                    <DateField id="add-date" label="Add a date" value={null} onChange={(value) => {
-                        if (!value || editor.unavailableDates.includes(value)) return;
-                        update({ ...editor, unavailableDates: [...editor.unavailableDates, value].sort() });
+                    <DateField id="add-date" label="Add a date" value={null} bounds={selectedTerm} focus={shownEditor.firstDay ?? selectedTerm?.startsOn ?? null} onChange={(value) => {
+                        if (!value || shownEditor.unavailableDates.includes(value)) return;
+                        update({ ...shownEditor, unavailableDates: [...shownEditor.unavailableDates, value].sort() });
                     }} />
                 </div>
             </FieldGroup>
             <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
                 {model.status === "changes" ? <Button type="button" variant="outline" className="h-11" onClick={() => setDiscardOpen(true)}>Discard unpublished changes</Button> : null}
                 {model.status === "draft" ? <Button type="button" variant="outline" className="h-11" onClick={() => setDiscardOpen(true)}>Discard draft</Button> : null}
-                <Button type="button" variant="outline" className="h-11" disabled={flow.pending !== null || !termId} onClick={() => save(termId, editor, "Draft saved")}>Save draft</Button>
+                <Button type="button" variant="outline" className="h-11" disabled={flow.pending !== null || !termId} onClick={() => save(termId, shownEditor, "Draft saved")}>Save draft</Button>
                 <Button type="button" className="h-11" disabled={flow.pending !== null || !termId} onClick={() => {
                     if (!termId) return;
                     flow.begin(() => undefined, { title: "Reviewing changes\u2026", description: "Saving your request\u2026" }, () => null, async () => {
-                        const result = await actions.review(termId, editor);
+                        const result = await actions.review(termId, shownEditor);
                         if (!result.ok && result.code === "review" && result.review) {
-                            setBaseline(editor);
+                            if (termNow.current === termId) setBaseline(shownEditor);
                             setReview(result.review);
                             return { ok: true };
                         }
@@ -256,8 +296,15 @@ export function AdvisorAvailability({
             </div>
             <div className="flex flex-col gap-3">
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-                    <h3 className="text-base font-semibold">Open times</h3>
-                    <DateField id="open-date" label="Date" value={dateFilter || null} onChange={(value) => { setDateFilter(value ?? ""); setPage(0); }} />
+                    <div className="flex flex-col gap-2">
+                        <h3 className="text-base font-semibold">Open times</h3>
+                        <div className="flex flex-wrap gap-2" role="group" aria-label="Which open times to show">
+                            <Button type="button" variant={listScope === "term" ? "default" : "outline"} className="h-11" aria-pressed={listScope === "term"} onClick={() => { setListScope("term"); setPage(0); }}>This semester</Button>
+                            <Button type="button" variant={listScope === "all" ? "default" : "outline"} className="h-11" aria-pressed={listScope === "all"} onClick={() => { setListScope("all"); setPage(0); }}>All open times</Button>
+                        </div>
+                        <p className="text-sm text-muted-foreground">{listScope === "term" ? "This semester\u2019s published hours and one-off times." : "Open times from every semester, including one-off times."}</p>
+                    </div>
+                    <DateField id="open-date" label="Date" value={dateFilter || null} bounds={listScope === "term" ? selectedTerm : null} focus={selectedTerm?.startsOn ?? null} onChange={(value) => { setDateFilter(value ?? ""); setPage(0); }} />
                 </div>
                 {filtered.length === 0 ? (
                     <Empty className="border border-dashed">
@@ -277,10 +324,16 @@ export function AdvisorAvailability({
                                     <p className="text-sm text-muted-foreground">{row.durationLabel}</p>
                                     {row.sourceLabel ? <p className="text-sm text-muted-foreground">{row.sourceLabel}</p> : null}
                                     {row.pendingLabel ? <Badge variant="outline">{row.pendingLabel}</Badge> : null}
-                                    {termId && generated(row) && !row.pendingLabel && !pendingInEditor(row) ? (
+                                    {termId && generated(row) && row.inventory !== "other" && row.inventory !== "manual" && !row.pendingLabel && !pendingInEditor(row) ? (
                                         <div className="flex flex-col gap-2 sm:flex-row">
                                             <Button type="button" variant="outline" className="h-11" onClick={() => setException({ mode: "change", row })}>Change this time</Button>
                                             <Button type="button" variant="outline" className="h-11" onClick={() => setException({ mode: "remove", row })}>Remove when I publish</Button>
+                                        </div>
+                                    ) : null}
+                                    {row.inventory === "manual" && row.canChange ? (
+                                        <div className="flex flex-col gap-2 sm:flex-row">
+                                            <Button type="button" variant="outline" className="h-11" onClick={() => setEditingManual(row)}>Edit time</Button>
+                                            <Button type="button" variant="outline" className="h-11" onClick={() => setRemovingManual(row)}>Remove</Button>
                                         </div>
                                     ) : null}
                                 </Card>
@@ -295,22 +348,22 @@ export function AdvisorAvailability({
             </div>
             {review ? (
                 <AlertDialog open onOpenChange={(open) => { if (!open) setReview(null); }}>
-                    <MeetingAlertContent className="sm:max-w-xl">
+                    <MeetingAlertContent className="bg-background sm:max-w-xl">
                         <MeetingHeader>
                             <AlertDialogTitle className="text-lg font-semibold leading-tight">Review and publish?</AlertDialogTitle>
                             <AlertDialogDescription className="text-sm text-muted-foreground">Publishing updates the times students can book for {review.semester}. Booked sessions stay as they are.</AlertDialogDescription>
                         </MeetingHeader>
-                        <div className="flex max-h-80 flex-col gap-3 overflow-y-auto px-6 pb-4">
+                        <div className="flex max-h-80 min-w-0 flex-col gap-3 overflow-x-hidden overflow-y-auto bg-background px-6 pb-4">
                             {review.stale ? <h3 ref={staleTitle} tabIndex={-1} className="text-base font-semibold">Review these changes again</h3> : null}
-                            {review.stale ? <p className="text-sm text-muted-foreground">Bookings or hours changed since you opened this review. Nothing was published. Check the updated counts and publish again if they look right.</p> : null}
-                            <p className="text-sm"><span className="whitespace-nowrap">{review.rangeLabel}</span></p>
-                            {review.officialLabel ? <p className="text-sm"><span className="whitespace-nowrap">{review.officialLabel}</span></p> : null}
+                            {review.stale ? <p className="min-w-0 text-sm text-muted-foreground">Bookings or hours changed since you opened this review. Nothing was published. Check the updated counts and publish again if they look right.</p> : null}
+                            <WrappedRange text={review.rangeLabel} className="text-sm" />
+                            {review.officialLabel ? <WrappedRange text={review.officialLabel} className="text-sm" /> : null}
                             {review.blocking.map((block) => (
                                 <div key={block.title} className="flex flex-col gap-2">
                                     <DismissibleAlert stacked title={block.title} description={block.description} />
                                     {block.times.map((item) => (
                                         <div key={item.id} className="flex flex-col gap-1">
-                                            <p className="text-sm">{item.fullTimestamp}</p>
+                                            <p className="min-w-0 text-sm"><MeetingStamp value={item.fullTimestamp} /></p>
                                             <p className="text-sm text-muted-foreground">{item.sourceLabel}</p>
                                             <Button type="button" variant="outline" className="h-11" onClick={() => viewTime(item)}>View time</Button>
                                         </div>
@@ -373,7 +426,7 @@ export function AdvisorAvailability({
                             if (!termId || !leaveHref) return;
                             const href = leaveHref;
                             flow.begin(() => setLeaveHref(null), { title: "Saving draft\u2026", description: "Saving your request\u2026" }, "Draft saved", async () => {
-                                const result = await actions.saveDraft(termId, editor);
+                                const result = await actions.saveDraft(termId, shownEditor);
                                 if (result.ok) go(href);
                                 return result;
                             });
@@ -409,9 +462,9 @@ export function AdvisorAvailability({
                         const original = slotInterval(exception.row, nowIso);
                         if (!original) return;
                         const config = {
-                            ...editor,
-                            suppressions: [...editor.suppressions, original],
-                            replacements: [...editor.replacements, { original, next }],
+                            ...shownEditor,
+                            suppressions: [...shownEditor.suppressions, original],
+                            replacements: [...shownEditor.replacements, { original, next }],
                         };
                         update(config);
                         save(termId, config, "Change saved in your draft");
@@ -419,8 +472,27 @@ export function AdvisorAvailability({
                     }}
                 />
             ) : null}
-            {windowOpen ? <OneOffDialog open title="Add a window of times" description="This adds times students can book now. Students will see every session that fits inside this window." withEnd nowIso={nowIso} duration={model.publishedDuration ?? 30} onClose={() => setWindowOpen(false)} onSave={(value) => actions.addWindow({ ...value, end: value.end ?? value.start, termId: termId ?? "" })} begin={flow.begin} /> : null}
-            {oneOpen ? <OneOffDialog open title="Add one time" description="This adds a time students can book now." nowIso={nowIso} duration={model.publishedDuration ?? 30} onClose={() => setOneOpen(false)} onSave={(value) => actions.addOne({ date: value.date, start: value.start, durationMinutes: value.durationMinutes, termId: termId ?? "" })} begin={flow.begin} /> : null}
+            {editingManual ? <ManualEditDialog row={editingManual} nowIso={nowIso} bounds={selectedTerm} onClose={() => setEditingManual(null)} onSave={(value) => actions.move(editingManual.id, value)} begin={flow.begin} /> : null}
+            <AlertDialog open={removingManual !== null} onOpenChange={(open) => { if (!open) setRemovingManual(null); }}>
+                <MeetingAlertContent>
+                    <MeetingHeader>
+                        <AlertDialogTitle className="text-lg font-semibold leading-tight">Remove these open times?</AlertDialogTitle>
+                        <AlertDialogDescription className="text-sm text-muted-foreground">
+                            Open times on {removingManual?.dateLabel} from {removingManual ? labelStart(removingManual.timeLabel) : ""} to {removingManual ? labelEnd(removingManual.timeLabel) : ""} will be removed. Booked sessions stay as they are.
+                        </AlertDialogDescription>
+                    </MeetingHeader>
+                    <MeetingFooter>
+                        <Button type="button" variant="outline" className={meetingButtonClass} autoFocus onClick={() => setRemovingManual(null)}>Keep times</Button>
+                        <Button type="button" variant="destructive" className={meetingButtonClass} onClick={() => {
+                            if (!removingManual) return;
+                            const row = removingManual;
+                            flow.begin(() => setRemovingManual(null), { title: "Removing open times\u2026", description: "Saving your request\u2026" }, "Open times removed", () => actions.remove(row.id));
+                        }}>Remove times</Button>
+                    </MeetingFooter>
+                </MeetingAlertContent>
+            </AlertDialog>
+            {windowOpen ? <OneOffDialog open title="Add a window of times" description="This adds times students can book now. Students will see every session that fits inside this window." withEnd nowIso={nowIso} duration={model.publishedDuration ?? 30} bounds={selectedTerm} onClose={() => setWindowOpen(false)} onSave={(value) => actions.addWindow({ ...value, end: value.end ?? value.start, termId: termId ?? "" })} begin={flow.begin} /> : null}
+            {oneOpen ? <OneOffDialog open title="Add one time" description="This adds a time students can book now." nowIso={nowIso} duration={model.publishedDuration ?? 30} bounds={selectedTerm} onClose={() => setOneOpen(false)} onSave={(value) => actions.addOne({ date: value.date, start: value.start, durationMinutes: value.durationMinutes, termId: termId ?? "" })} begin={flow.begin} /> : null}
         </section>
     );
 
@@ -428,7 +500,9 @@ export function AdvisorAvailability({
         if (!id) return;
         flow.begin(() => undefined, { title: "Saving draft\u2026", description: "Saving your request\u2026" }, toast, async () => {
             const result = await actions.saveDraft(id, config);
-            if (result.ok) setBaseline(config);
+            if (result.ok) {
+                setBaseline((current) => baselineAfterSave({ termId: termNow.current, editor: current, baseline: current, revision: seen }, id, config).baseline);
+            }
             return result;
         });
     }
@@ -437,7 +511,7 @@ export function AdvisorAvailability({
         if (!termId) return;
         const interval = slotInterval(row, nowIso);
         if (!interval) return;
-        const next = { ...editor, suppressions: [...editor.suppressions, interval] };
+        const next = { ...shownEditor, suppressions: [...shownEditor.suppressions, interval] };
         update(next);
         save(termId, next, "Removal saved in your draft");
     }
@@ -445,8 +519,8 @@ export function AdvisorAvailability({
     function pendingInEditor(row: AvailabilityRow) {
         const interval = slotInterval(row, nowIso);
         if (!interval) return false;
-        return editor.suppressions.some((item) => item.startsAt === interval.startsAt && item.endsAt === interval.endsAt)
-            || editor.replacements.some((item) => item.original.startsAt === interval.startsAt && item.original.endsAt === interval.endsAt);
+        return shownEditor.suppressions.some((item) => item.startsAt === interval.startsAt && item.endsAt === interval.endsAt)
+            || shownEditor.replacements.some((item) => item.original.startsAt === interval.startsAt && item.original.endsAt === interval.endsAt);
     }
 
     function viewTime(item: ReviewItem) {
@@ -476,7 +550,7 @@ function DetailList({ label, items }: { label: string; items: ScheduleReview["se
                 <>
                     <p className="text-sm tabular-nums text-muted-foreground">Showing {start}{"\u2013"}{end} of {items.length}</p>
                     {visible.map((item) => (
-                        <p key={item.id} className="text-sm">{item.fullTimestamp}. {item.sourceLabel}{item.studentName ? `. ${item.studentName}` : ""}{item.note ? ` ${item.note}` : ""}</p>
+                        <p key={item.id} className="min-w-0 text-sm"><MeetingStamp value={item.fullTimestamp} />. {item.sourceLabel}{item.studentName ? `. ${item.studentName}` : ""}{item.note ? ` ${item.note}` : ""}</p>
                     ))}
                     <div className="flex gap-2">
                         <Button type="button" variant="outline" className="h-11" disabled={page === 0} onClick={() => setPage((current) => current - 1)}>Previous</Button>
@@ -495,6 +569,7 @@ function OneOffDialog({
     withEnd = false,
     nowIso,
     duration,
+    bounds = null,
     onClose,
     onSave,
     begin,
@@ -505,6 +580,7 @@ function OneOffDialog({
     withEnd?: boolean;
     nowIso: string;
     duration: number;
+    bounds?: { startsOn: string | null; endsOn: string | null } | null;
     onClose: () => void;
     onSave: (value: { date: string; start: string; end?: string; durationMinutes: number }) => Promise<MeetingResult>;
     begin: ReturnType<typeof useMeetingAction>["begin"];
@@ -523,7 +599,7 @@ function OneOffDialog({
                 </MeetingFormHeader>
                 <div className="flex flex-col gap-4 px-6 pb-4">
                     {problem ? <DismissibleAlert stacked title={problem.title} description={problem.description} /> : null}
-                    <DateField id={`${title}-date`} label="Date" value={date || null} onChange={(value) => setDate(value ?? "")} />
+                    <DateField id={`${title}-date`} label="Date" value={date || null} bounds={bounds} focus={bounds?.startsOn ?? null} onChange={(value) => setDate(value ?? "")} />
                     <ClockField id={`${title}-start`} label="Start time" value={start} onChange={setStart} />
                     {withEnd ? <ClockField id={`${title}-end`} label="End time" value={end} onChange={setEnd} /> : null}
                     <Field>
@@ -608,6 +684,107 @@ function ChangeWhenPublishing({
     );
 }
 
+function ManualEditDialog({
+    row,
+    nowIso,
+    bounds,
+    onClose,
+    onSave,
+    begin,
+}: {
+    row: AvailabilityRow;
+    nowIso: string;
+    bounds: { startsOn: string | null; endsOn: string | null } | null;
+    onClose: () => void;
+    onSave: (value: { date: string; start: string }) => Promise<MeetingResult>;
+    begin: ReturnType<typeof useMeetingAction>["begin"];
+}) {
+    const [date, setDate] = useState(row.dateValue);
+    const [start, setStart] = useState(row.startValue);
+    const [problem, setProblem] = useState<{ title: string; description: string } | null>(null);
+    return (
+        <Dialog open onOpenChange={(next) => { if (!next) onClose(); }}>
+            <MeetingFormContent>
+                <MeetingFormHeader>
+                    <DialogTitle className="text-lg font-semibold leading-tight">Edit this time</DialogTitle>
+                    <DialogDescription className="text-sm text-muted-foreground">This keeps the session at {row.durationMinutes} minutes.</DialogDescription>
+                </MeetingFormHeader>
+                <div className="flex flex-col gap-4 px-6 pb-4">
+                    {problem ? <DismissibleAlert stacked title={problem.title} description={problem.description} /> : null}
+                    <DateField id="edit-manual-date" label="Date" value={date || null} bounds={bounds} focus={date || bounds?.startsOn || null} onChange={(value) => setDate(value ?? "")} />
+                    <ClockField id="edit-manual-start" label="Start time" value={start} onChange={setStart} />
+                    <p className="text-sm text-muted-foreground">Session length: {row.durationMinutes} minutes.</p>
+                </div>
+                <MeetingFormFooter>
+                    <Button type="button" variant="outline" className={meetingButtonClass} onClick={onClose}>Cancel</Button>
+                    <Button type="button" className={meetingButtonClass} onClick={() => {
+                        const built = buildSingleSlot({ date, start, durationMinutes: row.durationMinutes, now: new Date(nowIso) });
+                        if (!built.ok) {
+                            setProblem(issueCopy(built.issue, row.durationMinutes, formatClockValue(start)));
+                            return;
+                        }
+                        begin(onClose, { title: "Saving time\u2026", description: "Saving your request\u2026" }, "Time updated", () => onSave({ date, start }));
+                    }}>Save time</Button>
+                </MeetingFormFooter>
+            </MeetingFormContent>
+        </Dialog>
+    );
+}
+
+const dateUnit = /(?:Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday), [A-Za-z]+ \d{1,2}, \d{4}/g;
+
+function WrappedRange({ text, className }: { text: string; className?: string }) {
+    const pieces: { text: string; date: boolean }[] = [];
+    let cursor = 0;
+    for (const match of text.matchAll(dateUnit)) {
+        const index = match.index ?? 0;
+        if (index > cursor) pieces.push({ text: text.slice(cursor, index), date: false });
+        pieces.push({ text: match[0], date: true });
+        cursor = index + match[0].length;
+    }
+    if (cursor < text.length) pieces.push({ text: text.slice(cursor), date: false });
+    if (pieces.length === 0) pieces.push({ text, date: false });
+    return (
+        <p className={`min-w-0 wrap-break-word ${className ?? ""}`}>
+            {pieces.map((piece, index) => (
+                <span key={`${index}-${piece.text}`} className={piece.date ? "whitespace-nowrap" : undefined}>{piece.text}</span>
+            ))}
+        </p>
+    );
+}
+
+function nextWindow(windows: { start: string; end: string }[]) {
+    const spans = windows.flatMap((window) => {
+        const start = clockMinutes(window.start);
+        const end = clockMinutes(window.end);
+        return start === null || end === null ? [] : [{ start, end }];
+    });
+    for (let start = 9 * 60; start + 60 <= 21 * 60; start += 60) {
+        if (spans.every((span) => start >= span.end || start + 60 <= span.start)) {
+            return { start: minutesToClock(start), end: minutesToClock(start + 60) };
+        }
+    }
+    return { start: "09:00", end: "10:00" };
+}
+
+function clockMinutes(value: string) {
+    const [hour, minute] = value.split(":").map(Number);
+    if (hour === undefined || minute === undefined || Number.isNaN(hour) || Number.isNaN(minute)) return null;
+    return hour * 60 + minute;
+}
+
+function minutesToClock(total: number) {
+    return clockValue(Math.floor(total / 60) % 24, ((total % 60) + 60) % 60);
+}
+
+function labelStart(timeLabel: string) {
+    return timeLabel.split("\u2013")[0]?.trim() ?? timeLabel;
+}
+
+function labelEnd(timeLabel: string) {
+    return timeLabel.split("\u2013")[1]?.replace(/\s+[A-Z]{2,5}$/, "").trim() ?? "";
+}
+
 function generated(row: AvailabilityRow) {
     return row.sourceLabel === "Weekly hours" || row.sourceLabel === "Changed time";
 }
@@ -636,17 +813,31 @@ function clockSpan(start: string, end: string) {
     return ((endHour ?? 0) * 60 + (endMinute ?? 0)) - ((startHour ?? 0) * 60 + (startMinute ?? 0));
 }
 
-function DateField({ id, label, value, disabled, onChange }: { id: string; label: string; value: string | null; disabled?: boolean; onChange: (value: string | null) => void }) {
+function DateField({ id, label, value, disabled, bounds, focus, onChange }: { id: string; label: string; value: string | null; disabled?: boolean; bounds?: { startsOn: string | null; endsOn: string | null } | null; focus?: string | null; onChange: (value: string | null) => void }) {
     const [open, setOpen] = useState(false);
+    const focusValue = value || focus || bounds?.startsOn || null;
+    const start = bounds?.startsOn ? dateFromValue(bounds.startsOn) : undefined;
+    const end = bounds?.endsOn ? dateFromValue(bounds.endsOn) : undefined;
     return (
-        <Field>
+        <Field className="min-w-0">
             <FieldLabel htmlFor={id}>{label}</FieldLabel>
             <Popover open={open} onOpenChange={setOpen}>
-                <PopoverTrigger render={<Button type="button" id={id} variant="outline" className="h-11 justify-start" disabled={disabled} />}>
-                    {value ? civilDateLabel(value) : "Choose a date"}
+                <PopoverTrigger render={<Button type="button" id={id} variant="outline" className="h-11 w-full min-w-0 justify-start" disabled={disabled} />}>
+                    <span className="truncate">{value ? civilDateLabel(value) : "Choose a date"}</span>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0">
-                    <Calendar mode="single" selected={value ? dateFromValue(value) : undefined} onSelect={(day) => { if (day) { onChange(dateValue(day)); setOpen(false); } }} />
+                    <Calendar
+                        mode="single"
+                        selected={value ? dateFromValue(value) : undefined}
+                        defaultMonth={focusValue ? dateFromValue(focusValue) : undefined}
+                        startMonth={start}
+                        endMonth={end}
+                        disabled={bounds?.startsOn && bounds.endsOn ? (day: Date) => {
+                            const chosen = dateValue(day);
+                            return chosen < (bounds.startsOn ?? chosen) || chosen > (bounds.endsOn ?? chosen);
+                        } : undefined}
+                        onSelect={(day) => { if (day) { onChange(dateValue(day)); setOpen(false); } }}
+                    />
                 </PopoverContent>
             </Popover>
         </Field>
@@ -695,7 +886,6 @@ export function appointmentsHref(search: string, changes: Record<string, string 
         if (value === null) params.delete(key);
         else params.set(key, value);
     }
-    if (!params.get("view") && [...params.keys()].length > 0) params.set("view", "sessions");
     if (params.get("view") === "sessions" && [...params.keys()].every((key) => key === "view")) params.delete("view");
     const text = params.toString();
     return text ? `/advisor/appointments?${text}` : "/advisor/appointments";

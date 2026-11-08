@@ -1,6 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { appointmentsHref } from "../components/advising/advisor-availability";
 import {
+    adoptTermEditor,
+    baselineAfterSave,
     buildReview,
     coversExactInterval,
     emptySchedule,
@@ -31,6 +34,7 @@ function slot(partial: Partial<LiveSlot> & Pick<LiveSlot, "id" | "startsAt" | "e
         termId: "fall",
         termLabel: "Fall 2026",
         studentName: null,
+        studentId: null,
         sessionId: null,
         ...partial,
     };
@@ -205,6 +209,177 @@ test("released coverage requires the exact published interval", () => {
     config.unavailableDates = [];
     config.suppressions = [{ startsAt: start.toISOString(), endsAt: end.toISOString() }];
     assert.equal(coversExactInterval(config, start, end, now), false);
+});
+
+test("a destination semester replaces a dirty editor, and a late save cannot rewrite it", () => {
+    const springEditor = mondayHours(spring, "08:00", "12:00");
+    springEditor.weekdays[2] = { unavailable: false, windows: [{ start: "14:00", end: "17:00" }] };
+    springEditor.unavailableDates = ["2027-02-16"];
+    const fallPublished = mondayHours(fall);
+    const holdingSpring = {
+        termId: "spring",
+        editor: springEditor,
+        baseline: mondayHours(spring),
+        revision: "spring:1:draft",
+    };
+    const switched = adoptTermEditor(holdingSpring, { selectedTermId: "fall", config: fallPublished, revision: "fall:3:none" });
+    assert.equal(switched.termId, "fall");
+    assert.equal(switched.editor.firstDay, fall.startsOn);
+    assert.equal(switched.editor.weekdays[2]?.unavailable, true);
+    assert.deepEqual(switched.editor.unavailableDates, []);
+    assert.equal(switched.baseline, switched.editor);
+    const late = baselineAfterSave(switched, "spring", springEditor);
+    assert.equal(late.baseline.firstDay, fall.startsOn);
+    const dirtySameTerm = adoptTermEditor(holdingSpring, { selectedTermId: "spring", config: fallPublished, revision: "spring:2:draft" });
+    assert.equal(dirtySameTerm.editor, springEditor);
+});
+
+test("one booked session and one unavailable date are singular, and a booked-only date does not block", () => {
+    const config = mondayHours(fall);
+    config.firstDay = "2026-11-16";
+    config.lastDay = "2026-11-16";
+    config.unavailableDates = ["2026-11-16"];
+    const start = easternInstant(2026, 11, 16, 14, 0);
+    assert.ok(start);
+    const review = buildReview({
+        config,
+        term: fall,
+        hasPublished: true,
+        publishedVersion: 2,
+        slots: [slot({
+            id: "booked-only",
+            startsAt: start,
+            endsAt: new Date(start.getTime() + 30 * 60 * 1000),
+            status: "BOOKED",
+            sessionId: "session-a",
+            studentId: "student-a",
+            studentName: "Avery Cole",
+        })],
+        otherBlocks: [],
+        now,
+    });
+    assert.equal(review.ok, true);
+    if (!review.ok) return;
+    assert.equal(review.review.blocking.length, 0);
+    assert.match(review.review.lines.join("\n"), /1 date will be unavailable/);
+    assert.match(review.review.lines.join("\n"), /1 booked session stays as it is/);
+    assert.equal(review.review.sections.find((section) => section.key === "dates")?.expandLabel, "Show 1 unavailable date");
+    assert.equal(review.review.sections.find((section) => section.key === "bookings")?.expandLabel, "Show 1 booked session that stays");
+});
+
+test("crossing the 15-minute lead changes the reviewed set and token without hashing the clock", () => {
+    const config = mondayHours(fall, "14:00", "14:30");
+    config.firstDay = "2026-11-09";
+    config.lastDay = "2026-11-09";
+    const included = buildReview({ config, term: fall, hasPublished: false, publishedVersion: 0, slots: [], otherBlocks: [], now: new Date("2026-11-09T18:44:00.000Z") });
+    const skipped = buildReview({ config, term: fall, hasPublished: false, publishedVersion: 0, slots: [], otherBlocks: [], now: new Date("2026-11-09T18:46:00.000Z") });
+    assert.equal(included.ok && skipped.ok, true);
+    if (!included.ok || !skipped.ok) return;
+    assert.equal(included.review.plan.adds.length, 1);
+    assert.equal(skipped.review.plan.adds.length, 0);
+    assert.notEqual(included.review.token, skipped.review.token);
+    const again = buildReview({ config, term: fall, hasPublished: false, publishedVersion: 0, slots: [], otherBlocks: [], now: new Date("2026-11-09T18:44:30.000Z") });
+    if (!again.ok) return;
+    assert.equal(again.review.token, included.review.token);
+});
+
+test("a rebooked session changes the token while the slot id and status stay booked", () => {
+    const config = mondayHours(fall);
+    config.firstDay = "2026-11-16";
+    config.lastDay = "2026-11-16";
+    const start = easternInstant(2026, 11, 16, 14, 0);
+    assert.ok(start);
+    const shared = { id: "slot", startsAt: start, endsAt: new Date(start.getTime() + 30 * 60 * 1000), status: "BOOKED" as const };
+    const first = buildReview({
+        config, term: fall, hasPublished: true, publishedVersion: 1, otherBlocks: [], now,
+        slots: [slot({ ...shared, sessionId: "session-a", studentId: "student-a", studentName: "Avery Cole" })],
+    });
+    const second = buildReview({
+        config, term: fall, hasPublished: true, publishedVersion: 1, otherBlocks: [], now,
+        slots: [slot({ ...shared, sessionId: "session-b", studentId: "student-b", studentName: "Blair Diaz" })],
+    });
+    assert.equal(first.ok && second.ok, true);
+    if (!first.ok || !second.ok) return;
+    assert.notEqual(first.review.token, second.review.token);
+});
+
+test("an expired override does not block a later weekly interval, and a booked override can be republished", () => {
+    const config = mondayHours(fall);
+    config.firstDay = "2026-11-09";
+    config.lastDay = "2026-11-16";
+    const past = easternInstant(2026, 11, 9, 14, 0);
+    const future = easternInstant(2026, 11, 16, 14, 0);
+    assert.ok(past && future);
+    config.replacements = [{
+        original: { startsAt: past.toISOString(), endsAt: new Date(past.getTime() + 30 * 60 * 1000).toISOString() },
+        next: { startsAt: past.toISOString(), endsAt: new Date(past.getTime() + 30 * 60 * 1000).toISOString() },
+    }];
+    const later = new Date("2026-11-10T15:00:00.000Z");
+    assert.equal(coversExactInterval(config, future, new Date(future.getTime() + 30 * 60 * 1000), later), true);
+    const bookedStart = easternInstant(2026, 11, 16, 15, 0);
+    assert.ok(bookedStart);
+    const republish = mondayHours(fall);
+    republish.firstDay = "2026-11-16";
+    republish.lastDay = "2026-11-16";
+    republish.replacements = [{
+        original: { startsAt: future.toISOString(), endsAt: new Date(future.getTime() + 30 * 60 * 1000).toISOString() },
+        next: { startsAt: bookedStart.toISOString(), endsAt: new Date(bookedStart.getTime() + 30 * 60 * 1000).toISOString() },
+    }];
+    const review = buildReview({
+        config: republish,
+        term: fall,
+        hasPublished: true,
+        publishedVersion: 4,
+        slots: [slot({
+            id: "override",
+            startsAt: bookedStart,
+            endsAt: new Date(bookedStart.getTime() + 30 * 60 * 1000),
+            source: "TERM_OVERRIDE",
+            status: "BOOKED",
+            sessionId: "session-kept",
+            studentId: "student-a",
+            studentName: "Avery Cole",
+        })],
+        otherBlocks: [],
+        now,
+    });
+    assert.equal(review.ok, true);
+    if (!review.ok) return;
+    assert.equal(review.review.plan.adds.some((item) => item.startsAt === bookedStart.toISOString()), false);
+    assert.equal(review.review.plan.removeIds.includes("override"), false);
+});
+
+test("a new replacement must use an exact allowed grid interval inside the semester", () => {
+    const config = mondayHours(fall);
+    config.firstDay = "2026-11-16";
+    config.lastDay = "2026-11-16";
+    const start = easternInstant(2026, 11, 16, 14, 7);
+    const aligned = easternInstant(2026, 11, 16, 14, 0);
+    assert.ok(start && aligned);
+    config.replacements = [{
+        original: { startsAt: aligned.toISOString(), endsAt: new Date(aligned.getTime() + 30 * 60 * 1000).toISOString() },
+        next: { startsAt: start.toISOString(), endsAt: new Date(start.getTime() + 30 * 60 * 1000).toISOString() },
+    }];
+    const offGrid = buildReview({ config, term: fall, hasPublished: true, publishedVersion: 1, slots: [], otherBlocks: [], now });
+    assert.equal(offGrid.ok, false);
+    const outside = easternInstant(2027, 1, 12, 14, 0);
+    assert.ok(outside);
+    config.replacements[0]!.next = { startsAt: outside.toISOString(), endsAt: new Date(outside.getTime() + 30 * 60 * 1000).toISOString() };
+    const wrongTerm = buildReview({ config, term: fall, hasPublished: true, publishedVersion: 1, slots: [], otherBlocks: [], now });
+    assert.equal(wrongTerm.ok, false);
+    if (wrongTerm.ok) return;
+    assert.equal(wrongTerm.title, "Those days are outside this semester");
+});
+
+test("appointment links keep unrelated query keys", () => {
+    assert.equal(
+        appointmentsHref("view=availability&term=spring&session=abc&ref=1", { view: null }),
+        "/advisor/appointments?term=spring&session=abc&ref=1",
+    );
+    assert.equal(
+        appointmentsHref("view=availability&term=spring&ref=1", { term: "fall" }),
+        "/advisor/appointments?view=availability&term=fall&ref=1",
+    );
 });
 
 test("an unfinished weekday is allowed to parse and is rejected only for publish", () => {

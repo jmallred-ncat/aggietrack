@@ -5,19 +5,22 @@ import { DialogContent, DialogFooter, DialogHeader } from "@/components/ui/dialo
 import { cn } from "@/lib/utils";
 import type { ComponentProps, ReactNode } from "react";
 
-export const meetingDialogClassName = "@container not-typeset w-full max-w-[calc(100%-2rem)] gap-0 overflow-hidden p-0 sm:max-w-md";
+export const meetingDialogClassName = "@container not-typeset w-full max-w-[calc(100%-2rem)] gap-0 overflow-hidden bg-background! p-0 text-foreground shadow-lg sm:max-w-md";
 
-// Same z-50 as the shared dialog, select, and calendar popover. A higher popup
-// paints over those portaled menus. This overlay only drops the shared blur,
-// which composites scrolled page text through the card, and uses an opaque scrim.
-export const advisingOverlayClassName = "fixed inset-0 isolate z-50 bg-black/40 duration-100 data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0";
+// Local to advising dialogs. The shared popup and footer use a translucent
+// popover and muted wash, which lets the page show through a narrow review.
+// This scrim has no backdrop blur, and the panel and footer paint solid colors.
+export const advisingOverlayClassName = "fixed inset-0 isolate z-50 bg-black/70 duration-100 data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0";
 
-export function MeetingAlertContent({ className, ...props }: ComponentProps<typeof AlertDialogContent>) {
-    return <AlertDialogContent overlayClassName={advisingOverlayClassName} className={cn(meetingDialogClassName, className)} {...props} />;
+const opaquePanel = { backgroundColor: "var(--background)", animation: "none" } as const;
+const opaqueFooter = { backgroundColor: "var(--muted)" } as const;
+
+export function MeetingAlertContent({ className, style, ...props }: ComponentProps<typeof AlertDialogContent>) {
+    return <AlertDialogContent overlayClassName={advisingOverlayClassName} className={cn(meetingDialogClassName, className)} style={{ ...opaquePanel, ...style }} {...props} />;
 }
 
-export function MeetingFormContent({ className, ...props }: ComponentProps<typeof DialogContent>) {
-    return <DialogContent showCloseButton={false} overlayClassName={advisingOverlayClassName} className={cn(meetingDialogClassName, className)} {...props} />;
+export function MeetingFormContent({ className, style, ...props }: ComponentProps<typeof DialogContent>) {
+    return <DialogContent showCloseButton={false} overlayClassName={advisingOverlayClassName} className={cn(meetingDialogClassName, className)} style={{ ...opaquePanel, ...style }} {...props} />;
 }
 
 export function MeetingHeader({ children }: { children: ReactNode }) {
@@ -38,7 +41,7 @@ export function MeetingFormHeader({ children }: { children: ReactNode }) {
 
 export function MeetingFooter({ children }: { children: ReactNode }) {
     return (
-        <AlertDialogFooter className="mx-0 mb-0 block rounded-b-xl border-t bg-muted p-0 sm:flex-col">
+        <AlertDialogFooter className="mx-0 mb-0 block rounded-b-xl border-t bg-muted! p-0 sm:flex-col" style={opaqueFooter}>
             <div className="flex flex-col gap-2 px-6 py-4 @min-[23rem]:flex-row @min-[23rem]:justify-end">
                 {children}
             </div>
@@ -48,7 +51,7 @@ export function MeetingFooter({ children }: { children: ReactNode }) {
 
 export function MeetingFormFooter({ children }: { children: ReactNode }) {
     return (
-        <DialogFooter className="mx-0 mb-0 block rounded-b-xl border-t bg-muted p-0 sm:flex-col">
+        <DialogFooter className="mx-0 mb-0 block rounded-b-xl border-t bg-muted! p-0 sm:flex-col" style={opaqueFooter}>
             <div className="flex flex-col gap-2 px-6 py-4 @min-[23rem]:flex-row @min-[23rem]:justify-end">
                 {children}
             </div>

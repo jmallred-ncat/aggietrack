@@ -33,16 +33,20 @@ async function load(userId: string, termId?: string): Promise<{ failed: boolean;
 export default async function AppointmentsPage({
     searchParams,
 }: {
-    searchParams: Promise<{ view?: string; session?: string; term?: string }>;
+    searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
     const user = await getSessionUser();
     const query = await searchParams;
-    const mode = query.view === "availability" ? "availability" : "sessions";
+    const view = typeof query.view === "string" ? query.view : undefined;
+    const session = typeof query.session === "string" ? query.session : undefined;
+    const term = typeof query.term === "string" ? query.term : undefined;
+    const mode = view === "availability" ? "availability" : "sessions";
     const search = new URLSearchParams();
-    if (query.view) search.set("view", query.view);
-    if (query.session) search.set("session", query.session);
-    if (query.term) search.set("term", query.term);
-    const result = await load(user.id, query.term);
+    for (const [key, value] of Object.entries(query)) {
+        if (typeof value === "string") search.set(key, value);
+        else if (Array.isArray(value)) for (const item of value) search.append(key, item);
+    }
+    const result = await load(user.id, term);
     if (result.failed) {
         return (
             <div className="not-typeset flex flex-col gap-6 py-6">
@@ -71,7 +75,7 @@ export default async function AppointmentsPage({
             nowIso={new Date().toISOString()}
             mode={mode}
             search={search.toString()}
-            sessionId={query.session}
+            sessionId={session ?? ""}
             actions={{
                 saveDuration: saveDurationAction,
                 addWindow: addAvailabilityAction,
@@ -91,6 +95,8 @@ export default async function AppointmentsPage({
                 publish: publishTermAction,
                 addWindow: addAvailabilityAction,
                 addOne: addAvailabilityAction,
+                move: moveOpenSlotAction,
+                remove: removeOpenSlotAction,
             }}
         />
     );

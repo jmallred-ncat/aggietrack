@@ -65,6 +65,7 @@ export type AvailabilityRow = {
     canChange: boolean;
     pendingLabel?: string | null;
     sourceLabel?: string;
+    inventory?: "this" | "manual" | "other";
 };
 
 export type StudentAdvisingView = {

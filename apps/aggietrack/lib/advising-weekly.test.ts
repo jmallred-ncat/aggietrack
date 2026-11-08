@@ -4,7 +4,7 @@ import { after, before, test } from "node:test";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "./generated/prisma/client";
 import { STUDENT_HORIZON_MS } from "./advising-time";
-import { addAvailability, bookSlot, cancelSession, loadStudentAdvising } from "./advising-meetings";
+import { addAvailability, bookSlot, cancelSession, loadStudentAdvising, moveOpenSlot } from "./advising-meetings";
 import { discardTermDraft, publishTerm, reviewTerm, saveTermDraft } from "./advising-publish";
 import { emptySchedule, type ScheduleConfig } from "./advising-schedule";
 import { migrateDatabaseName, migrateEnvForScratch, openAdvisingTestClient, resolveAdvisingTestTarget } from "./advising-test-target";
@@ -307,6 +307,178 @@ test("a one-off uses the requested length, and cancel reopens only a still-cover
         assert.equal(released.ok, true, JSON.stringify(released));
         assert.equal(await client().meetingAvailability.findUnique({ where: { id: slot.id } }), null);
         assert.ok(await client().meetingAvailability.findFirst({ where: { advisorId: people.advisor.id, source: "MANUAL" } }));
+    } finally {
+        await cleanup(people);
+    }
+});
+
+test("moving a manual time onto a published unavailable date is rejected", async (t) => {
+    if (skip(t)) return;
+    const people = await fixture();
+    try {
+        const config = monday({ startsOn: "2026-08-19", endsOn: "2026-12-11" });
+        config.unavailableDates = ["2026-11-20"];
+        const review = await reviewTerm(client(), people.advisor.id, people.fall.id, config, now);
+        if (review.ok || !review.review) assert.fail(JSON.stringify(review));
+        assert.equal((await publishTerm(client(), people.advisor.id, people.fall.id, review.review.token, now)).ok, true);
+        const single = await addAvailability(client(), people.advisor.id, { date: "2026-11-18", start: "14:00", durationMinutes: 30, termId: people.fall.id }, now);
+        assert.equal(single.ok, true, JSON.stringify(single));
+        const manual = await client().meetingAvailability.findFirst({ where: { advisorId: people.advisor.id, source: "MANUAL" } });
+        assert.ok(manual);
+        const moved = await moveOpenSlot(client(), people.advisor.id, manual.id, { date: "2026-11-20", start: "14:00" }, now);
+        assert.equal(moved.ok, false);
+        if (!moved.ok) assert.equal(moved.title, "That date is marked unavailable");
+        assert.equal((await client().meetingAvailability.findUnique({ where: { id: manual.id } }))?.startsAt.toISOString(), manual.startsAt.toISOString());
+        const windowed = await addAvailability(client(), people.advisor.id, { date: "2026-11-18", start: "15:00", end: "16:00", durationMinutes: 30, termId: people.fall.id }, now);
+        assert.equal(windowed.ok, true, JSON.stringify(windowed));
+        const fromWindow = await client().meetingAvailability.findFirst({ where: { advisorId: people.advisor.id, source: "MANUAL_WINDOW" } });
+        assert.ok(fromWindow);
+        const movedWindow = await moveOpenSlot(client(), people.advisor.id, fromWindow.id, { date: "2026-11-20", start: "15:00" }, now);
+        assert.equal(movedWindow.ok, false);
+        if (!movedWindow.ok) assert.equal(movedWindow.title, "That date is marked unavailable");
+        assert.equal((await client().meetingAvailability.findUnique({ where: { id: fromWindow.id } }))?.startsAt.toISOString(), fromWindow.startsAt.toISOString());
+        assert.equal((await loadStudentAdvising(client(), people.studentUser.id, now))?.slots.some((slot) => slot.dateHeading.includes("November 20")), false);
+    } finally {
+        await cleanup(people);
+    }
+});
+
+test("publish after the lead time changes requires the updated review and writes nothing first", async (t) => {
+    if (skip(t)) return;
+    const people = await fixture();
+    try {
+        const config = monday({ startsOn: "2026-08-19", endsOn: "2026-12-11" }, "14:00", "14:30");
+        config.firstDay = "2026-11-09";
+        config.lastDay = "2026-11-09";
+        const early = new Date("2026-11-09T18:44:00.000Z");
+        const late = new Date("2026-11-09T18:46:00.000Z");
+        const review = await reviewTerm(client(), people.advisor.id, people.fall.id, config, early);
+        if (review.ok || !review.review) assert.fail(JSON.stringify(review));
+        assert.equal(review.review.plan.adds.length, 1);
+        const stale = await publishTerm(client(), people.advisor.id, people.fall.id, review.review.token, late);
+        assert.equal(stale.ok, false);
+        if (stale.ok) return;
+        assert.equal(stale.code, "stale");
+        assert.equal(await client().meetingAvailability.count({ where: { advisorId: people.advisor.id } }), 0);
+        assert.ok(stale.review);
+        assert.notEqual(stale.review.token, review.review.token);
+        assert.equal(stale.review.plan.adds.length, 0);
+        assert.equal((await publishTerm(client(), people.advisor.id, people.fall.id, stale.review.token, late)).ok, true);
+        assert.equal(await client().meetingAvailability.count({ where: { advisorId: people.advisor.id, source: "TERM_PATTERN" } }), 0);
+    } finally {
+        await cleanup(people);
+    }
+});
+
+test("cancel and rebook of the same slot makes the old review stale", async (t) => {
+    if (skip(t)) return;
+    const people = await fixture();
+    const otherUser = await client().user.create({ data: { id: randomUUID(), name: "Blair Diaz", email: `blair-${people.suffix}@example.test`, firstName: "Blair", lastName: "Diaz", role: "STUDENT", emailVerified: true } });
+    const otherStudent = await client().studentProfile.create({ data: { userId: otherUser.id, catalogYearId: people.catalog.id, advisorId: people.advisor.id, startConfirmedAt: now } });
+    try {
+        const config = monday({ startsOn: "2026-08-19", endsOn: "2026-12-11" });
+        config.firstDay = "2026-11-09";
+        config.lastDay = "2026-11-09";
+        const published = await reviewTerm(client(), people.advisor.id, people.fall.id, config, now);
+        if (published.ok || !published.review) assert.fail(JSON.stringify(published));
+        assert.equal((await publishTerm(client(), people.advisor.id, people.fall.id, published.review.token, now)).ok, true);
+        const slot = await client().meetingAvailability.findFirst({ where: { advisorId: people.advisor.id, status: "OPEN" }, orderBy: { startsAt: "asc" } });
+        assert.ok(slot);
+        const first = await bookSlot(client(), people.studentUser.id, slot.id, null, now);
+        assert.equal(first.ok, true);
+        const narrowed = { ...config, lastDay: "2026-11-09", weekdays: config.weekdays.map((day, index) => index === 1 ? { unavailable: true, windows: [] } : day) };
+        const review = await reviewTerm(client(), people.advisor.id, people.fall.id, narrowed, now);
+        if (review.ok || !review.review) assert.fail(JSON.stringify(review));
+        assert.equal((await cancelSession(client(), people.studentUser.id, first.ok ? first.sessionId ?? "" : "", null, now)).ok, true);
+        const again = await bookSlot(client(), otherUser.id, slot.id, null, now);
+        assert.equal(again.ok, true, JSON.stringify(again));
+        const stale = await publishTerm(client(), people.advisor.id, people.fall.id, review.review.token, now);
+        assert.equal(stale.ok, false);
+        if (stale.ok) return;
+        assert.equal(stale.code, "stale");
+        const session = await client().meetingSession.findFirst({ where: { availabilityId: slot.id, status: "CONFIRMED" } });
+        assert.equal(session?.studentId, otherStudent.id);
+        assert.equal((await client().meetingAvailability.findUnique({ where: { id: slot.id } }))?.status, "BOOKED");
+    } finally {
+        await client().meetingSession.deleteMany({ where: { studentId: otherStudent.id } });
+        await client().studentProfile.delete({ where: { id: otherStudent.id } });
+        await client().user.delete({ where: { id: otherUser.id } });
+        await cleanup(people);
+    }
+});
+
+test("a booked published override and an expired override do not block a later publish", async (t) => {
+    if (skip(t)) return;
+    const people = await fixture();
+    try {
+        const config = monday({ startsOn: "2026-08-19", endsOn: "2026-12-11" }, "14:00", "14:30");
+        config.firstDay = "2026-11-16";
+        config.lastDay = "2026-11-16";
+        const first = await reviewTerm(client(), people.advisor.id, people.fall.id, config, now);
+        if (first.ok || !first.review) assert.fail(JSON.stringify(first));
+        assert.equal((await publishTerm(client(), people.advisor.id, people.fall.id, first.review.token, now)).ok, true);
+        const original = await client().meetingAvailability.findFirst({ where: { advisorId: people.advisor.id, source: "TERM_PATTERN" } });
+        assert.ok(original);
+        const nextStart = new Date(original.startsAt.getTime() + 60 * 60 * 1000);
+        const nextEnd = new Date(original.endsAt.getTime() + 60 * 60 * 1000);
+        const replaced = {
+            ...config,
+            replacements: [{ original: { startsAt: original.startsAt.toISOString(), endsAt: original.endsAt.toISOString() }, next: { startsAt: nextStart.toISOString(), endsAt: nextEnd.toISOString() } }],
+            suppressions: [{ startsAt: original.startsAt.toISOString(), endsAt: original.endsAt.toISOString() }],
+        };
+        const overrideReview = await reviewTerm(client(), people.advisor.id, people.fall.id, replaced, now);
+        if (overrideReview.ok || !overrideReview.review) assert.fail(JSON.stringify(overrideReview));
+        assert.equal((await publishTerm(client(), people.advisor.id, people.fall.id, overrideReview.review.token, now)).ok, true, JSON.stringify(overrideReview));
+        const override = await client().meetingAvailability.findFirst({ where: { advisorId: people.advisor.id, source: "TERM_OVERRIDE", status: "OPEN" } });
+        assert.ok(override);
+        const booked = await bookSlot(client(), people.studentUser.id, override.id, null, now);
+        assert.equal(booked.ok, true, JSON.stringify(booked));
+        const again = await reviewTerm(client(), people.advisor.id, people.fall.id, replaced, now);
+        if (again.ok || !again.review) assert.fail(JSON.stringify(again));
+        assert.equal((await publishTerm(client(), people.advisor.id, people.fall.id, again.review.token, now)).ok, true, JSON.stringify(again));
+        assert.equal((await client().meetingAvailability.findUnique({ where: { id: override.id } }))?.status, "BOOKED");
+        const expiredNow = new Date(override.endsAt.getTime() + 60 * 60 * 1000);
+        const future = monday({ startsOn: "2026-08-19", endsOn: "2026-12-11" }, "14:00", "14:30");
+        future.firstDay = "2026-11-23";
+        future.lastDay = "2026-11-23";
+        future.replacements = replaced.replacements;
+        future.suppressions = replaced.suppressions;
+        const later = await reviewTerm(client(), people.advisor.id, people.fall.id, future, expiredNow);
+        if (later.ok || !later.review) assert.fail(JSON.stringify(later));
+        assert.equal((await publishTerm(client(), people.advisor.id, people.fall.id, later.review.token, expiredNow)).ok, true, JSON.stringify(later));
+        assert.equal((await client().meetingSession.findFirst({ where: { id: booked.ok ? booked.sessionId ?? "" : "" } }))?.status, "CONFIRMED");
+    } finally {
+        await cleanup(people);
+    }
+});
+
+test("a student and another advisor cannot write this advisor's schedule", async (t) => {
+    if (skip(t)) return;
+    const people = await fixture();
+    try {
+        const config = monday({ startsOn: "2026-08-19", endsOn: "2026-12-11" });
+        config.firstDay = "2026-11-09";
+        config.lastDay = "2026-11-09";
+        const review = await reviewTerm(client(), people.advisor.id, people.fall.id, config, now);
+        if (review.ok || !review.review) assert.fail(JSON.stringify(review));
+        assert.equal((await publishTerm(client(), people.advisor.id, people.fall.id, review.review.token, now)).ok, true);
+        const studentSave = await saveTermDraft(client(), people.studentUser.id, people.fall.id, config);
+        assert.equal(studentSave.ok, false);
+        const studentReview = await reviewTerm(client(), people.studentUser.id, people.fall.id, config, now);
+        assert.equal(studentReview.ok, false);
+        const studentPublish = await publishTerm(client(), people.studentUser.id, people.fall.id, review.review.token, now);
+        assert.equal(studentPublish.ok, false);
+        const before = await client().advisorTermSchedule.count({ where: { advisorId: people.advisor.id } });
+        const otherReview = await reviewTerm(client(), people.otherAdvisor.id, people.fall.id, config, now);
+        if (otherReview.ok || !otherReview.review) assert.fail(JSON.stringify(otherReview));
+        assert.equal((await publishTerm(client(), people.otherAdvisor.id, people.fall.id, otherReview.review.token, now)).ok, true);
+        assert.equal(await client().advisorTermSchedule.count({ where: { advisorId: people.advisor.id } }), before);
+        assert.equal(await client().meetingAvailability.count({ where: { advisorId: people.advisor.id, termId: people.fall.id } }) > 0, true);
+        const slot = await client().meetingAvailability.findFirst({ where: { advisorId: people.advisor.id, status: "OPEN" } });
+        assert.ok(slot);
+        const moved = await moveOpenSlot(client(), people.otherAdvisor.id, slot.id, { date: "2026-11-18", start: "14:00" }, now);
+        assert.equal(moved.ok, false);
+        assert.equal((await client().meetingAvailability.findUnique({ where: { id: slot.id } }))?.startsAt.toISOString(), slot.startsAt.toISOString());
     } finally {
         await cleanup(people);
     }

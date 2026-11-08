@@ -51,6 +51,7 @@ export type LiveSlot = {
     termId: string | null;
     termLabel: string | null;
     studentName: string | null;
+    studentId: string | null;
     sessionId: string | null;
 };
 
@@ -136,6 +137,38 @@ export function canonicalSchedule(config: ScheduleConfig): ScheduleConfig {
 
 export function schedulesEqual(left: ScheduleConfig, right: ScheduleConfig) {
     return stable(canonicalSchedule(left)) === stable(canonicalSchedule(right));
+}
+
+export type TermEditorState = {
+    termId: string | null;
+    editor: ScheduleConfig;
+    baseline: ScheduleConfig;
+    revision: string;
+};
+
+/** The server-selected semester replaces the whole editor. A dirty editor only sticks while that semester is still selected. */
+export function adoptTermEditor(
+    state: TermEditorState,
+    model: { selectedTermId: string | null; config: ScheduleConfig; revision: string },
+): TermEditorState {
+    if (model.selectedTermId !== state.termId) {
+        return {
+            termId: model.selectedTermId,
+            editor: model.config,
+            baseline: model.config,
+            revision: model.revision,
+        };
+    }
+    if (model.revision !== state.revision && schedulesEqual(state.editor, state.baseline)) {
+        return { ...state, editor: model.config, baseline: model.config, revision: model.revision };
+    }
+    return state;
+}
+
+/** A save that finishes after the advisor has switched semesters must not rewrite the destination baseline. */
+export function baselineAfterSave(state: TermEditorState, savedTermId: string, config: ScheduleConfig): TermEditorState {
+    if (state.termId !== savedTermId) return state;
+    return { ...state, baseline: config };
 }
 
 export function parseScheduleConfig(value: unknown): ScheduleConfig | null {
@@ -321,7 +354,7 @@ export function explainWindow(input: { date: string; start: string; end: string;
 }
 
 export function coversExactInterval(config: ScheduleConfig, startsAt: Date, endsAt: Date, now: Date) {
-    const plan = collectDesired(config, [], [], now, "term");
+    const plan = collectDesired(config, [], [], now, "term", null, "skip-historical");
     if (!plan.ok) return false;
     return plan.desired.some((item) => item.startsAt.getTime() === startsAt.getTime() && item.endsAt.getTime() === endsAt.getTime());
 }
@@ -338,7 +371,7 @@ export function buildReview(input: {
     const valid = validatePublish(input.config, input.term, input.hasPublished, input.now);
     if (!valid.ok) return valid;
     const config = valid.config;
-    const plan = collectDesired(config, input.slots, input.otherBlocks, input.now, input.term.id);
+    const plan = collectDesired(config, input.slots, input.otherBlocks, input.now, input.term.id, input.term);
     if (!plan.ok) return plan;
     const owned = input.slots.filter((slot) => slot.termId === input.term.id && (slot.source === "TERM_PATTERN" || slot.source === "TERM_OVERRIDE"));
     const used = new Set<string>();
@@ -409,18 +442,18 @@ export function buildReview(input: {
     if (!input.hasPublished || adds.length > 0) lines.push(`This adds ${adds.length} open times.`);
     if (removes.length > 0) lines.push(`This removes ${removes.length} open times.`);
     if (unchanged.length > 0) lines.push(`${unchanged.length} open times stay as they are.`);
-    if (bookings.length > 0) lines.push(`${bookings.length} booked sessions stay as they are.`);
-    if (config.unavailableDates.length > 0) lines.push(`${config.unavailableDates.length} dates will be unavailable.`);
+    if (bookings.length > 0) lines.push(bookings.length === 1 ? "1 booked session stays as it is." : `${bookings.length} booked sessions stay as they are.`);
+    if (config.unavailableDates.length > 0) lines.push(config.unavailableDates.length === 1 ? "1 date will be unavailable." : `${config.unavailableDates.length} dates will be unavailable.`);
     const skipLines = plan.skipLines.filter((line) => !line.startsWith("0 "));
     const sections: ReviewSection[] = [];
     if (adds.length > 0) sections.push({ key: "adds", expandLabel: `Show ${adds.length} open times that will be added`, items: adds });
     if (removes.length > 0) sections.push({ key: "removes", expandLabel: `Show ${removes.length} open times that will be removed`, items: removes });
     if (unchanged.length > 0) sections.push({ key: "unchanged", expandLabel: `Show ${unchanged.length} open times that stay`, items: unchanged });
-    if (bookings.length > 0) sections.push({ key: "bookings", expandLabel: `Show ${bookings.length} booked sessions that stay`, items: bookings });
+    if (bookings.length > 0) sections.push({ key: "bookings", expandLabel: bookings.length === 1 ? "Show 1 booked session that stays" : `Show ${bookings.length} booked sessions that stay`, items: bookings });
     if (config.unavailableDates.length > 0) {
         sections.push({
             key: "dates",
-            expandLabel: `Show ${config.unavailableDates.length} unavailable dates`,
+            expandLabel: config.unavailableDates.length === 1 ? "Show 1 unavailable date" : `Show ${config.unavailableDates.length} unavailable dates`,
             items: config.unavailableDates.map((date) => ({
                 id: date,
                 primary: civilDateLabel(date),
@@ -443,7 +476,15 @@ export function buildReview(input: {
     }
     const review: ScheduleReview = {
         stale: false,
-        token: reviewToken(config, input.publishedVersion, input.slots, input.otherBlocks),
+        token: reviewToken(config, input.publishedVersion, input.slots, input.otherBlocks, {
+            adds: plannedAdds,
+            removeIds: removes.map((item) => item.id),
+            unchangedIds: unchanged.map((item) => item.id),
+            bookings: bookings.map((item) => {
+                const slot = input.slots.find((live) => live.id === item.id);
+                return { id: item.id, sessionId: slot?.sessionId ?? null, studentId: slot?.studentId ?? null };
+            }),
+        }),
         semester: input.term.label,
         rangeLabel: `${input.term.label}: ${civilDateLabel(firstDay)}\u2013${civilDateLabel(lastDay)}`,
         officialLabel: narrowed && input.term.startsOn && input.term.endsOn
@@ -459,7 +500,15 @@ export function buildReview(input: {
     return { ok: true, review };
 }
 
-export function reviewToken(config: ScheduleConfig, publishedVersion: number, slots: LiveSlot[], otherBlocks: OtherBlock[]) {
+export type MaterialPlan = {
+    adds: PlannedSlot[];
+    removeIds: string[];
+    unchangedIds: string[];
+    bookings: { id: string; sessionId: string | null; studentId: string | null }[];
+};
+
+/** Hash the reviewed set, not the clock. A later instant is stale only when the materialized set or a booking identity changed. */
+export function reviewToken(config: ScheduleConfig, publishedVersion: number, slots: LiveSlot[], otherBlocks: OtherBlock[], plan: MaterialPlan) {
     return createHash("sha256").update(stable({
         config: canonicalSchedule(config),
         publishedVersion,
@@ -470,8 +519,16 @@ export function reviewToken(config: ScheduleConfig, publishedVersion: number, sl
             status: slot.status,
             source: slot.source,
             termId: slot.termId,
+            sessionId: slot.sessionId,
+            studentId: slot.studentId,
         })).sort((left, right) => left.id.localeCompare(right.id)),
         blocks: otherBlocks.map((block) => ({ termId: block.termId, dates: [...block.dates].sort() })).sort((left, right) => left.termId.localeCompare(right.termId)),
+        plan: {
+            adds: [...plan.adds].sort((left, right) => left.startsAt.localeCompare(right.startsAt) || left.endsAt.localeCompare(right.endsAt)),
+            removeIds: [...plan.removeIds].sort(),
+            unchangedIds: [...plan.unchangedIds].sort(),
+            bookings: [...plan.bookings].sort((left, right) => left.id.localeCompare(right.id)),
+        },
     })).digest("hex");
 }
 
@@ -483,6 +540,8 @@ function collectDesired(
     otherBlocks: OtherBlock[],
     now: Date,
     termId: string,
+    term: TermBounds | null,
+    historical: "reject" | "skip-historical" = "reject",
 ): { ok: true; desired: DesiredSlot[]; remainders: string[]; skipLines: string[]; buckets: { key: string; category: string; items: ReviewItem[] }[]; blockedDate: { date: string; label: string } | null } | ScheduleIssue {
     if (!config.firstDay || !config.lastDay) {
         return { ok: false, title: "Choose a first and last day", description: "Both days are required and are included.", field: "first" };
@@ -500,7 +559,7 @@ function collectDesired(
     let blockedDate: { date: string; label: string } | null = null;
     const taken: DesiredSlot[] = [];
     for (const replacement of config.replacements) {
-        const placed = placeReplacement(config, replacement, slots, now, termId, taken);
+        const placed = placeReplacement(config, replacement, slots, now, termId, term, taken, historical);
         if (!placed.ok) return placed;
         if (placed.skip) continue;
         if (placed.blocked) {
@@ -575,42 +634,67 @@ function collectDesired(
     return { ok: true, desired, remainders, skipLines, buckets: Object.values(buckets), blockedDate };
 }
 
+function retainedOverride(slots: LiveSlot[], termId: string, start: Date, end: Date) {
+    return slots.find((live) => live.termId === termId && live.source === "TERM_OVERRIDE" && live.startsAt.getTime() === start.getTime() && live.endsAt.getTime() === end.getTime()) ?? null;
+}
+
 function placeReplacement(
     config: ScheduleConfig,
     replacement: ScheduleReplacement,
     slots: LiveSlot[],
     now: Date,
     termId: string,
+    term: TermBounds | null,
     taken: DesiredSlot[],
+    historical: "reject" | "skip-historical",
 ): { ok: true; slot?: DesiredSlot; skip?: boolean; blocked?: { date: string; label: string } } | ScheduleIssue {
     const start = new Date(replacement.next.startsAt);
     const end = new Date(replacement.next.endsAt);
     if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end <= start) {
         return { ok: false, title: "This changed time overlaps another time", description: "Choose another time before publishing.", field: "dates" };
     }
+    const retained = retainedOverride(slots, termId, start, end);
+    const historicalInstance = historical === "skip-historical" || retained !== null;
+    if (start.getTime() < now.getTime() + LEAD_TIME_MS) {
+        if (historicalInstance) return { ok: true, skip: true };
+        return { ok: false, ...issueCopy("lead", config.durationMinutes), field: "dates" };
+    }
     const date = civilDateValue(start);
+    if (term?.startsOn && term.endsOn && (date < term.startsOn || date > term.endsOn)) {
+        return { ok: false, title: "Those days are outside this semester", description: `Choose dates inside ${term.label}.`, field: "dates" };
+    }
     const civil = parseCivilDate(date);
     const noon = civil ? easternInstant(civil.year, civil.month, civil.day, 12, 0) : null;
     const weekday = noon ? WEEKDAYS.indexOf(easternParts(noon).weekday as WeekdayName) : -1;
     const day = config.weekdays[weekday];
     const outside = !config.firstDay || !config.lastDay || date < config.firstDay || date > config.lastDay;
     if (outside || config.unavailableDates.includes(date) || !day || day.unavailable) return { ok: true, skip: true };
-    if (!easternInstant(civil?.year ?? 0, civil?.month ?? 1, civil?.day ?? 1, easternParts(start).hour, easternParts(start).minute)) {
-        return { ok: false, ...issueCopy("gap", config.durationMinutes), field: "dates" };
-    }
-    const duration = Math.round((end.getTime() - start.getTime()) / 60000);
-    if (!isMeetingDuration(duration)) {
-        return { ok: false, ...issueCopy("duration", duration), field: "length" };
-    }
-    if (start.getTime() < now.getTime() + LEAD_TIME_MS) {
-        return { ok: false, ...issueCopy("lead", duration), field: "dates" };
-    }
-    const slot = { startsAt: start, endsAt: end, durationMinutes: duration, source: "TERM_OVERRIDE" as const };
-    const reason = skipReason(slot, slots, config, termId, taken, now, replacement.original);
+    const checked = replacementBounds(start, end);
+    if (!checked.ok) return { ok: false, ...issueCopy(checked.issue, config.durationMinutes), field: checked.issue === "duration" ? "length" : "dates" };
+    if (retained?.status === "BOOKED") return { ok: true, skip: true };
+    const slot = { startsAt: start, endsAt: end, durationMinutes: checked.duration, source: "TERM_OVERRIDE" as const };
+    const reason = skipReason(slot, slots, config, termId, taken, now, replacement.original, retained?.id);
     if (reason !== "keep") {
         return { ok: false, title: "This changed time overlaps another time", description: "Choose another time before publishing.", field: "dates" };
     }
     return { ok: true, slot };
+}
+
+/** New replacements must be an exact allowed length on the 15-minute civil grid, inside one advising day. */
+function replacementBounds(start: Date, end: Date): { ok: true; duration: number } | { ok: false; issue: "duration" | "step" | "bounds" | "gap" } {
+    const exact = end.getTime() - start.getTime();
+    if (exact <= 0 || exact % 60_000 !== 0) return { ok: false, issue: "duration" };
+    const duration = exact / 60_000;
+    if (!isMeetingDuration(duration)) return { ok: false, issue: "duration" };
+    const startParts = easternParts(start);
+    const endParts = easternParts(end);
+    if (!easternInstant(startParts.year, startParts.month, startParts.day, startParts.hour, startParts.minute)) return { ok: false, issue: "gap" };
+    const startMinutes = startParts.hour * 60 + startParts.minute;
+    const endMinutes = endParts.hour * 60 + endParts.minute;
+    const sameDay = startParts.year === endParts.year && startParts.month === endParts.month && startParts.day === endParts.day;
+    if (!sameDay || endMinutes > 21 * 60) return { ok: false, issue: "bounds" };
+    if (startMinutes < 7 * 60 || startMinutes > 21 * 60 || startMinutes % 15 !== 0) return { ok: false, issue: "step" };
+    return { ok: true, duration };
 }
 
 function skipReason(
@@ -621,9 +705,10 @@ function skipReason(
     taken: DesiredSlot[],
     now: Date,
     ownOriginal?: ScheduleInterval,
+    ignoreSlotId?: string,
 ): "keep" | "booking" | "manual" | "other" | "suppression" | "lead" {
     if (slot.startsAt.getTime() < now.getTime() + LEAD_TIME_MS) return "lead";
-    if (slots.some((live) => live.status === "BOOKED" && rangesOverlap(slot.startsAt, slot.endsAt, live.startsAt, live.endsAt))) return "booking";
+    if (slots.some((live) => live.id !== ignoreSlotId && live.status === "BOOKED" && rangesOverlap(slot.startsAt, slot.endsAt, live.startsAt, live.endsAt))) return "booking";
     if (slots.some((live) => live.status === "OPEN" && (live.source === "MANUAL" || live.source === "MANUAL_WINDOW") && rangesOverlap(slot.startsAt, slot.endsAt, live.startsAt, live.endsAt))) return "manual";
     if (slots.some((live) => live.status === "OPEN" && live.termId && live.termId !== termId && rangesOverlap(slot.startsAt, slot.endsAt, live.startsAt, live.endsAt))) return "other";
     const suppressed = config.suppressions.some((interval) => {

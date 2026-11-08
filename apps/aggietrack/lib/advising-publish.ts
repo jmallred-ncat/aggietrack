@@ -77,7 +77,7 @@ function liveSlot(slot: {
     source: LiveSlot["source"];
     termId: string | null;
     term: { season: Parameters<typeof academicTermLabel>[0]["season"]; year: number } | null;
-    session: { id: string; student: { user: { firstName: string; lastName: string; name: string } } } | null;
+    session: { id: string; studentId: string; student: { user: { firstName: string; lastName: string; name: string } } } | null;
 }): LiveSlot {
     return {
         id: slot.id,
@@ -89,6 +89,7 @@ function liveSlot(slot: {
         termId: slot.termId,
         termLabel: slot.term ? academicTermLabel(slot.term) : null,
         studentName: slot.session ? personName(slot.session.student.user) : null,
+        studentId: slot.session?.studentId ?? null,
         sessionId: slot.session?.id ?? null,
     };
 }
@@ -135,7 +136,7 @@ export async function loadAdvisorAvailability(db: Db, userId: string, now = new 
         publishedDuration: published ? published.durationMinutes : null,
         datesUnavailable: false,
         runLabel: bounds ? termRunLabel(selected ? academicTermLabel(selected) : "", bounds.startsOn, bounds.endsOn) : null,
-        revision: `${publishedRow?.version ?? 0}:${draftRow?.updatedAt.toISOString() ?? "none"}`,
+        revision: `${selected?.id ?? "none"}:${publishedRow?.version ?? 0}:${draftRow?.updatedAt.toISOString() ?? "none"}`,
         openTimes: slots.map((slot) => openRow(slot, selected?.id ?? null, draftConfig)),
     };
 }
@@ -363,6 +364,7 @@ function openRow(slot: {
         canChange: true,
         pendingLabel: pending,
         sourceLabel,
+        inventory: slot.source === "MANUAL" || slot.source === "MANUAL_WINDOW" ? "manual" : slot.termId === termId ? "this" : "other",
     };
 }
 

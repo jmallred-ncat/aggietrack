@@ -95,7 +95,9 @@ test("shared dialogs keep the original layer and advising removes only its own b
         assert.doesNotMatch(source, /className \?\? /);
     }
     assert.match(advising, /overlayClassName=\{advisingOverlayClassName\}/);
-    assert.match(advising, /bg-black\/40/);
+    assert.match(advising, /bg-black\/70/);
+    assert.match(advising, /backgroundColor: "var\(--background\)"/);
+    assert.match(advising, /backgroundColor: "var\(--muted\)"/);
     assert.doesNotMatch(advising, /backdrop-blur/);
     assert.doesNotMatch(advising, /z-\[60\]/);
 });

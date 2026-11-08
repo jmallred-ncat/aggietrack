@@ -527,6 +527,14 @@ export async function moveOpenSlot(
             now,
         });
         if (!built.ok) throw new MeetingRefusal(validationFailure(built.issue, current.durationMinutes, start));
+        const blocked = await dateBlockedByPublished(tx, userId, civilDateValue(built.slot.startsAt));
+        if (blocked) {
+            throw new MeetingRefusal(failure(
+                "unavailable-date",
+                "That date is marked unavailable",
+                `${blocked.dateLabel} is unavailable on your published schedule. Remove that date and publish again before adding a time.`,
+            ));
+        }
         const clash = await slotClash(tx, userId, built.slot, current.id);
         if (clash) throw new MeetingRefusal(clashFailure(clash));
         await tx.meetingAvailability.update({
