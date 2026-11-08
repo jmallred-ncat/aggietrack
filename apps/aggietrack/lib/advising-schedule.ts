@@ -165,6 +165,24 @@ export function adoptTermEditor(
     return state;
 }
 
+/** Browser Back is bypassed for one navigation, then the next dirty form asks again. */
+export function createLeaveGuard() {
+    let bypass = false;
+    return {
+        beginDirty() {
+            bypass = false;
+        },
+        allowNavigation() {
+            bypass = true;
+        },
+        onBack(): "prompt" | "pass" {
+            if (!bypass) return "prompt";
+            bypass = false;
+            return "pass";
+        },
+    };
+}
+
 /** A save that finishes after the advisor has switched semesters must not rewrite the destination baseline. */
 export function baselineAfterSave(state: TermEditorState, savedTermId: string, config: ScheduleConfig): TermEditorState {
     if (state.termId !== savedTermId) return state;
@@ -367,11 +385,12 @@ export function buildReview(input: {
     slots: LiveSlot[];
     otherBlocks: OtherBlock[];
     now: Date;
+    publishedConfig?: ScheduleConfig | null;
 }): { ok: true; review: ScheduleReview } | ScheduleIssue {
     const valid = validatePublish(input.config, input.term, input.hasPublished, input.now);
     if (!valid.ok) return valid;
     const config = valid.config;
-    const plan = collectDesired(config, input.slots, input.otherBlocks, input.now, input.term.id, input.term);
+    const plan = collectDesired(config, input.slots, input.otherBlocks, input.now, input.term.id, input.term, "reject", input.publishedConfig ?? null);
     if (!plan.ok) return plan;
     const owned = input.slots.filter((slot) => slot.termId === input.term.id && (slot.source === "TERM_PATTERN" || slot.source === "TERM_OVERRIDE"));
     const used = new Set<string>();
@@ -470,7 +489,7 @@ export function buildReview(input: {
         if (bucket.items.length === 0) continue;
         sections.push({
             key: bucket.key,
-            expandLabel: `Show ${bucket.items.length} skipped times (${bucket.category})`,
+            expandLabel: bucket.items.length === 1 ? `Show 1 skipped time (${bucket.category})` : `Show ${bucket.items.length} skipped times (${bucket.category})`,
             items: bucket.items,
         });
     }
@@ -542,6 +561,7 @@ function collectDesired(
     termId: string,
     term: TermBounds | null,
     historical: "reject" | "skip-historical" = "reject",
+    published: ScheduleConfig | null = null,
 ): { ok: true; desired: DesiredSlot[]; remainders: string[]; skipLines: string[]; buckets: { key: string; category: string; items: ReviewItem[] }[]; blockedDate: { date: string; label: string } | null } | ScheduleIssue {
     if (!config.firstDay || !config.lastDay) {
         return { ok: false, title: "Choose a first and last day", description: "Both days are required and are included.", field: "first" };
@@ -559,7 +579,7 @@ function collectDesired(
     let blockedDate: { date: string; label: string } | null = null;
     const taken: DesiredSlot[] = [];
     for (const replacement of config.replacements) {
-        const placed = placeReplacement(config, replacement, slots, now, termId, term, taken, historical);
+        const placed = placeReplacement(config, replacement, slots, now, termId, term, taken, historical, published);
         if (!placed.ok) return placed;
         if (placed.skip) continue;
         if (placed.blocked) {
@@ -647,6 +667,7 @@ function placeReplacement(
     term: TermBounds | null,
     taken: DesiredSlot[],
     historical: "reject" | "skip-historical",
+    published: ScheduleConfig | null,
 ): { ok: true; slot?: DesiredSlot; skip?: boolean; blocked?: { date: string; label: string } } | ScheduleIssue {
     const start = new Date(replacement.next.startsAt);
     const end = new Date(replacement.next.endsAt);
@@ -654,7 +675,8 @@ function placeReplacement(
         return { ok: false, title: "This changed time overlaps another time", description: "Choose another time before publishing.", field: "dates" };
     }
     const retained = retainedOverride(slots, termId, start, end);
-    const historicalInstance = historical === "skip-historical" || retained !== null;
+    const persisted = published?.replacements.some((item) => sameInterval(item.original, replacement.original) && sameInterval(item.next, replacement.next)) ?? false;
+    const historicalInstance = historical === "skip-historical" || retained !== null || persisted;
     if (start.getTime() < now.getTime() + LEAD_TIME_MS) {
         if (historicalInstance) return { ok: true, skip: true };
         return { ok: false, ...issueCopy("lead", config.durationMinutes), field: "dates" };
@@ -688,7 +710,10 @@ function replacementBounds(start: Date, end: Date): { ok: true; duration: number
     if (!isMeetingDuration(duration)) return { ok: false, issue: "duration" };
     const startParts = easternParts(start);
     const endParts = easternParts(end);
-    if (!easternInstant(startParts.year, startParts.month, startParts.day, startParts.hour, startParts.minute)) return { ok: false, issue: "gap" };
+    const canonicalStart = easternInstant(startParts.year, startParts.month, startParts.day, startParts.hour, startParts.minute);
+    const canonicalEnd = easternInstant(endParts.year, endParts.month, endParts.day, endParts.hour, endParts.minute);
+    if (!canonicalStart || !canonicalEnd) return { ok: false, issue: "gap" };
+    if (canonicalStart.getTime() !== start.getTime() || canonicalEnd.getTime() !== end.getTime()) return { ok: false, issue: "step" };
     const startMinutes = startParts.hour * 60 + startParts.minute;
     const endMinutes = endParts.hour * 60 + endParts.minute;
     const sameDay = startParts.year === endParts.year && startParts.month === endParts.month && startParts.day === endParts.day;
@@ -775,8 +800,19 @@ function bucket(key: string, category: string) {
     return { key, category, items: [] as ReviewItem[] };
 }
 
+function sameInterval(left: ScheduleInterval, right: ScheduleInterval) {
+    const leftStart = new Date(left.startsAt).getTime();
+    const rightStart = new Date(right.startsAt).getTime();
+    const leftEnd = new Date(left.endsAt).getTime();
+    const rightEnd = new Date(right.endsAt).getTime();
+    return leftStart === rightStart && leftEnd === rightEnd && !Number.isNaN(leftStart) && !Number.isNaN(leftEnd);
+}
+
 function line(count: number, text: string) {
     if (count === 0) return null;
+    if (count === 1 && text.startsWith("times ")) {
+        return `1 time ${text.slice("times ".length).replace("they overlap", "it overlaps").replace("they start", "it starts")}`;
+    }
     return `${count} ${text}`;
 }
 

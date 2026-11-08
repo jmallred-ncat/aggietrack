@@ -15,7 +15,7 @@ import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/components/u
 import { Field, FieldDescription, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { WEEKDAYS, adoptTermEditor, baselineAfterSave, schedulesEqual, type ReviewItem, type ScheduleConfig, type ScheduleReview } from "@/lib/advising-schedule";
+import { WEEKDAYS, adoptTermEditor, baselineAfterSave, createLeaveGuard, schedulesEqual, type ReviewItem, type ScheduleConfig, type ScheduleReview } from "@/lib/advising-schedule";
 import {
     MEETING_DURATIONS,
     buildSingleSlot,
@@ -75,7 +75,7 @@ export function AdvisorAvailability({
     const [editingManual, setEditingManual] = useState<AvailabilityRow | null>(null);
     const [removingManual, setRemovingManual] = useState<AvailabilityRow | null>(null);
     const clean = useRef(false);
-    const allowLeave = useRef(false);
+    const leaveGuard = useRef(createLeaveGuard());
     const held = useRef<ScheduleReview | null>(null);
     const staleTitle = useRef<HTMLHeadingElement>(null);
     const termNow = useRef(model.selectedTermId);
@@ -105,6 +105,7 @@ export function AdvisorAvailability({
 
     useEffect(() => {
         if (!dirty) return;
+        leaveGuard.current.beginDirty();
         const warn = (event: BeforeUnloadEvent) => {
             event.preventDefault();
             event.returnValue = "";
@@ -122,7 +123,7 @@ export function AdvisorAvailability({
         const formPath = `${window.location.pathname}${window.location.search}`;
         window.history.pushState({ advisingGuard: formUrl }, "", formUrl);
         const back = () => {
-            if (allowLeave.current) return;
+            if (leaveGuard.current.onBack() === "pass") return;
             const destination = `${window.location.pathname}${window.location.search}`;
             window.history.pushState({ advisingGuard: formUrl }, "", formUrl);
             setLeaveHref(destination === formPath ? "__history_back__" : destination);
@@ -153,7 +154,7 @@ export function AdvisorAvailability({
     }
 
     function go(href: string) {
-        allowLeave.current = true;
+        leaveGuard.current.allowNavigation();
         clean.current = true;
         setLeaveHref(null);
         if (href === "__history_back__") {
@@ -353,7 +354,7 @@ export function AdvisorAvailability({
                             <AlertDialogTitle className="text-lg font-semibold leading-tight">Review and publish?</AlertDialogTitle>
                             <AlertDialogDescription className="text-sm text-muted-foreground">Publishing updates the times students can book for {review.semester}. Booked sessions stay as they are.</AlertDialogDescription>
                         </MeetingHeader>
-                        <div className="flex max-h-80 min-w-0 flex-col gap-3 overflow-x-hidden overflow-y-auto bg-background px-6 pb-4">
+                        <div className="flex min-h-0 w-full min-w-0 flex-1 flex-col gap-3 overflow-x-hidden overflow-y-auto bg-background px-6 pb-4">
                             {review.stale ? <h3 ref={staleTitle} tabIndex={-1} className="text-base font-semibold">Review these changes again</h3> : null}
                             {review.stale ? <p className="min-w-0 text-sm text-muted-foreground">Bookings or hours changed since you opened this review. Nothing was published. Check the updated counts and publish again if they look right.</p> : null}
                             <WrappedRange text={review.rangeLabel} className="text-sm" />
@@ -545,7 +546,7 @@ function DetailList({ label, items }: { label: string; items: ScheduleReview["se
     const end = page * pageSize + visible.length;
     return (
         <div className="flex flex-col gap-2">
-            <Button type="button" variant="outline" className="h-11 justify-start" aria-expanded={open} onClick={() => setOpen((current) => !current)}>{label}</Button>
+            <Button type="button" variant="outline" className="h-auto! min-h-11 w-full min-w-0 justify-start whitespace-normal! text-left" aria-expanded={open} onClick={() => setOpen((current) => !current)}>{label}</Button>
             {open ? (
                 <>
                     <p className="text-sm tabular-nums text-muted-foreground">Showing {start}{"\u2013"}{end} of {items.length}</p>
@@ -597,7 +598,7 @@ function OneOffDialog({
                     <DialogTitle className="text-lg font-semibold leading-tight">{title}</DialogTitle>
                     <DialogDescription className="text-sm text-muted-foreground">{description}</DialogDescription>
                 </MeetingFormHeader>
-                <div className="flex flex-col gap-4 px-6 pb-4">
+                <div className="flex min-h-0 w-full min-w-0 flex-1 flex-col gap-4 overflow-x-hidden overflow-y-auto bg-background px-6 pb-4">
                     {problem ? <DismissibleAlert stacked title={problem.title} description={problem.description} /> : null}
                     <DateField id={`${title}-date`} label="Date" value={date || null} bounds={bounds} focus={bounds?.startsOn ?? null} onChange={(value) => setDate(value ?? "")} />
                     <ClockField id={`${title}-start`} label="Start time" value={start} onChange={setStart} />
@@ -653,7 +654,7 @@ function ChangeWhenPublishing({
                     <AlertDialogTitle className="text-lg font-semibold leading-tight">Change this time when you publish?</AlertDialogTitle>
                     <AlertDialogDescription className="text-sm text-muted-foreground">Students can still book the original time until you publish.</AlertDialogDescription>
                 </MeetingHeader>
-                <div className="flex flex-col gap-4 px-6 pb-4">
+                <div className="flex min-h-0 w-full min-w-0 flex-1 flex-col gap-4 overflow-x-hidden overflow-y-auto bg-background px-6 pb-4">
                     {problem ? <DismissibleAlert stacked title={problem.title} description={problem.description} /> : null}
                     <DateField id="change-date" label="Date" value={date || null} onChange={(value) => setDate(value ?? "")} />
                     <ClockField id="change-start" label="Start time" value={start} onChange={(value) => {
@@ -709,7 +710,7 @@ function ManualEditDialog({
                     <DialogTitle className="text-lg font-semibold leading-tight">Edit this time</DialogTitle>
                     <DialogDescription className="text-sm text-muted-foreground">This keeps the session at {row.durationMinutes} minutes.</DialogDescription>
                 </MeetingFormHeader>
-                <div className="flex flex-col gap-4 px-6 pb-4">
+                <div className="flex min-h-0 w-full min-w-0 flex-1 flex-col gap-4 overflow-x-hidden overflow-y-auto bg-background px-6 pb-4">
                     {problem ? <DismissibleAlert stacked title={problem.title} description={problem.description} /> : null}
                     <DateField id="edit-manual-date" label="Date" value={date || null} bounds={bounds} focus={date || bounds?.startsOn || null} onChange={(value) => setDate(value ?? "")} />
                     <ClockField id="edit-manual-start" label="Start time" value={start} onChange={setStart} />

@@ -322,6 +322,7 @@ async function loadContext(tx: Tx, userId: string, termId: string, now: Date) {
         },
         hasPublished: Boolean(published && parseScheduleConfig(published.config)),
         publishedVersion: published?.version ?? 0,
+        publishedConfig: published ? parseScheduleConfig(published.config) : null,
         slots: slots.map((slot) => liveSlot(slot)),
         otherBlocks,
     };

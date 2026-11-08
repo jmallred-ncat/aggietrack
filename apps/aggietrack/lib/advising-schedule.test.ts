@@ -5,6 +5,7 @@ import {
     adoptTermEditor,
     baselineAfterSave,
     buildReview,
+    createLeaveGuard,
     coversExactInterval,
     emptySchedule,
     explainWindow,
@@ -128,7 +129,7 @@ test("interval overlap skips a longer neighbor and keeps a booking", () => {
     if (!review.ok) return;
     const added = review.review.sections.find((section) => section.key === "adds")?.items ?? [];
     assert.equal(added.some((item) => item.fullTimestamp.includes("2:00")), false);
-    assert.match(review.review.skipLines.join("\n"), /overlap a booked session/);
+    assert.equal(review.review.skipLines.join("\n"), "1 time skipped because it overlaps a booked session");
     const kept = review.review.sections.find((section) => section.key === "bookings");
     assert.equal(kept?.items[0]?.studentName, "Avery Cole");
     assert.equal(kept?.items.some((item) => item.note?.includes("Cancel")), false);
@@ -369,6 +370,113 @@ test("a new replacement must use an exact allowed grid interval inside the semes
     assert.equal(wrongTerm.ok, false);
     if (wrongTerm.ok) return;
     assert.equal(wrongTerm.title, "Those days are outside this semester");
+});
+
+test("a published replacement whose row is gone does not block a later review, and a new past replacement still does", () => {
+    const past = easternInstant(2026, 11, 9, 15, 0);
+    const future = easternInstant(2026, 11, 16, 14, 0);
+    assert.ok(past && future);
+    const published = mondayHours(fall);
+    published.firstDay = "2026-11-09";
+    published.lastDay = "2026-11-16";
+    published.replacements = [{
+        original: { startsAt: future.toISOString(), endsAt: new Date(future.getTime() + 30 * 60 * 1000).toISOString() },
+        next: { startsAt: past.toISOString(), endsAt: new Date(past.getTime() + 30 * 60 * 1000).toISOString() },
+    }];
+    const draft = mondayHours(fall);
+    draft.firstDay = "2026-11-16";
+    draft.lastDay = "2026-11-16";
+    draft.replacements = published.replacements;
+    const later = new Date("2026-11-10T16:00:00.000Z");
+    const review = buildReview({
+        config: draft,
+        term: fall,
+        hasPublished: true,
+        publishedVersion: 3,
+        publishedConfig: published,
+        slots: [],
+        otherBlocks: [],
+        now: later,
+    });
+    assert.equal(review.ok, true);
+    if (!review.ok) return;
+    assert.equal(review.review.plan.adds.some((item) => item.startsAt === past.toISOString()), false);
+    const forged = {
+        ...draft,
+        replacements: [{
+            original: published.replacements[0]!.original,
+            next: { startsAt: new Date(past.getTime() + 60 * 60 * 1000).toISOString(), endsAt: new Date(past.getTime() + 90 * 60 * 1000).toISOString() },
+        }],
+    };
+    const rejected = buildReview({
+        config: forged,
+        term: fall,
+        hasPublished: true,
+        publishedVersion: 3,
+        publishedConfig: published,
+        slots: [],
+        otherBlocks: [],
+        now: later,
+    });
+    assert.equal(rejected.ok, false);
+});
+
+test("a replacement with nonzero seconds is rejected", () => {
+    const config = mondayHours(fall);
+    config.firstDay = "2026-11-16";
+    config.lastDay = "2026-11-16";
+    const aligned = easternInstant(2026, 11, 16, 14, 0);
+    assert.ok(aligned);
+    const start = new Date(aligned.getTime() + 30_000);
+    const end = new Date(start.getTime() + 30 * 60 * 1000);
+    config.replacements = [{
+        original: { startsAt: aligned.toISOString(), endsAt: new Date(aligned.getTime() + 30 * 60 * 1000).toISOString() },
+        next: { startsAt: start.toISOString(), endsAt: end.toISOString() },
+    }];
+    const review = buildReview({ config, term: fall, hasPublished: true, publishedVersion: 1, slots: [], otherBlocks: [], now });
+    assert.equal(review.ok, false);
+});
+
+test("one skipped time is singular", () => {
+    const config = mondayHours(fall, "14:00", "14:30");
+    config.firstDay = "2026-11-16";
+    config.lastDay = "2026-11-16";
+    const start = easternInstant(2026, 11, 16, 14, 0);
+    assert.ok(start);
+    const review = buildReview({
+        config,
+        term: fall,
+        hasPublished: true,
+        publishedVersion: 1,
+        slots: [slot({
+            id: "kept",
+            startsAt: start,
+            endsAt: new Date(start.getTime() + 30 * 60 * 1000),
+            status: "BOOKED",
+            sessionId: "session-a",
+            studentId: "student-a",
+            studentName: "Avery Cole",
+        })],
+        otherBlocks: [],
+        now,
+    });
+    assert.equal(review.ok, true);
+    if (!review.ok) return;
+    assert.equal(review.review.skipLines.some((line) => line.startsWith("1 time skipped")), true);
+    assert.equal(review.review.sections.some((section) => section.expandLabel === "Show 1 skipped time (overlap a booked session)"), true);
+});
+
+test("a guarded semester switch does not leave Back bypassed for the next dirty form", () => {
+    const guard = createLeaveGuard();
+    guard.beginDirty();
+    assert.equal(guard.onBack(), "prompt");
+    guard.allowNavigation();
+    assert.equal(guard.onBack(), "pass");
+    assert.equal(guard.onBack(), "prompt");
+    guard.beginDirty();
+    guard.allowNavigation();
+    guard.beginDirty();
+    assert.equal(guard.onBack(), "prompt");
 });
 
 test("appointment links keep unrelated query keys", () => {

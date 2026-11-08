@@ -6,7 +6,7 @@ import { PrismaClient } from "./generated/prisma/client";
 import { STUDENT_HORIZON_MS } from "./advising-time";
 import { addAvailability, bookSlot, cancelSession, loadStudentAdvising, moveOpenSlot } from "./advising-meetings";
 import { discardTermDraft, publishTerm, reviewTerm, saveTermDraft } from "./advising-publish";
-import { emptySchedule, type ScheduleConfig } from "./advising-schedule";
+import { emptySchedule, parseScheduleConfig, type ScheduleConfig } from "./advising-schedule";
 import { migrateDatabaseName, migrateEnvForScratch, openAdvisingTestClient, resolveAdvisingTestTarget } from "./advising-test-target";
 
 const now = new Date("2026-11-08T15:00:00.000Z");
@@ -480,6 +480,212 @@ test("a student and another advisor cannot write this advisor's schedule", async
         assert.equal(moved.ok, false);
         assert.equal((await client().meetingAvailability.findUnique({ where: { id: slot.id } }))?.startsAt.toISOString(), slot.startsAt.toISOString());
     } finally {
+        await cleanup(people);
+    }
+});
+
+test("an expired published replacement reviews after its open row is removed", async (t) => {
+    if (skip(t)) return;
+    const people = await fixture();
+    try {
+        const base = monday({ startsOn: "2026-08-19", endsOn: "2026-12-11" }, "14:00", "14:30");
+        base.firstDay = "2026-11-09";
+        base.lastDay = "2026-11-16";
+        const opened = await reviewTerm(client(), people.advisor.id, people.fall.id, base, now);
+        if (opened.ok || !opened.review) assert.fail(JSON.stringify(opened));
+        assert.equal((await publishTerm(client(), people.advisor.id, people.fall.id, opened.review.token, now)).ok, true);
+        const slots = await client().meetingAvailability.findMany({ where: { advisorId: people.advisor.id, source: "TERM_PATTERN" }, orderBy: { startsAt: "asc" } });
+        const early = slots[0];
+        const kept = slots.at(-1);
+        assert.ok(early && kept && early.id !== kept.id);
+        const booked = await bookSlot(client(), people.studentUser.id, kept.id, "Keep this session", now);
+        assert.equal(booked.ok, true, JSON.stringify(booked));
+        const movedStart = new Date(early.startsAt.getTime() + 60 * 60 * 1000);
+        const movedEnd = new Date(early.endsAt.getTime() + 60 * 60 * 1000);
+        const replaced = {
+            ...base,
+            replacements: [{ original: { startsAt: early.startsAt.toISOString(), endsAt: early.endsAt.toISOString() }, next: { startsAt: movedStart.toISOString(), endsAt: movedEnd.toISOString() } }],
+            suppressions: [{ startsAt: early.startsAt.toISOString(), endsAt: early.endsAt.toISOString() }],
+        };
+        const moved = await reviewTerm(client(), people.advisor.id, people.fall.id, replaced, now);
+        if (moved.ok || !moved.review) assert.fail(JSON.stringify(moved));
+        assert.equal((await publishTerm(client(), people.advisor.id, people.fall.id, moved.review.token, now)).ok, true, JSON.stringify(moved));
+        const override = await client().meetingAvailability.findFirst({ where: { advisorId: people.advisor.id, source: "TERM_OVERRIDE", status: "OPEN" } });
+        assert.ok(override);
+        const blocked = { ...replaced, unavailableDates: ["2026-11-09"] };
+        const blocking = await reviewTerm(client(), people.advisor.id, people.fall.id, blocked, now);
+        if (blocking.ok || !blocking.review) assert.fail(JSON.stringify(blocking));
+        assert.equal((await publishTerm(client(), people.advisor.id, people.fall.id, blocking.review.token, now)).ok, true, JSON.stringify(blocking));
+        assert.equal(await client().meetingAvailability.findUnique({ where: { id: override.id } }), null);
+        const stored = parseScheduleConfig((await client().advisorTermSchedule.findUnique({ where: { advisorId_termId: { advisorId: people.advisor.id, termId: people.fall.id } } }))?.config);
+        assert.equal(stored?.replacements.length, 1);
+        const sessionId = booked.ok ? booked.sessionId ?? "" : "";
+        const eventsBefore = (await client().meetingEvent.findMany({ where: { sessionId }, orderBy: { id: "asc" } })).map((event) => event.id);
+        assert.ok(eventsBefore.length > 0);
+        const laterNow = new Date(movedEnd.getTime() + 60 * 60 * 1000);
+        const restored = { ...replaced, unavailableDates: [], firstDay: "2026-11-16", lastDay: "2026-11-16" };
+        const forged = {
+            ...restored,
+            replacements: [{ original: replaced.replacements[0]!.original, next: { startsAt: new Date(movedStart.getTime() + 60 * 60 * 1000).toISOString(), endsAt: new Date(movedEnd.getTime() + 60 * 60 * 1000).toISOString() } }],
+        };
+        const rejected = await reviewTerm(client(), people.advisor.id, people.fall.id, forged, laterNow);
+        assert.equal(rejected.ok, false);
+        if (!rejected.ok) assert.notEqual(rejected.code, "review");
+        const review = await reviewTerm(client(), people.advisor.id, people.fall.id, restored, laterNow);
+        if (review.ok || !review.review) assert.fail(JSON.stringify(review));
+        assert.equal(review.review.plan.adds.some((item) => item.startsAt === movedStart.toISOString()), false);
+        assert.equal((await publishTerm(client(), people.advisor.id, people.fall.id, review.review.token, laterNow)).ok, true, JSON.stringify(review));
+        assert.equal(await client().meetingAvailability.count({ where: { advisorId: people.advisor.id, startsAt: movedStart } }), 0);
+        assert.equal((await client().meetingSession.findUnique({ where: { id: sessionId } }))?.status, "CONFIRMED");
+        assert.deepEqual((await client().meetingEvent.findMany({ where: { sessionId }, orderBy: { id: "asc" } })).map((event) => event.id), eventsBefore);
+    } finally {
+        await cleanup(people);
+    }
+});
+
+test("a simultaneous publish, booking, and manual edit stay consistent and can be reconfirmed", async (t) => {
+    if (skip(t)) return;
+    const people = await fixture();
+    try {
+        const config = monday({ startsOn: "2026-08-19", endsOn: "2026-12-11" }, "14:00", "15:00");
+        config.firstDay = "2026-11-09";
+        config.lastDay = "2026-11-09";
+        const opened = await reviewTerm(client(), people.advisor.id, people.fall.id, config, now);
+        if (opened.ok || !opened.review) assert.fail(JSON.stringify(opened));
+        assert.equal((await publishTerm(client(), people.advisor.id, people.fall.id, opened.review.token, now)).ok, true);
+        const versionBefore = (await client().advisorTermSchedule.findUnique({ where: { advisorId_termId: { advisorId: people.advisor.id, termId: people.fall.id } } }))?.version;
+        const target = await client().meetingAvailability.findFirst({ where: { advisorId: people.advisor.id, status: "OPEN" }, orderBy: { startsAt: "desc" } });
+        assert.ok(target);
+        const narrowed = monday({ startsOn: "2026-08-19", endsOn: "2026-12-11" }, "15:00", "16:00");
+        narrowed.firstDay = "2026-11-09";
+        narrowed.lastDay = "2026-11-09";
+        const review = await reviewTerm(client(), people.advisor.id, people.fall.id, narrowed, now);
+        if (review.ok || !review.review) assert.fail(JSON.stringify(review));
+        assert.ok(review.review.plan.removeIds.includes(target.id));
+        const [published, booked, manual] = await Promise.all([
+            publishTerm(client(), people.advisor.id, people.fall.id, review.review.token, now),
+            bookSlot(client(), people.studentUser.id, target.id, "Race", now),
+            addAvailability(client(), people.advisor.id, { date: "2026-11-09", start: "10:00", durationMinutes: 30, termId: people.fall.id }, now),
+        ]);
+        assert.equal(manual.ok, true, JSON.stringify(manual));
+        const manualRow = await client().meetingAvailability.findFirst({ where: { advisorId: people.advisor.id, source: "MANUAL" } });
+        assert.equal(manualRow?.status, "OPEN");
+        const session = await client().meetingSession.findFirst({ where: { advisorId: people.advisor.id, status: "CONFIRMED" } });
+        const schedule = await client().advisorTermSchedule.findUnique({ where: { advisorId_termId: { advisorId: people.advisor.id, termId: people.fall.id } } });
+        if (booked.ok) {
+            assert.equal(published.ok, false);
+            if (published.ok) return;
+            assert.equal(published.code, "stale");
+            assert.equal(session?.availabilityId, target.id);
+            assert.equal((await client().meetingAvailability.findUnique({ where: { id: target.id } }))?.status, "BOOKED");
+            const eventIds = (await client().meetingEvent.findMany({ where: { sessionId: session?.id ?? "" } })).map((event) => event.id);
+            assert.ok(eventIds.length > 0);
+            assert.equal(schedule?.version, versionBefore);
+            assert.ok(await client().advisorTermDraft.findUnique({ where: { advisorId_termId: { advisorId: people.advisor.id, termId: people.fall.id } } }));
+            const again = await publishTerm(client(), people.advisor.id, people.fall.id, review.review.token, now);
+            assert.equal(again.ok, false);
+            if (again.ok || !again.review) return;
+            assert.equal(again.code, "stale");
+            assert.notEqual(again.review.token, review.review.token);
+            assert.equal((await publishTerm(client(), people.advisor.id, people.fall.id, again.review.token, now)).ok, true);
+            assert.equal((await client().meetingSession.findUnique({ where: { id: session?.id ?? "" } }))?.status, "CONFIRMED");
+            assert.equal((await client().meetingAvailability.findUnique({ where: { id: target.id } }))?.status, "BOOKED");
+            assert.deepEqual((await client().meetingEvent.findMany({ where: { sessionId: session?.id ?? "" } })).map((event) => event.id), eventIds);
+            assert.equal((await client().meetingAvailability.findUnique({ where: { id: manualRow?.id ?? "" } }))?.source, "MANUAL");
+        } else {
+            assert.equal(published.ok, true, JSON.stringify(published));
+            assert.equal(session, null);
+            assert.equal(await client().meetingAvailability.findUnique({ where: { id: target.id } }), null);
+            assert.equal(await client().meetingEvent.count({ where: { session: { advisorId: people.advisor.id }, kind: "BOOKED" } }), 0);
+            assert.equal(await client().advisorTermDraft.findUnique({ where: { advisorId_termId: { advisorId: people.advisor.id, termId: people.fall.id } } }), null);
+            assert.ok((schedule?.version ?? 0) > (versionBefore ?? 0));
+            assert.equal(manualRow?.source, "MANUAL");
+        }
+    } finally {
+        await cleanup(people);
+    }
+});
+
+test("an injected failure midway through publish rolls the schedule, rows, draft, and booking back", async (t) => {
+    if (skip(t)) return;
+    const people = await fixture();
+    const db = client();
+    const name = await db.$queryRaw<Array<{ name: string }>>`SELECT current_database() AS name`;
+    assert.match(name[0]?.name ?? "", /^aggietrack_scratch/);
+    await db.$executeRawUnsafe(`DROP TRIGGER IF EXISTS agt17_test_fault_availability ON "MeetingAvailability"`);
+    await db.$executeRawUnsafe(`DROP FUNCTION IF EXISTS agt17_test_fault_availability()`);
+    await db.$executeRawUnsafe(`DROP TABLE IF EXISTS agt17_test_fault`);
+    await db.$executeRawUnsafe(`CREATE TABLE agt17_test_fault (advisor_id text PRIMARY KEY)`);
+    await db.$executeRawUnsafe(`
+        CREATE FUNCTION agt17_test_fault_availability() RETURNS trigger
+        LANGUAGE plpgsql AS $fn$
+        BEGIN
+            IF EXISTS (SELECT 1 FROM agt17_test_fault WHERE advisor_id = NEW."advisorId") THEN
+                RAISE EXCEPTION 'agt17 injected publish fault' USING ERRCODE = 'P0001';
+            END IF;
+            RETURN NEW;
+        END;
+        $fn$
+    `);
+    await db.$executeRawUnsafe(`
+        CREATE TRIGGER agt17_test_fault_availability
+        BEFORE INSERT ON "MeetingAvailability"
+        FOR EACH ROW EXECUTE FUNCTION agt17_test_fault_availability()
+    `);
+    try {
+        const config = monday({ startsOn: "2026-08-19", endsOn: "2026-12-11" }, "14:00", "14:30");
+        config.firstDay = "2026-11-09";
+        config.lastDay = "2026-11-09";
+        const opened = await reviewTerm(db, people.advisor.id, people.fall.id, config, now);
+        if (opened.ok || !opened.review) assert.fail(JSON.stringify(opened));
+        assert.equal((await publishTerm(db, people.advisor.id, people.fall.id, opened.review.token, now)).ok, true);
+        const original = await db.meetingAvailability.findFirst({ where: { advisorId: people.advisor.id, status: "OPEN" } });
+        assert.ok(original);
+        const booked = await bookSlot(db, people.studentUser.id, original.id, "Do not lose this", now);
+        assert.equal(booked.ok, true, JSON.stringify(booked));
+        const added = await addAvailability(db, people.advisor.id, { date: "2026-11-11", start: "10:00", durationMinutes: 30, termId: people.fall.id }, now);
+        assert.equal(added.ok, true, JSON.stringify(added));
+        const wider = monday({ startsOn: "2026-08-19", endsOn: "2026-12-11" }, "14:00", "15:00");
+        wider.firstDay = "2026-11-09";
+        wider.lastDay = "2026-11-09";
+        const review = await reviewTerm(db, people.advisor.id, people.fall.id, wider, now);
+        if (review.ok || !review.review) assert.fail(JSON.stringify(review));
+        assert.ok(review.review.plan.adds.length > 0);
+        const before = {
+            schedule: await db.advisorTermSchedule.findUnique({ where: { advisorId_termId: { advisorId: people.advisor.id, termId: people.fall.id } } }),
+            draft: await db.advisorTermDraft.findUnique({ where: { advisorId_termId: { advisorId: people.advisor.id, termId: people.fall.id } } }),
+            slots: await db.meetingAvailability.findMany({ where: { advisorId: people.advisor.id }, orderBy: { id: "asc" } }),
+            session: await db.meetingSession.findFirst({ where: { availabilityId: original.id } }),
+            events: await db.meetingEvent.findMany({ where: { session: { advisorId: people.advisor.id } }, orderBy: { id: "asc" } }),
+        };
+        await db.$executeRaw`INSERT INTO agt17_test_fault (advisor_id) VALUES (${people.advisor.id})`;
+        const failed = await publishTerm(db, people.advisor.id, people.fall.id, review.review.token, now);
+        assert.equal(failed.ok, false);
+        if (!failed.ok) assert.equal(failed.code, "failed");
+        const after = {
+            schedule: await db.advisorTermSchedule.findUnique({ where: { advisorId_termId: { advisorId: people.advisor.id, termId: people.fall.id } } }),
+            draft: await db.advisorTermDraft.findUnique({ where: { advisorId_termId: { advisorId: people.advisor.id, termId: people.fall.id } } }),
+            slots: await db.meetingAvailability.findMany({ where: { advisorId: people.advisor.id }, orderBy: { id: "asc" } }),
+            session: await db.meetingSession.findFirst({ where: { availabilityId: original.id } }),
+            events: await db.meetingEvent.findMany({ where: { session: { advisorId: people.advisor.id } }, orderBy: { id: "asc" } }),
+        };
+        assert.equal(after.schedule?.version, before.schedule?.version);
+        assert.equal(JSON.stringify(after.schedule?.config), JSON.stringify(before.schedule?.config));
+        assert.equal(after.draft?.version, before.draft?.version);
+        assert.deepEqual(after.slots.map((slot) => [slot.id, slot.status, slot.startsAt.toISOString()]), before.slots.map((slot) => [slot.id, slot.status, slot.startsAt.toISOString()]));
+        assert.equal(after.session?.id, before.session?.id);
+        assert.equal(after.session?.status, "CONFIRMED");
+        assert.deepEqual(after.events.map((event) => event.id), before.events.map((event) => event.id));
+        await db.$executeRaw`DELETE FROM agt17_test_fault WHERE advisor_id = ${people.advisor.id}`;
+        assert.equal((await publishTerm(db, people.advisor.id, people.fall.id, review.review.token, now)).ok, true);
+        assert.equal((await db.meetingSession.findUnique({ where: { id: before.session?.id ?? "" } }))?.status, "CONFIRMED");
+        assert.deepEqual((await db.meetingEvent.findMany({ where: { sessionId: before.session?.id ?? "" }, orderBy: { id: "asc" } })).map((event) => event.id), before.events.filter((event) => event.sessionId === before.session?.id).map((event) => event.id));
+        assert.ok(await db.meetingAvailability.findFirst({ where: { advisorId: people.advisor.id, source: "MANUAL" } }));
+        assert.equal(await db.advisorTermDraft.findUnique({ where: { advisorId_termId: { advisorId: people.advisor.id, termId: people.fall.id } } }), null);
+    } finally {
+        await db.$executeRawUnsafe(`DROP TRIGGER IF EXISTS agt17_test_fault_availability ON "MeetingAvailability"`);
+        await db.$executeRawUnsafe(`DROP FUNCTION IF EXISTS agt17_test_fault_availability()`);
+        await db.$executeRawUnsafe(`DROP TABLE IF EXISTS agt17_test_fault`);
         await cleanup(people);
     }
 });
