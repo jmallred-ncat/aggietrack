@@ -135,6 +135,91 @@ async function getJordanSession() {
   });
 }
 
+/**
+ * Check if a date is a US federal holiday (matches logic in test-student-accounts.ts)
+ */
+function isUSFederalHoliday(date: Date): boolean {
+  const year = date.getUTCFullYear();
+  const month = date.getUTCMonth();
+  const day = date.getUTCDate();
+  const dayOfWeek = date.getUTCDay();
+  
+  // New Year's Day
+  if (month === 0 && day === 1) return true;
+  if (month === 0 && day === 2 && dayOfWeek === 1) return true;
+  if (month === 11 && day === 31 && dayOfWeek === 5) return true;
+  
+  // MLK Day (third Monday of January)
+  if (month === 0 && dayOfWeek === 1) {
+    const mondayCount = Math.floor((day - 1) / 7) + 1;
+    if (mondayCount === 3) return true;
+  }
+  
+  // Presidents' Day (third Monday of February)
+  if (month === 1 && dayOfWeek === 1) {
+    const mondayCount = Math.floor((day - 1) / 7) + 1;
+    if (mondayCount === 3) return true;
+  }
+  
+  // Memorial Day (last Monday of May)
+  if (month === 4 && dayOfWeek === 1 && day >= 25) return true;
+  
+  // Juneteenth
+  if (month === 5 && day === 19) return true;
+  if (month === 5 && day === 18 && dayOfWeek === 5) return true;
+  if (month === 5 && day === 20 && dayOfWeek === 1) return true;
+  
+  // Independence Day
+  if (month === 6 && day === 4) return true;
+  if (month === 6 && day === 3 && dayOfWeek === 5) return true;
+  if (month === 6 && day === 5 && dayOfWeek === 1) return true;
+  
+  // Labor Day (first Monday of September)
+  if (month === 8 && dayOfWeek === 1 && day <= 7) return true;
+  
+  // Columbus Day (second Monday of October)
+  if (month === 9 && dayOfWeek === 1) {
+    const mondayCount = Math.floor((day - 1) / 7) + 1;
+    if (mondayCount === 2) return true;
+  }
+  
+  // Veterans Day
+  if (month === 10 && day === 11) return true;
+  if (month === 10 && day === 10 && dayOfWeek === 5) return true;
+  if (month === 10 && day === 12 && dayOfWeek === 1) return true;
+  
+  // Thanksgiving (fourth Thursday of November)
+  if (month === 10 && dayOfWeek === 4) {
+    const thursdayCount = Math.floor((day - 1) / 7) + 1;
+    if (thursdayCount === 4) return true;
+  }
+  
+  // Christmas
+  if (month === 11 && day === 25) return true;
+  if (month === 11 && day === 24 && dayOfWeek === 5) return true;
+  if (month === 11 && day === 26 && dayOfWeek === 1) return true;
+  
+  return false;
+}
+
+/**
+ * Move a date backward to the nearest preceding weekday that is not a holiday
+ */
+function moveToValidBusinessDay(date: Date): Date {
+  const result = new Date(date);
+  
+  while (true) {
+    const dayOfWeek = result.getUTCDay();
+    const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+    
+    if (!isWeekend && !isUSFederalHoliday(result)) {
+      return result;
+    }
+    
+    result.setUTCDate(result.getUTCDate() - 1);
+  }
+}
+
 function expectedJordanAppointmentTime() {
   const term = nextRegistrationTerm();
   const termRecord = academicTerms.find(t => t.season === term.season && t.year === term.year);
@@ -143,12 +228,19 @@ function expectedJordanAppointmentTime() {
   const tenDaysBefore = new Date(termRecord.startsOn);
   tenDaysBefore.setDate(tenDaysBefore.getDate() - 10);
   tenDaysBefore.setUTCHours(14, 0, 0, 0);
-  return tenDaysBefore;
+  
+  return moveToValidBusinessDay(tenDaysBefore);
 }
 
 test("Jordan reset wipes Sarah's availability and creates seeded appointment", async () => {
   const sarahId = await getSarahId();
   assert.ok(sarahId, "Sarah Martinez should exist");
+  
+  // Clean slate: remove any existing availability first
+  await prisma.meetingSession.deleteMany({ where: { advisorId: sarahId } });
+  await prisma.meetingAvailability.deleteMany({ where: { advisorId: sarahId } });
+  await prisma.advisorTermSchedule.deleteMany({ where: { advisorId: sarahId } });
+  await prisma.advisorTermDraft.deleteMany({ where: { advisorId: sarahId } });
   
   await createDirtySarahAvailability(sarahId);
   
@@ -176,7 +268,7 @@ test("Jordan reset wipes Sarah's availability and creates seeded appointment", a
   assert.equal(
     session.startsAt.getTime(),
     expectedTime.getTime(),
-    "Session should start at expected time (10 days before next term, 2 PM UTC)"
+    "Session should start at expected time (business day adjusted)"
   );
 });
 
@@ -184,11 +276,18 @@ test("Avery reset does NOT wipe Sarah's availability", async () => {
   const sarahId = await getSarahId();
   assert.ok(sarahId, "Sarah Martinez should exist");
   
+  // Clean slate: remove any existing availability first
+  await prisma.meetingSession.deleteMany({ where: { advisorId: sarahId } });
+  await prisma.meetingAvailability.deleteMany({ where: { advisorId: sarahId } });
+  await prisma.advisorTermSchedule.deleteMany({ where: { advisorId: sarahId } });
+  await prisma.advisorTermDraft.deleteMany({ where: { advisorId: sarahId } });
+  
   await createDirtySarahAvailability(sarahId);
   
   const beforeCounts = await countSarahAvailability();
-  assert.equal(beforeCounts.availability, 1, "Should have availability before Avery reset");
-  assert.equal(beforeCounts.schedules, 1, "Should have schedule before Avery reset");
+  assert.equal(beforeCounts.availability, 1, "Should have 1 availability slot before Avery reset");
+  assert.equal(beforeCounts.schedules, 1, "Should have 1 schedule before Avery reset");
+  assert.equal(beforeCounts.drafts, 1, "Should have 1 draft before Avery reset");
   
   await resetTestStudent(mockRequest("it.start@example.test"), "it.start@example.test");
   
@@ -204,15 +303,23 @@ test("Riley reset does NOT wipe Sarah's availability", async () => {
   const sarahId = await getSarahId();
   assert.ok(sarahId, "Sarah Martinez should exist");
   
+  // Clean slate: remove any existing availability first
+  await prisma.meetingSession.deleteMany({ where: { advisorId: sarahId } });
+  await prisma.meetingAvailability.deleteMany({ where: { advisorId: sarahId } });
+  await prisma.advisorTermSchedule.deleteMany({ where: { advisorId: sarahId } });
+  await prisma.advisorTermDraft.deleteMany({ where: { advisorId: sarahId } });
+  
   await createDirtySarahAvailability(sarahId);
   
   const beforeCounts = await countSarahAvailability();
-  assert.ok(beforeCounts.availability > 0, "Should have availability before Riley reset");
+  assert.equal(beforeCounts.availability, 1, "Should have 1 availability slot before Riley reset");
+  assert.equal(beforeCounts.schedules, 1, "Should have 1 schedule before Riley reset");
   
   await resetTestStudent(mockRequest("it.late@example.test"), "it.late@example.test");
   
   const afterCounts = await countSarahAvailability();
-  assert.ok(afterCounts.availability > 0, "Availability should remain after Riley reset");
+  assert.equal(afterCounts.availability, 1, "Availability should remain after Riley reset");
+  assert.equal(afterCounts.schedules, 1, "Schedule should remain after Riley reset");
   
   console.log("✓ Riley reset preserved Sarah's availability (did not wipe)");
 });
@@ -220,6 +327,12 @@ test("Riley reset does NOT wipe Sarah's availability", async () => {
 test("Sarah advisor reset wipes availability and restores Jordan's session", async () => {
   const sarahId = await getSarahId();
   assert.ok(sarahId, "Sarah Martinez should exist");
+  
+  // Clean slate: remove any existing availability first
+  await prisma.meetingSession.deleteMany({ where: { advisorId: sarahId } });
+  await prisma.meetingAvailability.deleteMany({ where: { advisorId: sarahId } });
+  await prisma.advisorTermSchedule.deleteMany({ where: { advisorId: sarahId } });
+  await prisma.advisorTermDraft.deleteMany({ where: { advisorId: sarahId } });
   
   await createDirtySarahAvailability(sarahId);
   
@@ -237,6 +350,15 @@ test("Sarah advisor reset wipes availability and restores Jordan's session", asy
 });
 
 test("Jordan's seeded appointment has correct linked availability", async () => {
+  const sarahId = await getSarahId();
+  assert.ok(sarahId, "Sarah Martinez should exist");
+  
+  // Clean slate: remove any existing availability first
+  await prisma.meetingSession.deleteMany({ where: { advisorId: sarahId } });
+  await prisma.meetingAvailability.deleteMany({ where: { advisorId: sarahId } });
+  await prisma.advisorTermSchedule.deleteMany({ where: { advisorId: sarahId } });
+  await prisma.advisorTermDraft.deleteMany({ where: { advisorId: sarahId } });
+  
   await resetTestStudent(mockRequest("it.mid@example.test"), "it.mid@example.test");
   
   const session = await getJordanSession();

@@ -165,11 +165,100 @@ async function ensureJordanSubmittedPlan(studentId: string) {
   });
 }
 
+/**
+ * Check if a date is a US federal holiday (observed dates).
+ * Only includes holidays that would affect a Spring or Fall term schedule.
+ */
+function isUSFederalHoliday(date: Date): boolean {
+  const year = date.getUTCFullYear();
+  const month = date.getUTCMonth();
+  const day = date.getUTCDate();
+  const dayOfWeek = date.getUTCDay();
+  
+  // New Year's Day (January 1, or observed on adjacent weekday)
+  if (month === 0 && day === 1) return true;
+  if (month === 0 && day === 2 && dayOfWeek === 1) return true; // observed Monday if Jan 1 is Sunday
+  if (month === 11 && day === 31 && dayOfWeek === 5) return true; // observed Friday if Jan 1 is Saturday
+  
+  // Martin Luther King Jr. Day (third Monday of January)
+  if (month === 0 && dayOfWeek === 1) {
+    const mondayCount = Math.floor((day - 1) / 7) + 1;
+    if (mondayCount === 3) return true;
+  }
+  
+  // Presidents' Day (third Monday of February)
+  if (month === 1 && dayOfWeek === 1) {
+    const mondayCount = Math.floor((day - 1) / 7) + 1;
+    if (mondayCount === 3) return true;
+  }
+  
+  // Memorial Day (last Monday of May)
+  if (month === 4 && dayOfWeek === 1 && day >= 25) return true;
+  
+  // Juneteenth (June 19, or observed on adjacent weekday)
+  if (month === 5 && day === 19) return true;
+  if (month === 5 && day === 18 && dayOfWeek === 5) return true; // observed Friday if Jun 19 is Saturday
+  if (month === 5 && day === 20 && dayOfWeek === 1) return true; // observed Monday if Jun 19 is Sunday
+  
+  // Independence Day (July 4, or observed on adjacent weekday)
+  if (month === 6 && day === 4) return true;
+  if (month === 6 && day === 3 && dayOfWeek === 5) return true; // observed Friday if Jul 4 is Saturday
+  if (month === 6 && day === 5 && dayOfWeek === 1) return true; // observed Monday if Jul 4 is Sunday
+  
+  // Labor Day (first Monday of September)
+  if (month === 8 && dayOfWeek === 1 && day <= 7) return true;
+  
+  // Columbus Day (second Monday of October)
+  if (month === 9 && dayOfWeek === 1) {
+    const mondayCount = Math.floor((day - 1) / 7) + 1;
+    if (mondayCount === 2) return true;
+  }
+  
+  // Veterans Day (November 11, or observed on adjacent weekday)
+  if (month === 10 && day === 11) return true;
+  if (month === 10 && day === 10 && dayOfWeek === 5) return true; // observed Friday if Nov 11 is Saturday
+  if (month === 10 && day === 12 && dayOfWeek === 1) return true; // observed Monday if Nov 11 is Sunday
+  
+  // Thanksgiving (fourth Thursday of November)
+  if (month === 10 && dayOfWeek === 4) {
+    const thursdayCount = Math.floor((day - 1) / 7) + 1;
+    if (thursdayCount === 4) return true;
+  }
+  
+  // Christmas (December 25, or observed on adjacent weekday)
+  if (month === 11 && day === 25) return true;
+  if (month === 11 && day === 24 && dayOfWeek === 5) return true; // observed Friday if Dec 25 is Saturday
+  if (month === 11 && day === 26 && dayOfWeek === 1) return true; // observed Monday if Dec 25 is Sunday
+  
+  return false;
+}
+
+/**
+ * Move a date backward to the nearest preceding weekday that is not a US federal holiday.
+ */
+function moveToValidBusinessDay(date: Date): Date {
+  const result = new Date(date);
+  
+  while (true) {
+    const dayOfWeek = result.getUTCDay();
+    const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+    
+    if (!isWeekend && !isUSFederalHoliday(result)) {
+      return result;
+    }
+    
+    // Move back one day
+    result.setUTCDate(result.getUTCDate() - 1);
+  }
+}
+
 /** 
  * Deterministic appointment time for Jordan's advising session.
  * Returns a stable date: 10 days before the next registration term starts,
- * at 2:00 PM (14:00 UTC). This gives a realistic "upcoming appointment about 
- * his submitted plan" that doesn't drift with the current date.
+ * at 2:00 PM (14:00 UTC / 9:00 AM EST). If that date falls on a weekend or
+ * US federal holiday, moves it backward to the nearest preceding valid
+ * business day. This gives a realistic "upcoming appointment about his
+ * submitted plan" that doesn't drift with the current date.
  */
 function jordanAppointmentTime(now = new Date()) {
   const term = nextRegistrationTerm(now);
@@ -179,7 +268,8 @@ function jordanAppointmentTime(now = new Date()) {
   const tenDaysBefore = new Date(termRecord.startsOn);
   tenDaysBefore.setDate(tenDaysBefore.getDate() - 10);
   tenDaysBefore.setUTCHours(14, 0, 0, 0);
-  return tenDaysBefore;
+  
+  return moveToValidBusinessDay(tenDaysBefore);
 }
 
 /**
@@ -283,7 +373,19 @@ async function writeFrozen(userId: string, student: TestStudent, catalogYearId: 
     await tx.advisingAppointment.deleteMany({ where: { studentId: profile.id } });
     await tx.advisingNote.deleteMany({ where: { studentId: profile.id } });
     
+    // Get session availability IDs before deleting sessions, so we can clean up orphan slots
+    const studentSessions = await tx.meetingSession.findMany({
+      where: { studentId: profile.id },
+      select: { availabilityId: true },
+    });
+    const availabilityIds = studentSessions.map(s => s.availabilityId).filter((id): id is string => id !== null);
+    
     await tx.meetingSession.deleteMany({ where: { studentId: profile.id } });
+    
+    // Clean up availability slots that were linked to this student's sessions
+    if (availabilityIds.length > 0) {
+      await tx.meetingAvailability.deleteMany({ where: { id: { in: availabilityIds } } });
+    }
     
     await tx.session.deleteMany({ where: { userId } });
     
