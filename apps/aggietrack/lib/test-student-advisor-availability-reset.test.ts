@@ -5,7 +5,7 @@ import { MeetingSessionStatus, MeetingSlotStatus, MeetingSlotSource } from "./ge
 import { prisma } from "./prisma";
 import { resetTestStudent } from "./test-student-accounts";
 import { nextRegistrationTerm, sarahMartinezEmail } from "./test-students";
-import { academicTerms } from "../../prisma/seed/academic-terms";
+import { academicTerms } from "../prisma/seed/academic-terms";
 
 /**
  * Test: Verify advisor availability reset behavior

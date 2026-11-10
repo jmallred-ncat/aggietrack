@@ -7,7 +7,7 @@ import { prisma } from "./prisma";
 import { plannerWriteFaultValue } from "./planner-write";
 import { testPlanNoteDeleteWhere } from "./test-plan-notes";
 import { assignedAdvisorEmail, authorizeTestStudents, bearerSecret, jordanSubmittedPlan, nextRegistrationTerm, sarahMartinezEmail, testAccountByEmail, testAdvisorByEmail, testStudentByEmail, testStudents, testAdvisors, type FrozenCourse, type TestStudent, type TestAdvisor } from "./test-students";
-import { academicTerms } from "../../prisma/seed/academic-terms";
+import { academicTerms } from "../prisma/seed/academic-terms";
 
 const frozenAt = new Date("2026-01-15T00:00:00.000Z");
 
