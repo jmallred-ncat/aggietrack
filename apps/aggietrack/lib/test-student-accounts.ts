@@ -274,7 +274,7 @@ function jordanAppointmentTime(now = new Date()) {
 
 /**
  * Seed Jordan Hale's advising appointment with Sarah Martinez.
- * Creates a 30-minute confirmed session about reviewing his submitted next-term plan.
+ * Creates a 30-minute confirmed session for academic planning discussion.
  */
 async function ensureJordanAdvisingSession(studentId: string, advisorId: string, db: Db = prisma) {
   const appointmentTime = jordanAppointmentTime();
@@ -282,7 +282,7 @@ async function ensureJordanAdvisingSession(studentId: string, advisorId: string,
   const durationMinutes = 30;
   
   const term = nextRegistrationTerm();
-  const topic = `Review submitted ${term.season === "FALL" ? "Fall" : "Spring"} ${term.year} plan`;
+  const topic = `Academic planning for ${term.season === "FALL" ? "Fall" : "Spring"} ${term.year}`;
   
   const existingSession = await db.meetingSession.findFirst({
     where: { studentId, advisorId, status: MeetingSessionStatus.CONFIRMED },
@@ -357,7 +357,6 @@ async function cleanAdvisorAvailability(db: Db = prisma) {
 
 async function writeFrozen(userId: string, student: TestStudent, catalogYearId: string, advisorId: string | null) {
   const planned = plannedAttempts(student);
-  const submitted = student.email === jordanEmail ? await jordanPlanRecords() : null;
   const isJordan = student.email === jordanEmail;
   
   await prisma.$transaction(async tx => {
@@ -405,7 +404,6 @@ async function writeFrozen(userId: string, student: TestStudent, catalogYearId: 
       },
     });
     if (planned.length === 0) {
-      if (submitted) await tx.plannedTerm.create({ data: submittedPlanData(profile.id, submitted.termId, submitted.courseIds) });
       return;
     }
 
@@ -462,7 +460,6 @@ async function writeFrozen(userId: string, student: TestStudent, catalogYearId: 
       };
     });
     await tx.transcriptEntry.createMany({ data: entries });
-    if (submitted) await tx.plannedTerm.create({ data: submittedPlanData(profile.id, submitted.termId, submitted.courseIds) });
     
     if (isJordan && advisorId) {
       await ensureJordanAdvisingSession(profile.id, advisorId, tx);
@@ -540,7 +537,6 @@ export async function ensureTestStudents(request: Request) {
       if (!profile) await writeFrozen(userId, student, catalogYearId, advisorId);
       else {
         await prisma.studentProfile.update({ where: { id: profile.id }, data: { advisorId } });
-        if (student.email === jordanEmail) await ensureJordanSubmittedPlan(profile.id);
       }
       succeeded.push(student.email);
     } catch (error) {

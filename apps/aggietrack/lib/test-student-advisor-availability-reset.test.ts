@@ -260,7 +260,7 @@ test("Jordan reset wipes Sarah's availability and creates seeded appointment", a
   const session = await getJordanSession();
   assert.ok(session, "Jordan should have a seeded session");
   assert.equal(session.durationMinutes, 30, "Session should be 30 minutes");
-  assert.ok(session.topic?.includes("plan"), "Session should be about plan review");
+  assert.ok(session.topic?.includes("planning"), "Session should be about academic planning");
   assert.ok(session.availability, "Session should have linked availability");
   assert.equal(session.availability.status, MeetingSlotStatus.BOOKED, "Slot should be booked");
   

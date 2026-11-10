@@ -45,19 +45,19 @@ This document lists test students, their scenarios, and expected progress metric
 - **Resident Hours:** 48 (all NC A&T letter grades)
 - **Honors Badge:** **Cum Laude pace** (3.25–3.49, and 48 resident hours is enough)
 - **Advisor:** Sarah Martinez (`advisor.1@example.test`)
-- **Seeded Advising Session:** Jordan has a confirmed 30-minute appointment with Sarah to review his submitted next-term plan. The appointment is scheduled 10 days before the next registration term starts, at 2:00 PM UTC (9:00 AM EST), adjusted backward to the nearest preceding weekday if it falls on a weekend or US federal holiday. For example, Spring 2027 (starts January 11, 2027) places the raw appointment on January 1, 2027 (New Year's Day), so it moves back to Thursday, December 31, 2026 at 14:00 UTC / 9:00 AM EST. This session is deterministic (tied to the term schedule, not the current date) and is restored on reset.
+- **Seeded Advising Session:** Jordan has a confirmed 30-minute appointment with Sarah for academic planning discussion. The appointment is scheduled 10 days before the next registration term starts, at 2:00 PM UTC (9:00 AM EST), adjusted backward to the nearest preceding weekday if it falls on a weekend or US federal holiday. For example, Spring 2027 (starts January 11, 2027) places the raw appointment on January 1, 2027 (New Year's Day), so it moves back to Thursday, December 31, 2026 at 14:00 UTC / 9:00 AM EST. This session is deterministic (tied to the term schedule, not the current date) and is restored on reset.
 - **Purpose:** Standard mid-program student with current-term enrollment and advising workflow
 - **Transcript:** 
   - Terms 1-3 completed with varied grades (A, A-, B+, and B)
   - **Term 4 courses: IN_PROGRESS** (no final grades yet, excluded from GPA)
   - No transfer credits
   - Represents typical student mid-semester
-  - **Submitted next-term plan:** Spring or Fall (whichever is next), waiting for Sarah's review
+- **Planner:** Empty after reset (no submitted or draft plans)
 - **Tests:**
   - ✅ **In-progress courses** (term 4, no grades)
   - ✅ **Varied plus/minus grades** (A, A-, B+, B)
   - ✅ **Advisor assignment and seeded advising session**
-  - ✅ **Submitted next-term plan restoration on reset**
+  - ✅ **Clean planner slate after reset**
   - In-progress excluded from earned credits and GPA
   - In-progress courses don't block prerequisites
   - Standard progress tracking
@@ -220,7 +220,7 @@ When test accounts are reset, advisor availability is cleaned and restored to th
 
 - **Individual Student Reset (Jordan Hale):** Wipes all of Sarah Martinez's availability (weekly hours, open times, schedules, and sessions), then restores only Jordan's seeded advising appointment. This returns Sarah's availability to the clean baseline fixture.
 - **Individual Student Reset (Avery Cole or Riley Brooks):** Does NOT wipe Sarah's availability. This allows testing a student's experience without disrupting the advisor's schedule mid-test. The student's own advising sessions are deleted (along with their linked availability slots), but Sarah's published weekly schedules and other students' sessions remain.
-- **Advisor Reset (Sarah Martinez):** Signs Sarah out, refreshes her password, wipes all availability and sessions, then restores Jordan's seeded appointment. Student advisor assignments and Jordan's submitted plan remain intact.
+- **Advisor Reset (Sarah Martinez):** Signs Sarah out, refreshes her password, wipes all availability and sessions, then restores Jordan's seeded appointment. Student advisor assignments remain intact.
 - **Reset All Students:** Applies individual student reset for each student in order: Avery Cole, then Jordan Hale, then Riley Brooks. Since Jordan's reset wipes all availability and then restores his session, the final state is clean baseline availability with only Jordan's seeded session, regardless of whether Avery or Riley had sessions before Jordan's reset.
 
 The baseline fixture is:
