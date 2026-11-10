@@ -1,12 +1,13 @@
 import { randomUUID } from "node:crypto";
 import { hashPassword } from "better-auth/crypto";
-import { PlannedTermStatus, Prisma, TranscriptStatus, UserRole } from "./generated/prisma/client";
+import { MeetingSessionStatus, MeetingSlotStatus, MeetingSlotSource, PlannedTermStatus, Prisma, TranscriptStatus, UserRole } from "./generated/prisma/client";
 import { plannedAttempts } from "./frozen-transcript";
 import { describeFixtureLoad, runFixtureLoad, type FixtureAttempt } from "./transcript-fixtures";
 import { prisma } from "./prisma";
 import { plannerWriteFaultValue } from "./planner-write";
 import { testPlanNoteDeleteWhere } from "./test-plan-notes";
-import { assignedAdvisorEmail, authorizeTestStudents, bearerSecret, jordanSubmittedPlan, sarahMartinezEmail, testAccountByEmail, testAdvisorByEmail, testStudentByEmail, testStudents, testAdvisors, type FrozenCourse, type TestStudent, type TestAdvisor } from "./test-students";
+import { assignedAdvisorEmail, authorizeTestStudents, bearerSecret, jordanSubmittedPlan, nextRegistrationTerm, sarahMartinezEmail, testAccountByEmail, testAdvisorByEmail, testStudentByEmail, testStudents, testAdvisors, type FrozenCourse, type TestStudent, type TestAdvisor } from "./test-students";
+import { academicTerms } from "../../prisma/seed/academic-terms";
 
 const frozenAt = new Date("2026-01-15T00:00:00.000Z");
 
@@ -164,9 +165,111 @@ async function ensureJordanSubmittedPlan(studentId: string) {
   });
 }
 
+/** 
+ * Deterministic appointment time for Jordan's advising session.
+ * Returns a stable date: 10 days before the next registration term starts,
+ * at 2:00 PM (14:00 UTC). This gives a realistic "upcoming appointment about 
+ * his submitted plan" that doesn't drift with the current date.
+ */
+function jordanAppointmentTime(now = new Date()) {
+  const term = nextRegistrationTerm(now);
+  const termRecord = academicTerms.find(t => t.season === term.season && t.year === term.year);
+  if (!termRecord) throw new TestStudentError(`${term.season} ${term.year} is not in the seed data.`, 500);
+  
+  const tenDaysBefore = new Date(termRecord.startsOn);
+  tenDaysBefore.setDate(tenDaysBefore.getDate() - 10);
+  tenDaysBefore.setUTCHours(14, 0, 0, 0);
+  return tenDaysBefore;
+}
+
+/**
+ * Seed Jordan Hale's advising appointment with Sarah Martinez.
+ * Creates a 30-minute confirmed session about reviewing his submitted next-term plan.
+ */
+async function ensureJordanAdvisingSession(studentId: string, advisorId: string, db: Db = prisma) {
+  const appointmentTime = jordanAppointmentTime();
+  const endTime = new Date(appointmentTime.getTime() + 30 * 60 * 1000);
+  const durationMinutes = 30;
+  
+  const term = nextRegistrationTerm();
+  const topic = `Review submitted ${term.season === "FALL" ? "Fall" : "Spring"} ${term.year} plan`;
+  
+  const existingSession = await db.meetingSession.findFirst({
+    where: { studentId, advisorId, status: MeetingSessionStatus.CONFIRMED },
+    include: { availability: true },
+  });
+  
+  if (
+    existingSession
+    && existingSession.startsAt.getTime() === appointmentTime.getTime()
+    && existingSession.endsAt.getTime() === endTime.getTime()
+    && existingSession.durationMinutes === durationMinutes
+    && existingSession.topic === topic
+  ) {
+    return;
+  }
+  
+  if (existingSession?.availabilityId) {
+    await db.meetingAvailability.delete({ where: { id: existingSession.availabilityId } }).catch(() => {});
+  }
+  if (existingSession) {
+    await db.meetingSession.delete({ where: { id: existingSession.id } });
+  }
+  
+  const availabilityId = randomUUID();
+  const sessionId = randomUUID();
+  
+  await db.meetingAvailability.create({
+    data: {
+      id: availabilityId,
+      advisorId,
+      startsAt: appointmentTime,
+      endsAt: endTime,
+      durationMinutes,
+      status: MeetingSlotStatus.BOOKED,
+      source: MeetingSlotSource.MANUAL,
+    },
+  });
+  
+  await db.meetingSession.create({
+    data: {
+      id: sessionId,
+      studentId,
+      advisorId,
+      availabilityId,
+      startsAt: appointmentTime,
+      endsAt: endTime,
+      durationMinutes,
+      status: MeetingSessionStatus.CONFIRMED,
+      topic,
+    },
+  });
+}
+
+/**
+ * Clean up all advisor availability, schedules, and sessions.
+ * This restores the baseline empty availability state that Test Manager expects after reset.
+ * Call this before recreating Jordan's seeded appointment.
+ */
+async function cleanAdvisorAvailability(db: Db = prisma) {
+  const sarahId = await db.user.findUnique({ 
+    where: { email: sarahMartinezEmail },
+    select: { id: true },
+  }).then(u => u?.id);
+  
+  if (!sarahId) return;
+  
+  await db.meetingSession.deleteMany({ where: { advisorId: sarahId } });
+  await db.meetingAvailability.deleteMany({ where: { advisorId: sarahId } });
+  await db.advisorTermSchedule.deleteMany({ where: { advisorId: sarahId } });
+  await db.advisorTermDraft.deleteMany({ where: { advisorId: sarahId } });
+}
+
 async function writeFrozen(userId: string, student: TestStudent, catalogYearId: string, advisorId: string | null) {
   const planned = plannedAttempts(student);
   const submitted = student.email === jordanEmail ? await jordanPlanRecords() : null;
+  const isJordan = student.email === jordanEmail;
+  
   await prisma.$transaction(async tx => {
     const profile = await tx.studentProfile.upsert({
       where: { userId },
@@ -179,7 +282,15 @@ async function writeFrozen(userId: string, student: TestStudent, catalogYearId: 
     await tx.plannedTerm.deleteMany({ where: { studentId: profile.id } });
     await tx.advisingAppointment.deleteMany({ where: { studentId: profile.id } });
     await tx.advisingNote.deleteMany({ where: { studentId: profile.id } });
+    
+    await tx.meetingSession.deleteMany({ where: { studentId: profile.id } });
+    
     await tx.session.deleteMany({ where: { userId } });
+    
+    if (isJordan) {
+      await cleanAdvisorAvailability(tx);
+    }
+    
     // JOUR 101 was briefly inserted as a catalog course. A typed free elective is not one, so drop that row once this transcript no longer points at it.
     await tx.course.deleteMany({
       where: {
@@ -250,6 +361,10 @@ async function writeFrozen(userId: string, student: TestStudent, catalogYearId: 
     });
     await tx.transcriptEntry.createMany({ data: entries });
     if (submitted) await tx.plannedTerm.create({ data: submittedPlanData(profile.id, submitted.termId, submitted.courseIds) });
+    
+    if (isJordan && advisorId) {
+      await ensureJordanAdvisingSession(profile.id, advisorId, tx);
+    }
   });
 }
 
@@ -375,9 +490,26 @@ export async function resetTestStudent(request: Request, email: string) {
   
   const advisor = testAdvisorByEmail(email);
   if (advisor) {
-    // Sign the advisor out and refresh the password. Assignments and Jordan's submitted plan stay.
     const userId = await ensureUser(advisor, password, true);
-    await prisma.session.deleteMany({ where: { userId } });
+    
+    if (advisor.email === sarahMartinezEmail) {
+      const jordanUser = await prisma.user.findUnique({
+        where: { email: jordanEmail },
+        include: { studentProfile: true },
+      });
+      
+      await prisma.$transaction(async tx => {
+        await tx.session.deleteMany({ where: { userId } });
+        await cleanAdvisorAvailability(tx);
+        
+        if (jordanUser?.studentProfile) {
+          await ensureJordanAdvisingSession(jordanUser.studentProfile.id, userId, tx);
+        }
+      });
+    } else {
+      await prisma.session.deleteMany({ where: { userId } });
+    }
+    
     return { email: advisor.email, name: `${advisor.firstName} ${advisor.lastName}` };
   }
   
