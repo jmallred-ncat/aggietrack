@@ -138,9 +138,41 @@ export async function repairBrokenLinks(db: PrismaClient = getPrisma()) {
   }, { timeout: 60000 });
 }
 
+const agt17Workbook = "agt17-advisor-meetings";
+const agt17TestIds = new Set(["T-90", "T-91", "T-92", "T-93", "T-94", "T-95", "T-96", "T-97"]);
+
+/** Insert missing AGT-17 test rows. Do not rewrite a row that already exists, and do not bump copyRevision. */
+export async function applyAgt17Tests(db: PrismaClient = getPrisma()) {
+  await db.$transaction(async tx => {
+    if ((await tx.importMetadata.findUnique({ where: { key: "agt17-workbook" } }))?.value === agt17Workbook) return;
+    const tests = seed.sections.find(section => section.name === "Tests");
+    if (!tests) return;
+    for (const row of tests.rows) {
+      const id = normalizeId(String(row.id));
+      if (!agt17TestIds.has(id)) continue;
+      const current = await tx.workbookRecord.findUnique({ where: { section_id: { section: "Tests", id } } });
+      if (current) continue;
+      await tx.workbookRecord.create({
+        data: {
+          section: "Tests",
+          id,
+          position: row.sourceRow,
+          values: rewriteRecordValues(row.values as Values) as Prisma.InputJsonValue,
+        },
+      });
+    }
+    await tx.importMetadata.upsert({
+      where: { key: "agt17-workbook" },
+      create: { key: "agt17-workbook", value: agt17Workbook },
+      update: { value: agt17Workbook },
+    });
+  });
+}
+
 export async function readWorkspace(db: PrismaClient = getPrisma()): Promise<Workspace> {
   await normalizeStoredIds(db);
   await applyHumanCopy(db);
+  await applyAgt17Tests(db);
   await repairBrokenLinks(db);
   const [records, history] = await db.$transaction([db.workbookRecord.findMany({ orderBy: [{ position: "asc" }, { id: "asc" }] }), db.recordHistory.findMany({ orderBy: { sequence: "desc" } })]);
   const result: Workspace = {

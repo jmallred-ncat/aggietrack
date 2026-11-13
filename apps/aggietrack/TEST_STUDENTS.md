@@ -44,15 +44,20 @@ This document lists test students, their scenarios, and expected progress metric
 - **Adjusted GPA:** **3.41** (same as cumulative, no repeats)
 - **Resident Hours:** 48 (all NC A&T letter grades)
 - **Honors Badge:** **Cum Laude pace** (3.25–3.49, and 48 resident hours is enough)
-- **Purpose:** Standard mid-program student with current-term enrollment
+- **Advisor:** Sarah Martinez (`advisor.1@example.test`)
+- **Seeded Advising Session:** Jordan has a confirmed 30-minute appointment with Sarah for academic planning discussion. The appointment is scheduled 10 days before the next registration term starts, at 2:00 PM UTC (9:00 AM EST), adjusted backward to the nearest preceding weekday if it falls on a weekend or US federal holiday. For example, Spring 2027 (starts January 11, 2027) places the raw appointment on January 1, 2027 (New Year's Day), so it moves back to Thursday, December 31, 2026 at 14:00 UTC / 9:00 AM EST. This session is deterministic (tied to the term schedule, not the current date) and is restored on reset.
+- **Purpose:** Standard mid-program student with current-term enrollment and advising workflow
 - **Transcript:** 
   - Terms 1-3 completed with varied grades (A, A-, B+, and B)
   - **Term 4 courses: IN_PROGRESS** (no final grades yet, excluded from GPA)
   - No transfer credits
   - Represents typical student mid-semester
+- **Planner:** Empty after reset (no submitted or draft plans)
 - **Tests:**
   - ✅ **In-progress courses** (term 4, no grades)
   - ✅ **Varied plus/minus grades** (A, A-, B+, B)
+  - ✅ **Advisor assignment and seeded advising session**
+  - ✅ **Clean planner slate after reset**
   - In-progress excluded from earned credits and GPA
   - In-progress courses don't block prerequisites
   - Standard progress tracking
@@ -208,6 +213,21 @@ The `computeDegreeProgress` function ensures each course only counts once toward
 - **Toast notifications** confirm actions
 - **Dashboard progress ring** animates on changes
 - **Test Manager** lists all 7 students with reset buttons
+
+### Advisor Availability Reset Behavior
+
+When test accounts are reset, advisor availability is cleaned and restored to the baseline fixture state:
+
+- **Individual Student Reset (Jordan Hale):** Wipes all of Sarah Martinez's availability (weekly hours, open times, schedules, and sessions), then restores only Jordan's seeded advising appointment. This returns Sarah's availability to the clean baseline fixture.
+- **Individual Student Reset (Avery Cole or Riley Brooks):** Does NOT wipe Sarah's availability. This allows testing a student's experience without disrupting the advisor's schedule mid-test. The student's own advising sessions are deleted (along with their linked availability slots), but Sarah's published weekly schedules and other students' sessions remain.
+- **Advisor Reset (Sarah Martinez):** Signs Sarah out, refreshes her password, wipes all availability and sessions, then restores Jordan's seeded appointment. Student advisor assignments remain intact.
+- **Reset All Students:** Applies individual student reset for each student in order: Avery Cole, then Jordan Hale, then Riley Brooks. Since Jordan's reset wipes all availability and then restores his session, the final state is clean baseline availability with only Jordan's seeded session, regardless of whether Avery or Riley had sessions before Jordan's reset.
+
+The baseline fixture is:
+- **Sarah Martinez:** No weekly term schedules, no published open times, no stray bookings or unavailability blocks, except Jordan's seeded session (see Jordan Hale above).
+- **Michael Chen:** No availability (not assigned to any test student).
+
+This design ensures the Demo 2 recording can show Sarah setting and publishing weekly hours from a clean slate, and Test Manager always returns to a consistent known state. Individual testing of Avery or Riley mid-workflow won't break Sarah's schedule unless Jordan is reset.
 
 ## Validation Covered
 

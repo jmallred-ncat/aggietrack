@@ -1,8 +1,14 @@
-export function getMigrateUrl() {
-    const raw = process.env.DATABASE_URL_UNPOOLED
-        ?? process.env.POSTGRES_URL_NON_POOLING
-        ?? process.env.DIRECT_URL
-        ?? process.env.DATABASE_URL;
+type MigrateEnv = Record<string, string | undefined>;
+
+export function readMigrateUrl(env: MigrateEnv = process.env) {
+    return env.DATABASE_URL_UNPOOLED
+        ?? env.POSTGRES_URL_NON_POOLING
+        ?? env.DIRECT_URL
+        ?? env.DATABASE_URL;
+}
+
+export function getMigrateUrl(env: MigrateEnv = process.env) {
+    const raw = readMigrateUrl(env);
 
     if (!raw) {
         return raw;

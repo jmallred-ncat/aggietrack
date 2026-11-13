@@ -22,6 +22,9 @@ function AlertDialogPortal({ ...props }: AlertDialogPrimitive.Portal.Props) {
   )
 }
 
+const alertDialogOverlayClassName =
+  "fixed inset-0 isolate z-50 bg-black/10 duration-100 supports-backdrop-filter:backdrop-blur-xs data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0"
+
 function AlertDialogOverlay({
   className,
   ...props
@@ -29,10 +32,7 @@ function AlertDialogOverlay({
   return (
     <AlertDialogPrimitive.Backdrop
       data-slot="alert-dialog-overlay"
-      className={cn(
-        "fixed inset-0 isolate z-50 bg-black/10 duration-100 supports-backdrop-filter:backdrop-blur-xs data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0",
-        className
-      )}
+      className={cn(alertDialogOverlayClassName, className)}
       {...props}
     />
   )
@@ -41,13 +41,20 @@ function AlertDialogOverlay({
 function AlertDialogContent({
   className,
   size = "default",
+  overlayClassName,
   ...props
 }: AlertDialogPrimitive.Popup.Props & {
   size?: "default" | "sm"
+  /** Replaces the shared overlay classes. A normal className on AlertDialogOverlay still merges with the defaults. */
+  overlayClassName?: string
 }) {
   return (
     <AlertDialogPortal>
-      <AlertDialogOverlay />
+      {overlayClassName === undefined ? (
+        <AlertDialogOverlay />
+      ) : (
+        <AlertDialogPrimitive.Backdrop data-slot="alert-dialog-overlay" className={overlayClassName} />
+      )}
       <AlertDialogPrimitive.Popup
         data-slot="alert-dialog-content"
         data-size={size}

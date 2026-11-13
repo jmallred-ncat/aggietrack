@@ -1,12 +1,13 @@
 import { randomUUID } from "node:crypto";
 import { hashPassword } from "better-auth/crypto";
-import { PlannedTermStatus, Prisma, TranscriptStatus, UserRole } from "./generated/prisma/client";
+import { MeetingSessionStatus, MeetingSlotStatus, MeetingSlotSource, PlannedTermStatus, Prisma, TranscriptStatus, UserRole } from "./generated/prisma/client";
 import { plannedAttempts } from "./frozen-transcript";
 import { describeFixtureLoad, runFixtureLoad, type FixtureAttempt } from "./transcript-fixtures";
 import { prisma } from "./prisma";
 import { plannerWriteFaultValue } from "./planner-write";
 import { testPlanNoteDeleteWhere } from "./test-plan-notes";
-import { assignedAdvisorEmail, authorizeTestStudents, bearerSecret, jordanSubmittedPlan, sarahMartinezEmail, testAccountByEmail, testAdvisorByEmail, testStudentByEmail, testStudents, testAdvisors, type FrozenCourse, type TestStudent, type TestAdvisor } from "./test-students";
+import { assignedAdvisorEmail, authorizeTestStudents, bearerSecret, jordanSubmittedPlan, nextRegistrationTerm, sarahMartinezEmail, testAccountByEmail, testAdvisorByEmail, testStudentByEmail, testStudents, testAdvisors, type FrozenCourse, type TestStudent, type TestAdvisor } from "./test-students";
+import { academicTerms } from "../prisma/seed/academic-terms";
 
 const frozenAt = new Date("2026-01-15T00:00:00.000Z");
 
@@ -164,9 +165,200 @@ async function ensureJordanSubmittedPlan(studentId: string) {
   });
 }
 
+/**
+ * Check if a date is a US federal holiday (observed dates).
+ * Only includes holidays that would affect a Spring or Fall term schedule.
+ */
+function isUSFederalHoliday(date: Date): boolean {
+  const year = date.getUTCFullYear();
+  const month = date.getUTCMonth();
+  const day = date.getUTCDate();
+  const dayOfWeek = date.getUTCDay();
+  
+  // New Year's Day (January 1, or observed on adjacent weekday)
+  if (month === 0 && day === 1) return true;
+  if (month === 0 && day === 2 && dayOfWeek === 1) return true; // observed Monday if Jan 1 is Sunday
+  if (month === 11 && day === 31 && dayOfWeek === 5) return true; // observed Friday if Jan 1 is Saturday
+  
+  // Martin Luther King Jr. Day (third Monday of January)
+  if (month === 0 && dayOfWeek === 1) {
+    const mondayCount = Math.floor((day - 1) / 7) + 1;
+    if (mondayCount === 3) return true;
+  }
+  
+  // Presidents' Day (third Monday of February)
+  if (month === 1 && dayOfWeek === 1) {
+    const mondayCount = Math.floor((day - 1) / 7) + 1;
+    if (mondayCount === 3) return true;
+  }
+  
+  // Memorial Day (last Monday of May)
+  if (month === 4 && dayOfWeek === 1 && day >= 25) return true;
+  
+  // Juneteenth (June 19, or observed on adjacent weekday)
+  if (month === 5 && day === 19) return true;
+  if (month === 5 && day === 18 && dayOfWeek === 5) return true; // observed Friday if Jun 19 is Saturday
+  if (month === 5 && day === 20 && dayOfWeek === 1) return true; // observed Monday if Jun 19 is Sunday
+  
+  // Independence Day (July 4, or observed on adjacent weekday)
+  if (month === 6 && day === 4) return true;
+  if (month === 6 && day === 3 && dayOfWeek === 5) return true; // observed Friday if Jul 4 is Saturday
+  if (month === 6 && day === 5 && dayOfWeek === 1) return true; // observed Monday if Jul 4 is Sunday
+  
+  // Labor Day (first Monday of September)
+  if (month === 8 && dayOfWeek === 1 && day <= 7) return true;
+  
+  // Columbus Day (second Monday of October)
+  if (month === 9 && dayOfWeek === 1) {
+    const mondayCount = Math.floor((day - 1) / 7) + 1;
+    if (mondayCount === 2) return true;
+  }
+  
+  // Veterans Day (November 11, or observed on adjacent weekday)
+  if (month === 10 && day === 11) return true;
+  if (month === 10 && day === 10 && dayOfWeek === 5) return true; // observed Friday if Nov 11 is Saturday
+  if (month === 10 && day === 12 && dayOfWeek === 1) return true; // observed Monday if Nov 11 is Sunday
+  
+  // Thanksgiving (fourth Thursday of November)
+  if (month === 10 && dayOfWeek === 4) {
+    const thursdayCount = Math.floor((day - 1) / 7) + 1;
+    if (thursdayCount === 4) return true;
+  }
+  
+  // Christmas (December 25, or observed on adjacent weekday)
+  if (month === 11 && day === 25) return true;
+  if (month === 11 && day === 24 && dayOfWeek === 5) return true; // observed Friday if Dec 25 is Saturday
+  if (month === 11 && day === 26 && dayOfWeek === 1) return true; // observed Monday if Dec 25 is Sunday
+  
+  return false;
+}
+
+/**
+ * Move a date backward to the nearest preceding weekday that is not a US federal holiday.
+ */
+function moveToValidBusinessDay(date: Date): Date {
+  const result = new Date(date);
+  
+  while (true) {
+    const dayOfWeek = result.getUTCDay();
+    const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+    
+    if (!isWeekend && !isUSFederalHoliday(result)) {
+      return result;
+    }
+    
+    // Move back one day
+    result.setUTCDate(result.getUTCDate() - 1);
+  }
+}
+
+/** 
+ * Deterministic appointment time for Jordan's advising session.
+ * Returns a stable date: 10 days before the next registration term starts,
+ * at 2:00 PM (14:00 UTC / 9:00 AM EST). If that date falls on a weekend or
+ * US federal holiday, moves it backward to the nearest preceding valid
+ * business day. This gives a realistic "upcoming appointment about his
+ * submitted plan" that doesn't drift with the current date.
+ */
+function jordanAppointmentTime(now = new Date()) {
+  const term = nextRegistrationTerm(now);
+  const termRecord = academicTerms.find(t => t.season === term.season && t.year === term.year);
+  if (!termRecord) throw new TestStudentError(`${term.season} ${term.year} is not in the seed data.`, 500);
+  
+  const tenDaysBefore = new Date(termRecord.startsOn);
+  tenDaysBefore.setDate(tenDaysBefore.getDate() - 10);
+  tenDaysBefore.setUTCHours(14, 0, 0, 0);
+  
+  return moveToValidBusinessDay(tenDaysBefore);
+}
+
+/**
+ * Seed Jordan Hale's advising appointment with Sarah Martinez.
+ * Creates a 30-minute confirmed session for academic planning discussion.
+ */
+async function ensureJordanAdvisingSession(studentId: string, advisorId: string, db: Db = prisma) {
+  const appointmentTime = jordanAppointmentTime();
+  const endTime = new Date(appointmentTime.getTime() + 30 * 60 * 1000);
+  const durationMinutes = 30;
+  
+  const term = nextRegistrationTerm();
+  const topic = `Academic planning for ${term.season === "FALL" ? "Fall" : "Spring"} ${term.year}`;
+  
+  const existingSession = await db.meetingSession.findFirst({
+    where: { studentId, advisorId, status: MeetingSessionStatus.CONFIRMED },
+    include: { availability: true },
+  });
+  
+  if (
+    existingSession
+    && existingSession.startsAt.getTime() === appointmentTime.getTime()
+    && existingSession.endsAt.getTime() === endTime.getTime()
+    && existingSession.durationMinutes === durationMinutes
+    && existingSession.topic === topic
+  ) {
+    return;
+  }
+  
+  if (existingSession?.availabilityId) {
+    await db.meetingAvailability.delete({ where: { id: existingSession.availabilityId } }).catch(() => {});
+  }
+  if (existingSession) {
+    await db.meetingSession.delete({ where: { id: existingSession.id } });
+  }
+  
+  const availabilityId = randomUUID();
+  const sessionId = randomUUID();
+  
+  await db.meetingAvailability.create({
+    data: {
+      id: availabilityId,
+      advisorId,
+      startsAt: appointmentTime,
+      endsAt: endTime,
+      durationMinutes,
+      status: MeetingSlotStatus.BOOKED,
+      source: MeetingSlotSource.MANUAL,
+    },
+  });
+  
+  await db.meetingSession.create({
+    data: {
+      id: sessionId,
+      studentId,
+      advisorId,
+      availabilityId,
+      startsAt: appointmentTime,
+      endsAt: endTime,
+      durationMinutes,
+      status: MeetingSessionStatus.CONFIRMED,
+      topic,
+    },
+  });
+}
+
+/**
+ * Clean up all advisor availability, schedules, and sessions.
+ * This restores the baseline empty availability state that Test Manager expects after reset.
+ * Call this before recreating Jordan's seeded appointment.
+ */
+async function cleanAdvisorAvailability(db: Db = prisma) {
+  const sarahId = await db.user.findUnique({ 
+    where: { email: sarahMartinezEmail },
+    select: { id: true },
+  }).then(u => u?.id);
+  
+  if (!sarahId) return;
+  
+  await db.meetingSession.deleteMany({ where: { advisorId: sarahId } });
+  await db.meetingAvailability.deleteMany({ where: { advisorId: sarahId } });
+  await db.advisorTermSchedule.deleteMany({ where: { advisorId: sarahId } });
+  await db.advisorTermDraft.deleteMany({ where: { advisorId: sarahId } });
+}
+
 async function writeFrozen(userId: string, student: TestStudent, catalogYearId: string, advisorId: string | null) {
   const planned = plannedAttempts(student);
-  const submitted = student.email === jordanEmail ? await jordanPlanRecords() : null;
+  const isJordan = student.email === jordanEmail;
+  
   await prisma.$transaction(async tx => {
     const profile = await tx.studentProfile.upsert({
       where: { userId },
@@ -179,7 +371,27 @@ async function writeFrozen(userId: string, student: TestStudent, catalogYearId: 
     await tx.plannedTerm.deleteMany({ where: { studentId: profile.id } });
     await tx.advisingAppointment.deleteMany({ where: { studentId: profile.id } });
     await tx.advisingNote.deleteMany({ where: { studentId: profile.id } });
+    
+    // Get session availability IDs before deleting sessions, so we can clean up orphan slots
+    const studentSessions = await tx.meetingSession.findMany({
+      where: { studentId: profile.id },
+      select: { availabilityId: true },
+    });
+    const availabilityIds = studentSessions.map(s => s.availabilityId).filter((id): id is string => id !== null);
+    
+    await tx.meetingSession.deleteMany({ where: { studentId: profile.id } });
+    
+    // Clean up availability slots that were linked to this student's sessions
+    if (availabilityIds.length > 0) {
+      await tx.meetingAvailability.deleteMany({ where: { id: { in: availabilityIds } } });
+    }
+    
     await tx.session.deleteMany({ where: { userId } });
+    
+    if (isJordan) {
+      await cleanAdvisorAvailability(tx);
+    }
+    
     // JOUR 101 was briefly inserted as a catalog course. A typed free elective is not one, so drop that row once this transcript no longer points at it.
     await tx.course.deleteMany({
       where: {
@@ -192,7 +404,6 @@ async function writeFrozen(userId: string, student: TestStudent, catalogYearId: 
       },
     });
     if (planned.length === 0) {
-      if (submitted) await tx.plannedTerm.create({ data: submittedPlanData(profile.id, submitted.termId, submitted.courseIds) });
       return;
     }
 
@@ -249,7 +460,10 @@ async function writeFrozen(userId: string, student: TestStudent, catalogYearId: 
       };
     });
     await tx.transcriptEntry.createMany({ data: entries });
-    if (submitted) await tx.plannedTerm.create({ data: submittedPlanData(profile.id, submitted.termId, submitted.courseIds) });
+    
+    if (isJordan && advisorId) {
+      await ensureJordanAdvisingSession(profile.id, advisorId, tx);
+    }
   });
 }
 
@@ -323,7 +537,6 @@ export async function ensureTestStudents(request: Request) {
       if (!profile) await writeFrozen(userId, student, catalogYearId, advisorId);
       else {
         await prisma.studentProfile.update({ where: { id: profile.id }, data: { advisorId } });
-        if (student.email === jordanEmail) await ensureJordanSubmittedPlan(profile.id);
       }
       succeeded.push(student.email);
     } catch (error) {
@@ -375,9 +588,26 @@ export async function resetTestStudent(request: Request, email: string) {
   
   const advisor = testAdvisorByEmail(email);
   if (advisor) {
-    // Sign the advisor out and refresh the password. Assignments and Jordan's submitted plan stay.
     const userId = await ensureUser(advisor, password, true);
-    await prisma.session.deleteMany({ where: { userId } });
+    
+    if (advisor.email === sarahMartinezEmail) {
+      const jordanUser = await prisma.user.findUnique({
+        where: { email: jordanEmail },
+        include: { studentProfile: true },
+      });
+      
+      await prisma.$transaction(async tx => {
+        await tx.session.deleteMany({ where: { userId } });
+        await cleanAdvisorAvailability(tx);
+        
+        if (jordanUser?.studentProfile) {
+          await ensureJordanAdvisingSession(jordanUser.studentProfile.id, userId, tx);
+        }
+      });
+    } else {
+      await prisma.session.deleteMany({ where: { userId } });
+    }
+    
     return { email: advisor.email, name: `${advisor.firstName} ${advisor.lastName}` };
   }
   
