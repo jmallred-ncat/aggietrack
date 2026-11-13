@@ -532,3 +532,29 @@ test("availability writes ignore a clock supplied on the input object", async (t
         await cleanup(people);
     }
 });
+
+test("student view detects times beyond the 8-week horizon", async (t) => {
+    if (skip(t)) return;
+    const people = await fixture();
+    try {
+        const viewBefore = await loadStudentAdvising(client(), people.studentUser.id, now);
+        assert.ok(viewBefore);
+        assert.equal(viewBefore.slots.length, 0);
+        assert.equal(viewBefore.hasTimesOutsideHorizon, false);
+        const farFuture = new Date(now.getTime() + 60 * 24 * 60 * 60 * 1000);
+        const farSlot = await addAvailability(client(), people.advisor.id, { date: "2027-01-11", start: "14:00", end: "15:00" }, now);
+        assert.equal(farSlot.ok, true);
+        const viewWithFar = await loadStudentAdvising(client(), people.studentUser.id, now);
+        assert.ok(viewWithFar);
+        assert.equal(viewWithFar.slots.length, 0);
+        assert.equal(viewWithFar.hasTimesOutsideHorizon, true);
+        const nearSlot = await addAvailability(client(), people.advisor.id, { date: "2026-11-12", start: "14:00", end: "15:00" }, now);
+        assert.equal(nearSlot.ok, true);
+        const viewWithBoth = await loadStudentAdvising(client(), people.studentUser.id, now);
+        assert.ok(viewWithBoth);
+        assert.equal(viewWithBoth.slots.length, 1);
+        assert.equal(viewWithBoth.hasTimesOutsideHorizon, true);
+    } finally {
+        await cleanup(people);
+    }
+});

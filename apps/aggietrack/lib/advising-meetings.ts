@@ -275,7 +275,7 @@ export async function loadStudentAdvising(db: Db, userId: string, now = new Date
     });
     if (!user?.studentProfile || user.role !== "STUDENT") return null;
     const profile = user.studentProfile;
-    const [sessions, slots, settings] = await Promise.all([
+    const [sessions, slots, settings, beyondHorizon] = await Promise.all([
         db.meetingSession.findMany({
             where: { studentId: profile.id },
             include: sessionInclude,
@@ -293,11 +293,21 @@ export async function loadStudentAdvising(db: Db, userId: string, now = new Date
         profile.advisorId
             ? db.advisorMeetingSettings.findUnique({ where: { advisorId: profile.advisorId } })
             : Promise.resolve(null),
+        profile.advisorId
+            ? db.meetingAvailability.count({
+                where: {
+                    advisorId: profile.advisorId,
+                    status: "OPEN",
+                    startsAt: { gt: new Date(now.getTime() + STUDENT_HORIZON_MS) },
+                },
+            })
+            : Promise.resolve(0),
     ]);
     return {
         advisorName: profile.advisor ? personName(profile.advisor) : null,
         sessionMinutes: profile.advisorId ? (settings?.durationMinutes ?? 30) : null,
         slots: slots.map(toSlot),
+        hasTimesOutsideHorizon: beyondHorizon > 0,
         ...splitSessions(sessions, "student", now),
     };
 }

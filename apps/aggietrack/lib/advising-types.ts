@@ -75,6 +75,7 @@ export type StudentAdvisingView = {
     upcoming: MeetingCard[];
     canceled: MeetingCard[];
     earlier: MeetingCard[];
+    hasTimesOutsideHorizon: boolean;
 };
 
 export type AdvisorTermChoice = {

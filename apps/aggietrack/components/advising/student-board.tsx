@@ -119,7 +119,11 @@ export function StudentBoard({
                         <Empty className="border border-dashed">
                             <EmptyHeader>
                                 <EmptyTitle>No times are open</EmptyTitle>
-                                <EmptyDescription>{view.advisorName} has not posted any open times yet. Check back soon.</EmptyDescription>
+                                <EmptyDescription>
+                                    {view.hasTimesOutsideHorizon
+                                        ? `${view.advisorName}'s next open times aren't bookable yet. Times become available 8 weeks in advance.`
+                                        : `${view.advisorName} has not posted any open times yet. Check back soon.`}
+                                </EmptyDescription>
                             </EmptyHeader>
                         </Empty>
                     ) : (
@@ -254,24 +258,31 @@ export function StudentBoard({
                             Your current session is <MeetingStamp value={moving?.fullTimestamp ?? ""} />. Choose another open time with {moving?.personName}.
                         </AlertDialogDescription>
                     </MeetingHeader>
-                    <div className="flex max-h-80 flex-col gap-2 overflow-y-auto px-6 pb-4">
-                        {choices.length === 0 ? (
-                            <Empty className="border-0">
-                                <EmptyHeader>
-                                    <EmptyTitle>No other times are open</EmptyTitle>
-                                    <EmptyDescription>Cancel this session, or wait for your advisor to add more times.</EmptyDescription>
-                                </EmptyHeader>
-                            </Empty>
-                        ) : choices.map((slot) => (
-                            <Button key={slot.id} type="button" variant={nextSlot === slot.id ? "default" : "outline"} className="h-11 whitespace-normal" aria-label={slot.accessibleName} onClick={() => setNextSlot(slot.id)}>
-                                <span className="whitespace-nowrap">{slot.dateHeading}</span>
-                                <span className="whitespace-nowrap">{slot.slotLabel}</span>
-                                <span className="tabular-nums">{slot.durationLabel}</span>
-                            </Button>
-                        ))}
-                        <Label htmlFor="student-move-note">Add a note (optional)</Label>
-                        <Textarea id="student-move-note" value={moveNote} maxLength={2000} onChange={(event) => setMoveNote(event.target.value)} />
-                        <p className="text-sm text-muted-foreground tabular-nums">{moveNote.length}/2,000 characters</p>
+                    <div className="flex min-h-0 flex-col gap-4 overflow-y-auto px-6 pb-4">
+                        <div className="flex flex-col gap-2">
+                            {choices.length === 0 ? (
+                                <Empty className="border-0">
+                                    <EmptyHeader>
+                                        <EmptyTitle>No other times are open</EmptyTitle>
+                                        <EmptyDescription>Cancel this session, or wait for your advisor to add more times.</EmptyDescription>
+                                    </EmptyHeader>
+                                </Empty>
+                            ) : choices.map((slot) => (
+                                <Button key={slot.id} type="button" variant={nextSlot === slot.id ? "default" : "outline"} className="h-auto min-h-11 flex-col items-start gap-1 whitespace-normal px-4 py-2 text-left" aria-label={slot.accessibleName} onClick={() => setNextSlot(slot.id)}>
+                                    <span className="font-medium">{slot.dateHeading}</span>
+                                    <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
+                                        <span className="whitespace-nowrap">{slot.slotLabel}</span>
+                                        <span className="text-muted-foreground tabular-nums">·</span>
+                                        <span className="text-muted-foreground tabular-nums">{slot.durationLabel}</span>
+                                    </div>
+                                </Button>
+                            ))}
+                        </div>
+                        <div className="flex flex-col gap-2">
+                            <Label htmlFor="student-move-note">Add a note (optional)</Label>
+                            <Textarea id="student-move-note" value={moveNote} maxLength={2000} onChange={(event) => setMoveNote(event.target.value)} />
+                            <p className="text-sm text-muted-foreground tabular-nums">{moveNote.length}/2,000 characters</p>
+                        </div>
                     </div>
                     <MeetingFooter>
                         <Button type="button" variant="outline" className={meetingButtonClass} autoFocus onClick={() => setMoving(null)}>Keep current time</Button>

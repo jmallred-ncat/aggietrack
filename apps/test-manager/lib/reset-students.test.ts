@@ -24,7 +24,7 @@ test("reset all keeps going when one student fails and names that student", asyn
   const first = await resetTestAccounts(students, resetOne);
   assert.equal(first.failed.length, 0);
   assert.equal(first.succeeded.length, 7);
-  assert.equal(resetAllSummary(first), "Reset 7 of 7 students");
+  assert.equal(resetAllSummary(first), "Reset 7 of 7 students and advisor availability");
 
   const second = await resetTestAccounts(students, async email => {
     calls.push(email);
@@ -32,7 +32,7 @@ test("reset all keeps going when one student fails and names that student", asyn
   });
   assert.equal(second.succeeded.length, 6);
   assert.deepEqual(second.failed.map(student => student.name), ["Morgan Lee"]);
-  assert.equal(resetAllSummary(second), "Reset 6 of 7 students. Failed: Morgan Lee");
+  assert.equal(resetAllSummary(second), "Reset 6 of 7 students and advisor availability. Failed: Morgan Lee");
   assert.equal(calls.length, 14);
 });
 
@@ -43,8 +43,8 @@ test("reset all succeeds on the second pass when reset replaces frozen data", as
   }
   const first = await resetTestAccounts(students, resetOne);
   const second = await resetTestAccounts(students, resetOne);
-  assert.equal(resetAllSummary(first), "Reset 7 of 7 students");
-  assert.equal(resetAllSummary(second), "Reset 7 of 7 students");
+  assert.equal(resetAllSummary(first), "Reset 7 of 7 students and advisor availability");
+  assert.equal(resetAllSummary(second), "Reset 7 of 7 students and advisor availability");
   assert.deepEqual([...store.values()], [2, 2, 2, 2, 2, 2, 2]);
 });
 

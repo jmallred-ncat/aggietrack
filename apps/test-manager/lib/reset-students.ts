@@ -22,8 +22,8 @@ export async function resetTestAccounts(students: ResetTarget[], resetOne: (emai
 }
 
 export function resetAllSummary(result: ResetAllResult) {
-  if (result.failed.length === 0) return `Reset ${result.succeeded.length} of ${result.total} students`;
-  return `Reset ${result.succeeded.length} of ${result.total} students. Failed: ${result.failed.map(student => student.name).join(", ")}`;
+  if (result.failed.length === 0) return `Reset ${result.succeeded.length} of ${result.total} students and advisor availability`;
+  return `Reset ${result.succeeded.length} of ${result.total} students and advisor availability. Failed: ${result.failed.map(student => student.name).join(", ")}`;
 }
 
 export function planNotesResetSummary(deleted: number) {
