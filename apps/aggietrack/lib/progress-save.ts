@@ -1,8 +1,7 @@
-import { courseCodeLabel } from "@/lib/course-code";
-import { Prisma, type TranscriptStatus, type StudentProfile } from "@/lib/generated/prisma/client";
-import { progressStatuses, transcriptFieldsForProgressStatus } from "@/lib/transcript";
-
-type ProgressStatus = (typeof progressStatuses)[number];
+import { getProgressSlotCourses } from "@/lib/catalog";
+import { courseCodeLabel, parseCourseCode } from "@/lib/course-code";
+import { Prisma, RequirementSlot, type Grade, type TranscriptStatus, type StudentProfile } from "@/lib/generated/prisma/client";
+import { progressStatuses, transcriptFieldsForProgressStatus, type ProgressStatus } from "@/lib/transcript";
 
 export type SaveProgressInput = {
     standing: "FRESHMAN" | "SOPHOMORE" | "JUNIOR" | "SENIOR" | null;
@@ -22,128 +21,158 @@ export type SaveProgressInput = {
     confirmStart?: boolean;
 };
 
-type TranscriptEntryWriteInput = {
-    existing: { id: string; status: TranscriptStatus } | null;
-    studentId: string;
-    courseId: string | null;
-    subject: string | null;
-    number: string | null;
-    title: string | null;
-    recommendedTermCourseId: string | null;
-    status: ProgressStatus | null;
-    credits: number;
-};
+type SlotInput = SaveProgressInput["slots"][number];
+
+function courseIdentity(entry: { courseId: string | null; subject: string | null; number: string | null }) {
+    if (entry.courseId) {
+        return `course:${entry.courseId}`;
+    }
+    if (entry.subject && entry.number) {
+        return `code:${courseCodeLabel(entry.subject, entry.number)}`;
+    }
+    return null;
+}
 
 async function writeTranscriptEntry(
     tx: Prisma.TransactionClient,
-    input: TranscriptEntryWriteInput,
+    input: {
+        existing: { id: string; courseId: string | null; subject: string | null; number: string | null; grade: Grade | null; status: TranscriptStatus } | null;
+        studentId: string;
+        courseId: string | null;
+        subject: string | null;
+        number: string | null;
+        title: string | null;
+        recommendedTermCourseId: string | null;
+        status: ProgressStatus | null;
+        credits: number;
+    },
 ) {
-    const { existing, studentId, courseId, subject, number, title, recommendedTermCourseId, status, credits } = input;
-    
-    if (!status) {
-        if (existing && existing.status === "COMPLETED") {
-            await tx.transcriptEntry.delete({ where: { id: existing.id } });
+    if (!input.status) {
+        // Don't delete FAILED or WITHDRAWN entries when saving the form
+        // They stay on the row (not marked complete) and should persist
+        if (input.existing && input.existing.status !== "IN_PROGRESS" && 
+            input.existing.status !== "FAILED" && input.existing.status !== "WITHDRAWN") {
+            await tx.transcriptEntry.delete({ where: { id: input.existing.id } });
         }
         return;
     }
 
-    const fields = transcriptFieldsForProgressStatus(status);
-    if (!fields) return;
-
+    const fields = transcriptFieldsForProgressStatus(input.status);
+    const sameCourse = input.existing != null && courseIdentity(input.existing) === courseIdentity(input);
+    const grade = sameCourse && input.status === "complete" && input.existing?.grade && input.existing.grade !== "TR"
+        ? input.existing.grade
+        : fields.grade;
+    
+    // Preserve FAILED/WITHDRAWN status when saving the form (don't overwrite to COMPLETED)
+    const status = sameCourse && input.status === "complete" && input.existing?.status && 
+        (input.existing.status === "FAILED" || input.existing.status === "WITHDRAWN")
+        ? input.existing.status
+        : fields.status;
+    
     const data = {
-        studentId,
-        courseId,
-        subject,
-        number,
-        title,
-        recommendedTermCourseId,
-        credits,
-        ...fields,
+        courseId: input.courseId,
+        subject: input.courseId ? null : input.subject,
+        number: input.courseId ? null : input.number,
+        title: input.courseId ? null : input.title,
+        status,
+        source: fields.source,
+        grade,
+        credits: input.credits,
+        recommendedTermCourseId: input.recommendedTermCourseId,
     };
 
-    if (existing) {
+    if (input.existing) {
         await tx.transcriptEntry.update({
-            where: { id: existing.id },
+            where: { id: input.existing.id },
             data,
         });
-    } else {
-        await tx.transcriptEntry.create({ data });
+        return;
     }
+
+    await tx.transcriptEntry.create({
+        data: {
+            studentId: input.studentId,
+            ...data,
+        },
+    });
 }
 
-type SlotInput = SaveProgressInput["slots"][number];
-
-type ResolvedSlot = {
-    recommendedTermCourseId: string;
-    status: ProgressStatus | null;
-    courseId: string | null;
-    subject: string | null;
-    number: string | null;
-    title: string | null;
-    credits: number;
-};
-
 async function resolveSlotCourse(
+    tx: Prisma.TransactionClient,
     slot: SlotInput,
-    group: { slot: string; minNumber: number | null },
-    eligible: Array<{ id: string; subject: string; number: string; title: string; credits: number; lab: boolean }>,
+    group: { slot: RequirementSlot; minNumber: number | null },
+    eligible: Array<{ id: string; credits: number }>,
 ): Promise<
     | { ok: true; courseId: string | null; subject: string | null; number: string | null; title: string | null; credits: number }
     | { ok: false; error: string }
 > {
-    // If no status, we don't need a valid course
-    if (!slot.status) {
+    const minimum = group.minNumber ?? 100;
+    const hasCatalogCourse = Boolean(slot.courseId);
+    const hasEnteredCourse = Boolean(slot.subject || slot.number || slot.title);
+
+    if (hasCatalogCourse && hasEnteredCourse) {
+        return { ok: false, error: "Those progress choices could not be saved." };
+    }
+
+    if (!slot.status || (!hasCatalogCourse && !hasEnteredCourse)) {
         return { ok: true, courseId: null, subject: null, number: null, title: null, credits: 0 };
     }
 
     if (slot.courseId) {
-        const course = eligible.find((c) => c.id === slot.courseId);
+        const course = eligible.find((option) => option.id === slot.courseId);
         if (!course) {
-            return { ok: false, error: "That course is not allowed in this requirement." };
+            return { ok: false, error: "That course does not satisfy this requirement." };
         }
-        return { ok: true, courseId: course.id, subject: null, number: null, title: null, credits: course.credits };
+        return { ok: true, courseId: slot.courseId, subject: null, number: null, title: null, credits: course.credits };
     }
 
-    if (slot.subject && slot.number) {
-        const found = eligible.find((c) => c.subject === slot.subject && c.number === slot.number);
-        if (found) {
-            return { ok: true, courseId: found.id, subject: null, number: null, title: null, credits: found.credits };
-        }
+    if (group.slot !== RequirementSlot.FREE_ELECTIVE) {
+        return { ok: false, error: "That course does not satisfy this requirement." };
+    }
 
-        if (group.slot !== "FREE_ELECTIVE") {
-            return { ok: false, error: "That course is not in the catalog or not allowed in this requirement." };
-        }
+    const parsed = parseCourseCode(`${slot.subject ?? ""} ${slot.number ?? ""}`);
+    if (!parsed || !slot.title?.trim() || slot.credits == null) {
+        return { ok: false, error: "Enter a course code, title, and credit hours." };
+    }
 
-        if (!slot.credits || slot.credits < 1 || slot.credits > 6) {
-            return { ok: false, error: "Credit hours must be between 1 and 6." };
-        }
+    const courseNumber = Number.parseInt(parsed.number, 10);
+    if (courseNumber < minimum) {
+        return { ok: false, error: `Free electives must be numbered ${minimum} or above.` };
+    }
 
-        if (group.minNumber && parseInt(slot.number) < group.minNumber) {
-            return {
-                ok: false,
-                error: `This elective must be numbered ${group.minNumber} or higher (such as ${slot.subject} ${group.minNumber}).`,
-            };
-        }
+    const catalogCourse = await tx.course.findUnique({
+        where: { subject_number: { subject: parsed.subject, number: parsed.number } },
+        select: { id: true, credits: true },
+    });
 
+    if (catalogCourse) {
+        const eligibleCourse = eligible.find((option) => option.id === catalogCourse.id);
+        if (!eligibleCourse) {
+            return { ok: false, error: "That course is already on your plan." };
+        }
         return {
             ok: true,
-            courseId: null,
-            subject: slot.subject,
-            number: slot.number,
-            title: slot.title,
-            credits: slot.credits,
+            courseId: catalogCourse.id,
+            subject: null,
+            number: null,
+            title: null,
+            credits: eligibleCourse.credits,
         };
     }
 
-    return { ok: false, error: "Choose a course from the dropdown or type its code." };
+    return {
+        ok: true,
+        courseId: null,
+        subject: parsed.subject,
+        number: parsed.number,
+        title: slot.title.trim(),
+        credits: slot.credits,
+    };
 }
 
 /**
- * Core progress save logic extracted for testing.
- * Validates input, resolves slot courses, and writes transcript entries.
- * Preserves FAILED/WITHDRAWN/IN_PROGRESS entries.
- * 
- * @param slotCourses - Map of requirement group ID to eligible courses for that group
+ * Core progress save logic moved from saveTranscriptProgress.
+ * This is the exact validated and verified save logic from commit 73c343f.
  */
 export async function saveProgressCore(
     tx: Prisma.TransactionClient,
@@ -156,7 +185,6 @@ export async function saveProgressCore(
     if (confirmStart && !marked) {
         return { success: false, error: "Mark the courses you have completed, or say you have no prior coursework." };
     }
-
     const courseIds = courses.map((entry) => entry.courseId);
     const slotIds = slots.map((entry) => entry.recommendedTermCourseId);
     const [allowed, slotRows] = await Promise.all([
@@ -208,7 +236,15 @@ export async function saveProgressCore(
         claimed.add(key);
     }
 
-    const resolvedSlots: ResolvedSlot[] = [];
+    const resolvedSlots: Array<{
+        recommendedTermCourseId: string;
+        status: ProgressStatus | null;
+        courseId: string | null;
+        subject: string | null;
+        number: string | null;
+        title: string | null;
+        credits: number;
+    }> = [];
 
     for (const slot of slots) {
         const row = groupBySlot.get(slot.recommendedTermCourseId);
@@ -218,7 +254,7 @@ export async function saveProgressCore(
 
         const eligible = (slotCourses[row.requirementGroupId!] ?? [])
             .filter((course) => !row.requiresLab || course.lab);
-        const resolved = await resolveSlotCourse(slot, row.requirementGroup, eligible);
+        const resolved = await resolveSlotCourse(tx, slot, row.requirementGroup, eligible);
         if (!resolved.ok) {
             return { success: false, error: resolved.error };
         }
@@ -250,7 +286,7 @@ export async function saveProgressCore(
         });
     }
 
-    // Write ordinary course entries
+    // Write transcript entries
     for (const entry of courses) {
         const credits = creditsByCourse.get(entry.courseId);
         if (credits === undefined) {
@@ -279,7 +315,6 @@ export async function saveProgressCore(
         });
     }
 
-    // Write slot entries - preserve FAILED/WITHDRAWN/IN_PROGRESS
     for (const slot of resolvedSlots) {
         const existing = await tx.transcriptEntry.findFirst({
             where: {
@@ -292,9 +327,9 @@ export async function saveProgressCore(
         if (!slot.status || (!slot.courseId && !slot.subject)) {
             // Don't delete FAILED, WITHDRAWN, or IN_PROGRESS entries when form status is blank
             if (existing && 
-                existing.status !== "IN_PROGRESS" &&
-                existing.status !== "FAILED" &&
-                existing.status !== "WITHDRAWN") {
+                !(existing.status === "IN_PROGRESS" && !slot.status) &&
+                !(existing.status === "FAILED") &&
+                !(existing.status === "WITHDRAWN")) {
                 await tx.transcriptEntry.delete({ where: { id: existing.id } });
             }
             continue;
@@ -331,6 +366,12 @@ export async function saveProgressCore(
             ...(startConfirmed && !profile.startConfirmedAt ? { startConfirmedAt: new Date() } : {}),
         },
     });
+
+    // Final check: if confirmStart was requested but nothing was recorded, return error
+    // This check happens after the transaction writes, so it will be rolled back
+    if (confirmStart && !startConfirmed) {
+        return { success: false, error: "Mark the courses you have completed, or say you have no prior coursework." };
+    }
 
     return { success: true };
 }

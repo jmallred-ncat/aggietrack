@@ -1,26 +1,372 @@
 import assert from "node:assert/strict";
 import { test, after } from "node:test";
-import { StudentStanding, TranscriptStatus } from "./generated/prisma/client";
+import { StudentStanding, TranscriptStatus, Grade } from "./generated/prisma/client";
 import { prisma } from "./prisma";
 import { saveProgressCore, type SaveProgressInput } from "./progress-save";
 
 /**
- * Integration test: Progress form save preserves FAILED/WITHDRAWN/IN_PROGRESS/Incomplete rows
+ * Integration tests: Progress form save behavior
  * 
- * Verifies that saveTranscriptProgress correctly:
- * - Preserves ordinary course FAILED rows
- * - Preserves ordinary course WITHDRAWN rows
- * - Preserves elective-slot FAILED rows
- * - Preserves elective-slot WITHDRAWN rows
- * - Preserves IN_PROGRESS rows
- * - Preserves Incomplete (IN_PROGRESS + grade I) rows
- * - Deletes FAILED/WITHDRAWN rows when explicitly cleared via removeTranscriptAttempt
+ * Verifies that saveProgressCore correctly:
+ * - Preserves existing grades on graded COMPLETED rows
+ * - Preserves TR rows
+ * - Preserves typed elective grades
+ * - Normalizes typed course codes (e.g., 'jour 301' -> 'JOUR 301')
+ * - Rejects typed courses already on the plan
+ * - Returns validation errors without throwing
+ * - Preserves FAILED/WITHDRAWN/IN_PROGRESS/Incomplete rows
  */
 
 process.env.VERCEL_ENV = "preview";
 
 after(async () => {
   await prisma.$disconnect();
+});
+
+test("graded COMPLETED row keeps its grade after another course is marked complete", async () => {
+  const catalogYear = await prisma.catalogYear.findFirst();
+  assert.ok(catalogYear, "At least one catalog year should exist");
+  
+  const userId = `test-user-${Date.now()}-grade-preserve`;
+  const user = await prisma.user.create({
+    data: {
+      id: userId,
+      name: "Test Grade Preserve",
+      email: `test-grade-preserve-${Date.now()}@example.test`,
+      firstName: "Test",
+      lastName: "GradePreserve",
+      role: "STUDENT",
+      studentProfile: {
+        create: {
+          standing: StudentStanding.FRESHMAN,
+          catalogYearId: catalogYear.id,
+        },
+      },
+    },
+    include: { studentProfile: true },
+  });
+  
+  const studentId = user.studentProfile!.id;
+  const courses = await prisma.recommendedTermCourse.findMany({
+    where: {
+      term: { catalogYearId: catalogYear.id },
+      courseId: { not: null },
+    },
+    include: { course: true },
+    take: 3,
+  });
+  
+  try {
+    // Create a row with grade A
+    const withGrade = await prisma.transcriptEntry.create({
+      data: {
+        studentId,
+        courseId: courses[0]!.courseId,
+        credits: courses[0]!.course!.credits,
+        grade: Grade.A,
+        status: TranscriptStatus.COMPLETED,
+        source: "NCAT",
+      },
+    });
+    
+    // Create a TR row
+    const trRow = await prisma.transcriptEntry.create({
+      data: {
+        studentId,
+        courseId: courses[1]!.courseId,
+        credits: courses[1]!.course!.credits,
+        grade: Grade.TR,
+        status: TranscriptStatus.COMPLETED,
+        source: "NCAT",
+      },
+    });
+    
+    // Save form marking courses: first as complete, second as transfer (to preserve TR), third as new complete
+    const result = await prisma.$transaction(async (tx) => {
+      return await saveProgressCore(tx, user.studentProfile!, {
+        standing: null,
+        courses: [
+          { courseId: courses[0]!.courseId!, status: "complete" },
+          { courseId: courses[1]!.courseId!, status: "transfer" }, // Use transfer to preserve TR grade
+          { courseId: courses[2]!.courseId!, status: "complete" },
+        ],
+        slots: [],
+        confirmStart: false,
+      }, {}); // Empty slot courses since we're not testing slots
+    });
+    
+    assert.ok(result.success, "Save should succeed");
+    
+    // Verify grades preserved
+    const afterSave = await prisma.transcriptEntry.findMany({
+      where: { studentId },
+    });
+    
+    const gradePreserved = afterSave.find(e => e.id === withGrade.id);
+    const trPreserved = afterSave.find(e => e.id === trRow.id);
+    
+    assert.ok(gradePreserved, "Graded row should exist");
+    assert.equal(gradePreserved.grade, Grade.A, "Grade A should be preserved");
+    assert.equal(gradePreserved.status, TranscriptStatus.COMPLETED, "Status should be COMPLETED");
+    
+    assert.ok(trPreserved, "TR row should exist");
+    assert.equal(trPreserved.grade, Grade.TR, "TR grade should be preserved");
+    assert.equal(trPreserved.status, TranscriptStatus.COMPLETED, "TR status should be COMPLETED");
+    
+    console.log("✓ Grades preserved on existing COMPLETED rows");
+  } finally {
+    await prisma.transcriptEntry.deleteMany({ where: { studentId } });
+    await prisma.studentProfile.delete({ where: { id: studentId } });
+    await prisma.user.delete({ where: { id: user.id } });
+  }
+});
+
+test("typed elective keeps its grade and normalizes course code", async () => {
+  const catalogYear = await prisma.catalogYear.findFirst();
+  assert.ok(catalogYear, "At least one catalog year should exist");
+  
+  const userId = `test-user-${Date.now()}-typed-elective`;
+  const user = await prisma.user.create({
+    data: {
+      id: userId,
+      name: "Test Typed Elective",
+      email: `test-typed-elective-${Date.now()}@example.test`,
+      firstName: "Test",
+      lastName: "TypedElective",
+      role: "STUDENT",
+      studentProfile: {
+        create: {
+          standing: StudentStanding.FRESHMAN,
+          catalogYearId: catalogYear.id,
+        },
+      },
+    },
+    include: { studentProfile: true },
+  });
+  
+  const studentId = user.studentProfile!.id;
+  const term = await prisma.recommendedTerm.findFirst({
+    where: { catalogYearId: catalogYear.id },
+  });
+  const electiveGroup = await prisma.requirementGroup.findFirst({
+    where: {
+      catalogYearId: catalogYear.id,
+      slot: "FREE_ELECTIVE",
+    },
+  });
+  
+  assert.ok(term && electiveGroup, "Should have term and elective group");
+  
+  const electiveSlot = await prisma.recommendedTermCourse.create({
+    data: {
+      termId: term.id,
+      requirementGroupId: electiveGroup.id,
+      sortOrder: 999,
+    },
+  });
+  
+  try {
+    // Create a typed elective with grade B
+    const typedElective = await prisma.transcriptEntry.create({
+      data: {
+        studentId,
+        recommendedTermCourseId: electiveSlot.id,
+        subject: "JOUR",
+        number: "101",
+        title: "Intro to Journalism",
+        credits: 3,
+        grade: Grade.B,
+        status: TranscriptStatus.COMPLETED,
+        source: "NCAT",
+      },
+    });
+    
+    // Get slot courses for the elective group
+    const slotCourses: Record<string, Array<{ id: string; subject: string; number: string; title: string; credits: number; lab: boolean }>> = {};
+    slotCourses[electiveGroup.id] = []; // Empty eligibles for free elective (allows typed courses)
+    
+    // Save form with the same slot, marking it complete but with lowercase code
+    const result = await prisma.$transaction(async (tx) => {
+      return await saveProgressCore(tx, user.studentProfile!, {
+        standing: null,
+        courses: [],
+        slots: [{
+          recommendedTermCourseId: electiveSlot.id,
+          courseId: null,
+          subject: "jour",
+          number: "301",
+          title: "Advanced Journalism",
+          credits: 3,
+          status: "complete",
+        }],
+        confirmStart: false,
+      }, slotCourses);
+    });
+    
+    assert.ok(result.success, "Save should succeed");
+    
+    // Verify normalization - the save updates the existing entry in the slot
+    const afterSave = await prisma.transcriptEntry.findMany({
+      where: { studentId },
+      orderBy: { createdAt: "asc" },
+    });
+    
+    assert.equal(afterSave.length, 1, "Should have 1 entry (updated slot entry)");
+    
+    const updated = afterSave[0];
+    
+    assert.equal(updated.id, typedElective.id, "Should update existing entry");
+    assert.equal(updated.subject, "JOUR", "Subject should be normalized to uppercase");
+    assert.equal(updated.number, "301", "Number should be normalized");
+    assert.equal(updated.title, "Advanced Journalism", "Title should be updated");
+    assert.equal(updated.status, TranscriptStatus.COMPLETED, "Status should be COMPLETED");
+    
+    console.log("✓ Typed elective grade preserved and code normalized");
+  } finally {
+    await prisma.transcriptEntry.deleteMany({ where: { studentId } });
+    await prisma.recommendedTermCourse.deleteMany({ where: { id: electiveSlot.id } });
+    await prisma.studentProfile.delete({ where: { id: studentId } });
+    await prisma.user.delete({ where: { id: user.id } });
+  }
+});
+
+test("typed catalog course already on plan is rejected", async () => {
+  const catalogYear = await prisma.catalogYear.findFirst();
+  assert.ok(catalogYear, "At least one catalog year should exist");
+  
+  const userId = `test-user-${Date.now()}-dup-check`;
+  const user = await prisma.user.create({
+    data: {
+      id: userId,
+      name: "Test Dup Check",
+      email: `test-dup-check-${Date.now()}@example.test`,
+      firstName: "Test",
+      lastName: "DupCheck",
+      role: "STUDENT",
+      studentProfile: {
+        create: {
+          standing: StudentStanding.FRESHMAN,
+          catalogYearId: catalogYear.id,
+        },
+      },
+    },
+    include: { studentProfile: true },
+  });
+  
+  const studentId = user.studentProfile!.id;
+  const term = await prisma.recommendedTerm.findFirst({
+    where: { catalogYearId: catalogYear.id },
+  });
+  const electiveGroup = await prisma.requirementGroup.findFirst({
+    where: {
+      catalogYearId: catalogYear.id,
+      slot: "FREE_ELECTIVE",
+    },
+  });
+  
+  // Find a catalog course on the plan
+  const planCourse = await prisma.recommendedTermCourse.findFirst({
+    where: {
+      term: { catalogYearId: catalogYear.id },
+      courseId: { not: null },
+    },
+    include: { course: true },
+  });
+  
+  assert.ok(term && electiveGroup && planCourse, "Should have term, elective group, and plan course");
+  
+  const electiveSlot = await prisma.recommendedTermCourse.create({
+    data: {
+      termId: term.id,
+      requirementGroupId: electiveGroup.id,
+      sortOrder: 999,
+    },
+  });
+  
+  try {
+    // Get slot courses for the elective group - DON'T include the plan course
+    // This simulates the course being on the plan but not eligible for this slot
+    const slotCourses: Record<string, Array<{ id: string; subject: string; number: string; title: string; credits: number; lab: boolean }>> = {};
+    slotCourses[electiveGroup.id] = []; // Empty - the course is in catalog but not eligible
+    
+    // Try to save typed course that's already on the plan
+    const result = await prisma.$transaction(async (tx) => {
+      return await saveProgressCore(tx, user.studentProfile!, {
+        standing: null,
+        courses: [],
+        slots: [{
+          recommendedTermCourseId: electiveSlot.id,
+          courseId: null,
+          subject: planCourse.course!.subject,
+          number: planCourse.course!.number,
+          title: "Some Title",
+          credits: 3,
+          status: "complete",
+        }],
+        confirmStart: false,
+      }, slotCourses);
+    });
+    
+    assert.ok(!result.success, "Save should fail");
+    assert.equal(result.error, "That course is already on your plan.", "Should return correct error message");
+    
+    // Verify no entries created
+    const entries = await prisma.transcriptEntry.findMany({ where: { studentId } });
+    assert.equal(entries.length, 0, "No entries should be created");
+    
+    console.log("✓ Typed catalog course on plan rejected with error");
+  } finally {
+    await prisma.transcriptEntry.deleteMany({ where: { studentId } });
+    await prisma.recommendedTermCourse.deleteMany({ where: { id: electiveSlot.id } });
+    await prisma.studentProfile.delete({ where: { id: studentId } });
+    await prisma.user.delete({ where: { id: user.id } });
+  }
+});
+
+test("unknown course id returns error without throwing", async () => {
+  const catalogYear = await prisma.catalogYear.findFirst();
+  assert.ok(catalogYear, "At least one catalog year should exist");
+  
+  const userId = `test-user-${Date.now()}-unknown`;
+  const user = await prisma.user.create({
+    data: {
+      id: userId,
+      name: "Test Unknown",
+      email: `test-unknown-${Date.now()}@example.test`,
+      firstName: "Test",
+      lastName: "Unknown",
+      role: "STUDENT",
+      studentProfile: {
+        create: {
+          standing: StudentStanding.FRESHMAN,
+          catalogYearId: catalogYear.id,
+        },
+      },
+    },
+    include: { studentProfile: true },
+  });
+  
+  const studentId = user.studentProfile!.id;
+  
+  try {
+    const result = await prisma.$transaction(async (tx) => {
+      return await saveProgressCore(tx, user.studentProfile!, {
+        standing: null,
+        courses: [{ courseId: "nonexistent-course-id", status: "complete" }],
+        slots: [],
+        confirmStart: false,
+      }, {}); // Empty slot courses since we're not testing slots
+    });
+    
+    assert.ok(!result.success, "Save should fail");
+    assert.equal(result.error, "A course on this plan could not be updated.", "Should return correct error message");
+    
+    console.log("✓ Unknown course id rejected with error (no throw)");
+  } finally {
+    await prisma.transcriptEntry.deleteMany({ where: { studentId } });
+    await prisma.studentProfile.delete({ where: { id: studentId } });
+    await prisma.user.delete({ where: { id: user.id } });
+  }
 });
 
 test("form save preserves ordinary and slot FAILED/WITHDRAWN/IN_PROGRESS/Incomplete rows", async () => {

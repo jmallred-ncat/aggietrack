@@ -63,12 +63,13 @@ export async function saveTranscriptProgress(input: unknown) {
     }>> = {};
     let savedSlotAttempts: typeof savedCourseAttempts = {};
     
-    await prisma.$transaction(async (tx) => {
+    const txResult = await prisma.$transaction(async (tx) => {
         // Call the extracted core save logic
         const result = await saveProgressCore(tx, profile, saveInput, slotCourses);
         
         if (!result.success) {
-            throw new Error(result.error);
+            // Return error to abort transaction
+            return result;
         }
         
         // Read back saved attempts for return value
@@ -78,26 +79,42 @@ export async function saveTranscriptProgress(input: unknown) {
             select: { ...attemptSelect, courseId: true, recommendedTermCourseId: true },
         });
         
-        savedCourseAttempts = {};
+        const courseAttempts: typeof savedCourseAttempts = {};
         for (const course of courses) {
-            savedCourseAttempts[course.courseId] = saved
+            courseAttempts[course.courseId] = saved
                 .filter((row) => row.courseId === course.courseId && row.recommendedTermCourseId == null)
                 .map(({ id, grade, status, source, createdAt }) => ({ id, grade, status, source, createdAt }));
         }
         
-        savedSlotAttempts = {};
+        const slotAttempts: typeof savedSlotAttempts = {};
         for (const slot of slots) {
-            savedSlotAttempts[slot.recommendedTermCourseId] = saved
+            slotAttempts[slot.recommendedTermCourseId] = saved
                 .filter((row) => row.recommendedTermCourseId === slot.recommendedTermCourseId)
                 .map(({ id, grade, status, source, createdAt }) => ({ id, grade, status, source, createdAt }));
         }
         
         // Check if start was confirmed
-        startConfirmed = (await tx.studentProfile.findUnique({
+        const confirmed = (await tx.studentProfile.findUnique({
             where: { id: profile.id },
             select: { startConfirmedAt: true },
         }))?.startConfirmedAt != null;
+        
+        return {
+            success: true as const,
+            courseAttempts,
+            slotAttempts,
+            startConfirmed: confirmed,
+        };
     });
+    
+    // If transaction returned an error, return it
+    if (!txResult.success) {
+        return txResult;
+    }
+    
+    savedCourseAttempts = txResult.courseAttempts;
+    savedSlotAttempts = txResult.slotAttempts;
+    startConfirmed = txResult.startConfirmed;
 
     refreshStudentViews();
     return {
