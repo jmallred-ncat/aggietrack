@@ -38,6 +38,11 @@ export default async function Page() {
           students = testAccountCards.map((card) => {
             const stat = stats[card.email];
             if (stat && card.role === "student") {
+              // Avery Cole special case: preserve original wording when at 0 credits
+              if (card.email === "it.start@example.test" && stat.credits === 0) {
+                return card; // Keep original "Just started, with no prior coursework (0 credits)."
+              }
+              
               const scenarioNotes = getScenarioNotes(card.place);
               const standing = getStanding(card.place);
               const gpaStr = stat.gpa !== null ? `GPA ${stat.gpa.toFixed(2)}` : "no GPA yet";

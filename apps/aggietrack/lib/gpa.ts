@@ -126,16 +126,19 @@ export function computeHonors(transcript: TranscriptEntry[]): {
   let residentHours = 0;
 
   for (const entry of transcript) {
-    // Skip non-completed courses (in-progress, failed, withdrawn)
-    if (entry.status !== "COMPLETED") continue;
+    // Skip in-progress courses
+    if (entry.status === "IN_PROGRESS") continue;
     
     // Skip entries with no grade
     if (!entry.grade) continue;
     
-    // Skip non-GPA grades (P, TR, I, W)
+    // Skip W (withdrawn) - the ONLY grade excluded from adjusted GPA
+    if (entry.grade === Grade.W) continue;
+    
+    // Skip non-GPA grades (P, TR, I)
     if (QUALITY_POINTS[entry.grade] === null) continue;
     
-    // Count all NC A&T letter-graded attempts (including repeats)
+    // Count all NC A&T letter-graded attempts (including repeats and F)
     const qualityPoints = QUALITY_POINTS[entry.grade] ?? 0;
     totalQualityPoints += qualityPoints * entry.credits;
     totalCredits += entry.credits;

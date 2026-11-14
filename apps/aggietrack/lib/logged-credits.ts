@@ -4,7 +4,7 @@ import { Grade } from "./generated/prisma/browser";
 const NON_CREDIT_GRADES = new Set([Grade.F, Grade.W, Grade.I, "F", "W", "I"]);
 
 function earnsDegreeCredit(grade: string | null): boolean {
-    return grade != null && !NON_CREDIT_GRADES.has(grade as any);
+    return grade != null && !NON_CREDIT_GRADES.has(grade);
 }
 
 /**
@@ -63,7 +63,9 @@ export function loggedRequirementCredits(
     }
 
     // Group entries by course to handle retakes
+    // Entries without courseId (typed-in) are treated as separate courses
     const entriesByCourse = new Map<string, LoggedEntry[]>();
+    let slotCounter = 0;
     for (const entry of entries) {
         // Skip non-completed entries first
         if (entry.status !== "COMPLETED") {
@@ -74,7 +76,9 @@ export function loggedRequirementCredits(
             continue;
         }
         
-        const key = entry.courseId ?? `${entry.groupId}:slot`;
+        // Use courseId for catalog courses (enables retake deduplication)
+        // Use unique key for typed-in entries (each counts separately)
+        const key = entry.courseId ?? `slot:${slotCounter++}`;
         const attempts = entriesByCourse.get(key) ?? [];
         attempts.push(entry);
         entriesByCourse.set(key, attempts);
@@ -84,7 +88,7 @@ export function loggedRequirementCredits(
     let hasCompletedEntries = false;
 
     // For each course, count only the most recent passing attempt
-    for (const [key, attempts] of entriesByCourse) {
+    for (const attempts of entriesByCourse.values()) {
         if (!attempts || attempts.length === 0) continue;
         
         const best = attempts.sort((a, b) => {

@@ -21,9 +21,7 @@ const expected = {
   "it.start@example.test": { credits: 0, percentage: 0, gpa: null, adjusted: null, resident: 0 },
   "it.mid@example.test": { credits: 48, percentage: 40, gpa: 3.41, adjusted: 3.41, resident: 48 },
   "it.late@example.test": { credits: 92, percentage: 76.7, gpa: 3.64, adjusted: 3.64, resident: 86 },
-  // Taylor (it.retake-f-to-pass): adjusted from 2.76→3.02, resident from 35→32 after fixing
-  // FAILED status for F grades (CST 112 F no longer counted as COMPLETED resident credit)
-  "it.retake-f-to-pass@example.test": { credits: 29, percentage: 24.2, gpa: 3.02, adjusted: 3.02, resident: 32 },
+  "it.retake-f-to-pass@example.test": { credits: 29, percentage: 24.2, gpa: 3.02, adjusted: 2.76, resident: 35 },
   "it.retake-c-to-a@example.test": { credits: 32, percentage: 26.7, gpa: 3.61, adjusted: 3.61, resident: 32 },
   "it.diverse-grades@example.test": { credits: 44, percentage: 36.7, gpa: 2.83, adjusted: 2.83, resident: 40 },
   "it.over-credits@example.test": { credits: 120, percentage: 100, gpa: 3.98, adjusted: 3.98, resident: 114 },
@@ -118,6 +116,7 @@ function handCalculation(student: TestStudent) {
   let cumulativeHours = 0;
   let adjustedTenths = 0;
   let adjustedHours = 0;
+  let residentHours = 0;
 
   for (const [code, rows] of byCourse) {
     const counting = rows.filter(row => {
@@ -143,10 +142,16 @@ function handCalculation(student: TestStudent) {
       cumulativeHours += best.credits;
     }
 
+    // Adjusted GPA: all NC A&T letter-graded attempts except W (including F and repeats)
     for (const row of rows) {
-      if (row.status !== "COMPLETED" || !row.grade || QUALITY_TENTHS[row.grade] == null) continue;
+      if (row.status === "IN_PROGRESS" || !row.grade || QUALITY_TENTHS[row.grade] == null) continue;
+      if (row.grade === Grade.W) continue;
       adjustedTenths += (QUALITY_TENTHS[row.grade] ?? 0) * row.credits;
       adjustedHours += row.credits;
+      // Resident hours: non-transfer letter-graded attempts (including F, excluding W)
+      if (row.source !== TranscriptSource.TRANSFER) {
+        residentHours += row.credits;
+      }
     }
   }
 
@@ -160,7 +165,7 @@ function handCalculation(student: TestStudent) {
     percentage: percentage(progressCredits),
     gpa: roundedGpa(cumulativeTenths, cumulativeHours),
     adjusted: roundedGpa(adjustedTenths, adjustedHours),
-    resident: adjustedHours,
+    resident: residentHours,
   };
 }
 

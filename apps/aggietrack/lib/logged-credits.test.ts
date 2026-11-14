@@ -8,7 +8,6 @@ import { elet2025 } from "../prisma/seed/elet-2025";
 import { info2025 } from "../prisma/seed/info-2025";
 import type { CurriculumSeed } from "../prisma/seed/curriculum";
 import { loggedRequirementCredits, type LoggedEntry, type LoggedGroup } from "./logged-credits";
-import { Grade } from "./generated/prisma/client";
 import { plannedAttempts } from "./frozen-transcript";
 import { testStudents } from "./test-students";
 
@@ -295,4 +294,29 @@ test("student-entered retake: F followed by passing grade counts once", () => {
     const summary = loggedRequirementCredits(groups, [failedEntry, passingEntry]);
     const cstCore = summary.groups.find((group) => group.name === "CST Major Core");
     assert.equal(cstCore?.earnedCredits, 3, "F grade doesn't count, only passing attempt counts");
+});
+
+test("student-entered retake with FAILED status: F then passing grade counts once in requirement and overall", () => {
+    const groups = groupsFromSeed(info2025);
+    const failedEntry: LoggedEntry = {
+        courseId: courseId("CST", "120"),
+        credits: creditsFor("CST", "120"),
+        status: "FAILED", // Properly marked as FAILED
+        grade: "F",
+        createdAt: new Date(Date.UTC(2024, 0, 1)),
+        groupId: null,
+    };
+    const passingEntry: LoggedEntry = {
+        courseId: courseId("CST", "120"),
+        credits: creditsFor("CST", "120"),
+        status: "COMPLETED",
+        grade: "B",
+        createdAt: new Date(Date.UTC(2024, 1, 1)),
+        groupId: null,
+    };
+    
+    const summary = loggedRequirementCredits(groups, [failedEntry, passingEntry]);
+    const cstCore = summary.groups.find((group) => group.name === "CST Major Core");
+    assert.equal(cstCore?.earnedCredits, 3, "FAILED F doesn't count, only passing attempt counts");
+    assert.equal(summary.totalEarnedCredits, 3, "Overall should also count once");
 });

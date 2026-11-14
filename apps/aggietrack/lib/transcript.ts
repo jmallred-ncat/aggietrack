@@ -19,7 +19,8 @@ export function progressStatusFromEntry(entry: {
     if (entry.source === "TRANSFER" || entry.grade === "TR") {
         return "transfer";
     }
-    if (entry.status === "COMPLETED") {
+    // COMPLETED, FAILED, and WITHDRAWN all show as logged with grade visible
+    if (entry.status === "COMPLETED" || entry.status === "FAILED" || entry.status === "WITHDRAWN") {
         return "complete";
     }
     return "";

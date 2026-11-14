@@ -29,7 +29,7 @@ function attempt(
   
   return {
     ...course,
-    grade: finalStatus === TranscriptStatus.IN_PROGRESS ? null : grade,
+    grade, // Keep the grade visible (including I for in-progress)
     status: finalStatus,
     source: grade === Grade.TR ? TranscriptSource.TRANSFER : TranscriptSource.NCAT,
     outsidePlan: false,
@@ -169,11 +169,13 @@ const ALEX: Record<string, Grade> = {
 };
 
 function fromTable(courses: FrozenCourse[], table: Record<string, Grade>, inProgressFrom?: number) {
-  return courses.map(course => attempt(
-    course,
-    inProgressFrom != null && course.sequence >= inProgressFrom ? null : requireGrade(table, codeOf(course)),
-    inProgressFrom != null && course.sequence >= inProgressFrom ? TranscriptStatus.IN_PROGRESS : TranscriptStatus.COMPLETED,
-  ));
+  return courses.map(course => {
+    const isInProgress = inProgressFrom != null && course.sequence >= inProgressFrom;
+    const grade = isInProgress ? null : requireGrade(table, codeOf(course));
+    // Pass explicit IN_PROGRESS status for in-progress courses
+    // For completed courses, omit status to use automatic mapping (F→FAILED, W→WITHDRAWN, etc.)
+    return attempt(course, grade, isInProgress ? TranscriptStatus.IN_PROGRESS : undefined);
+  });
 }
 
 function withRetake(courses: FrozenCourse[], table: Record<string, Grade>, code: string, first: Grade, second: Grade) {
