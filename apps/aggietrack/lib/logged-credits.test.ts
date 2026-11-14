@@ -215,7 +215,7 @@ test("reset state: Taylor has CST 112 F and B, should count once (14 earned for 
     const attempts = plannedAttempts(taylor);
     const entries: LoggedEntry[] = attempts.map((attempt, index) => ({
         courseId: courseId(attempt.subject, attempt.number),
-        credits: attempt.credits,
+        credits: attempt.entered?.credits ?? creditsFor(attempt.subject, attempt.number),
         status: attempt.status,
         grade: attempt.grade,
         createdAt: new Date(Date.UTC(2024, 0, index + 1)),
@@ -223,9 +223,10 @@ test("reset state: Taylor has CST 112 F and B, should count once (14 earned for 
     }));
     
     const summary = loggedRequirementCredits(groups, entries);
+    const groupNames = summary.groups.map((g) => g.name).join(", ");
     const cstCore = summary.groups.find((group) => group.name === "CST Major Core");
-    assert.ok(cstCore, "CST Major Core group should exist");
-    assert.equal(cstCore.earnedCredits, 14, "Taylor: CST Major Core should have 14 earned credits (CST 112 counted once)");
+    assert.ok(cstCore, `CST Major Core group should exist. Available: ${groupNames}`);
+    assert.equal(cstCore.earnedCredits, 14, `Taylor: CST Major Core should have 14 earned credits (CST 112 counted once). Got ${cstCore.earnedCredits}`);
 });
 
 test("reset state: Casey has CST 130 W, should not count (14 earned for CST Major Core)", () => {
@@ -236,7 +237,7 @@ test("reset state: Casey has CST 130 W, should not count (14 earned for CST Majo
     const attempts = plannedAttempts(casey);
     const entries: LoggedEntry[] = attempts.map((attempt, index) => ({
         courseId: courseId(attempt.subject, attempt.number),
-        credits: attempt.credits,
+        credits: attempt.entered?.credits ?? creditsFor(attempt.subject, attempt.number),
         status: attempt.status,
         grade: attempt.grade,
         createdAt: new Date(Date.UTC(2024, 0, index + 1)),
@@ -256,7 +257,7 @@ test("reset state: Alex has W/I/F attempts, none should count (16 earned for CST
     const attempts = plannedAttempts(alex);
     const entries: LoggedEntry[] = attempts.map((attempt, index) => ({
         courseId: courseId(attempt.subject, attempt.number),
-        credits: attempt.credits,
+        credits: attempt.entered?.credits ?? creditsFor(attempt.subject, attempt.number),
         status: attempt.status,
         grade: attempt.grade,
         createdAt: new Date(Date.UTC(2024, 0, index + 1)),
