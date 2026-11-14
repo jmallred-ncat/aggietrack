@@ -33,15 +33,13 @@ export default async function Page() {
       // Fetch live stats and merge into cards
       try {
         const statsResponse = await callAggieTrack("/api/test-students/stats");
-        const stats = statsResponse.stats as Record<string, { credits: number; percentage: number; gpa: number | null }> | undefined;
+        const stats = statsResponse.stats as Record<string, { credits: number; percentage: number; gpa: number | null; standing: string | null; place: string }> | undefined;
         if (stats) {
           students = testAccountCards.map((card) => {
             const stat = stats[card.email];
             if (stat && card.role === "student") {
-              // Avery Cole special case: preserve original wording when at 0 credits
-              if (card.email === "it.start@example.test" && stat.credits === 0) {
-                return card; // Keep original "Just started, with no prior coursework (0 credits)."
-              }
+              // Use the place string from the stats API which includes standing
+              // Append scenario notes for reset state
               
               // Determine if this is reset state by comparing credits, GPA, and percentage to expected values
               const resetState: Record<string, { credits: number; gpa: number | null; percentage: number }> = {
@@ -60,23 +58,17 @@ export default async function Page() {
                 expected.gpa === stat.gpa && 
                 expected.percentage === stat.percentage;
               
-              const scenarioNotes = getScenarioNotes(card.place);
-              const gpaStr = stat.gpa !== null ? `GPA ${stat.gpa.toFixed(2)}` : "no GPA yet";
-              
-              // After reset: show standing + scenario notes
-              // After fixture load: show stats without standing
+              // After reset: append scenario notes from original card
+              // After fixture load: use stats place as-is (includes standing)
               if (isResetState) {
-                const standing = getStanding(card.place);
-                const statsStr = `${standing}: ${stat.credits} credits, ${stat.percentage}%, ${gpaStr}`;
+                const scenarioNotes = getScenarioNotes(card.place);
                 const place = scenarioNotes
-                  ? `Information Technology 2025. ${statsStr}. ${scenarioNotes}`
-                  : `Information Technology 2025. ${statsStr}.`;
+                  ? `${stat.place}. ${scenarioNotes}`
+                  : `${stat.place}.`;
                 return { ...card, place };
               } else {
-                // Non-reset: show stats without standing
-                const statsStr = `${stat.credits} credits, ${stat.percentage}%, ${gpaStr}`;
-                const place = `Information Technology 2025. ${statsStr}.`;
-                return { ...card, place };
+                // Non-reset: use place from API which includes standing
+                return { ...card, place: `${stat.place}.` };
               }
             }
             return card;

@@ -39,7 +39,7 @@ export function GradeSelect({
                     {value ? completionGradeLabel(value) : placeholder}
                 </SelectValue>
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="min-w-48">
                 <SelectGroup>
                     {gradeOptions.map((grade) => (
                         <SelectItem key={grade.value} value={grade.value}>

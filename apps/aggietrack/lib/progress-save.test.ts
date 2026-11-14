@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { test, after } from "node:test";
 import { StudentStanding, TranscriptStatus } from "./generated/prisma/client";
 import { prisma } from "./prisma";
+import { saveProgressCore, type SaveProgressInput } from "./progress-save";
 
 /**
  * Integration test: Progress form save preserves FAILED/WITHDRAWN/IN_PROGRESS/Incomplete rows
@@ -202,19 +203,37 @@ test("form save preserves ordinary and slot FAILED/WITHDRAWN/IN_PROGRESS/Incompl
   });
   assert.ok(anotherCourse, "Should have another course to mark complete");
 
-  // Simulate saveTranscriptProgress logic: mark another course complete
-  // This tests the preservation logic without requiring Next.js server action context
-  // The real saveTranscriptProgress uses the same Prisma operations
-  await prisma.transcriptEntry.create({
-    data: {
-      studentId,
-      courseId: anotherCourse.courseId!,
-      credits: 3,
-      grade: "B",
-      status: TranscriptStatus.COMPLETED,
-      source: "NCAT",
-    },
-  });
+  // Call the actual save logic that saveTranscriptProgress uses
+  // This tests that the preservation logic works correctly
+  // The key test is that FAILED/WITHDRAWN/IN_PROGRESS entries in slots are preserved
+  // even when those slots are not included in the save input
+  const saveInput: SaveProgressInput = {
+    standing: null,
+    courses: [
+      { courseId: anotherCourse.courseId!, status: "complete" },
+    ],
+    slots: [
+      // Pass the slot IDs with no status to simulate not marking them
+      // The save logic should preserve any existing FAILED/WITHDRAWN/IN_PROGRESS entries
+      { recommendedTermCourseId: electiveSlot1.id, courseId: null, subject: null, number: null, title: null, credits: null, status: null },
+      { recommendedTermCourseId: electiveSlot2.id, courseId: null, subject: null, number: null, title: null, credits: null, status: null },
+    ],
+    confirmStart: false,
+  };
+
+  try {
+    const result = await prisma.$transaction(async (tx) => {
+      // For this test, we don't need slot courses since we're not marking slots as complete
+      // We're just testing that existing FAILED/WITHDRAWN/IN_PROGRESS entries are preserved
+      const slotCourses: Record<string, Array<{ id: string; subject: string; number: string; title: string; credits: number; lab: boolean }>> = {};
+      return await saveProgressCore(tx, user.studentProfile!, saveInput, slotCourses);
+    });
+    if (!result.success) {
+      assert.fail(`Save failed: ${result.error}`);
+    }
+  } catch (error) {
+    assert.fail(`Save threw error: ${error instanceof Error ? error.message : String(error)}`);
+  }
 
   // Verify all entries still exist
   const afterSave = await prisma.transcriptEntry.findMany({
@@ -222,7 +241,16 @@ test("form save preserves ordinary and slot FAILED/WITHDRAWN/IN_PROGRESS/Incompl
     orderBy: { createdAt: "asc" },
   });
 
-  assert.ok(afterSave.length >= 7, "Should have at least 7 entries (6 original + 1 new)");
+  if (afterSave.length < 7) {
+    console.log(`Only ${afterSave.length} entries found. Entries:`, afterSave.map(e => ({
+      id: e.id.slice(-8),
+      courseId: e.courseId?.slice(-8) || 'null',
+      recommendedTermCourseId: e.recommendedTermCourseId?.slice(-8) || 'null',
+      status: e.status,
+      grade: e.grade,
+    })));
+  }
+  assert.ok(afterSave.length >= 7, `Should have at least 7 entries (6 original + 1 new), but found ${afterSave.length}`);
 
   const failedAfter = afterSave.find(e => e.id === ordinaryFailed.id);
   const withdrawnAfter = afterSave.find(e => e.id === ordinaryWithdrawn.id);
@@ -275,11 +303,15 @@ test("form save preserves ordinary and slot FAILED/WITHDRAWN/IN_PROGRESS/Incompl
 
   console.log("✓ Clearing FAILED and WITHDRAWN entries deletes them as expected");
 
-  // Cleanup
-  await prisma.transcriptEntry.deleteMany({ where: { studentId } });
-  await prisma.recommendedTermCourse.deleteMany({ 
-    where: { id: { in: [electiveSlot1.id, electiveSlot2.id] } } 
-  });
-  await prisma.studentProfile.delete({ where: { id: studentId } });
-  await prisma.user.delete({ where: { id: user.id } });
+  // Cleanup in try/finally since we added slots to shared curriculum
+  try {
+    await prisma.transcriptEntry.deleteMany({ where: { studentId } });
+    await prisma.studentProfile.delete({ where: { id: studentId } });
+    await prisma.user.delete({ where: { id: user.id } });
+  } finally {
+    // Clean up the recommended term course slots we created
+    await prisma.recommendedTermCourse.deleteMany({ 
+      where: { id: { in: [electiveSlot1.id, electiveSlot2.id] } } 
+    });
+  }
 });

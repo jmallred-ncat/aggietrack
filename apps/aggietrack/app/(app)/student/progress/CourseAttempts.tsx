@@ -334,7 +334,7 @@ export function CourseAttempts({
                                         disabled={isPending}
                                         size="sm"
                                         placeholder="Set grade"
-                                        className="h-11 min-w-fit whitespace-nowrap sm:h-7"
+                                        className="min-w-fit whitespace-nowrap data-[size=sm]:h-11 sm:data-[size=sm]:h-7"
                                         label={sortedAttempts.length > 1
                                             ? `Grade for ${courseCode}, attempt ${index + 1}`
                                             : `Grade for ${courseCode}`}

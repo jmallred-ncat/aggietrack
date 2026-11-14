@@ -106,7 +106,7 @@ export async function POST(request: Request) {
           percentage: 0,
           gpa: null,
           standing: null,
-          place: `${student.name}. Information Technology 2025. Stats unavailable.`
+          place: `${student.firstName} ${student.lastName}. Information Technology 2025. Stats unavailable.`
         };
       }
     }

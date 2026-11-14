@@ -92,18 +92,6 @@ async function postFixture(email: string, fixtureId: string) {
   return fixtureLoadResult(body);
 }
 
-async function fetchStudentStats() {
-  const response = await fetch("/api/test-students/stats", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-  });
-  const body = await response.json().catch(() => ({}));
-  if (!response.ok || !body.stats) {
-    throw new Error("Could not fetch student stats.");
-  }
-  return body.stats as Record<string, { place: string }>;
-}
-
 export function TestStudents({ students, password, notice, faults = {} }: { students: TestStudentCard[]; password: string; notice: string; faults?: Record<string, string | null> }) {
   const router = useRouter();
   const [pending, setPending] = useState("");
@@ -116,7 +104,6 @@ export function TestStudents({ students, password, notice, faults = {} }: { stud
   const [confirmFixture, setConfirmFixture] = useState<{ email: string; fixtureId: string } | null>(null);
   const [fixtureChoice, setFixtureChoice] = useState<Record<string, string>>({});
   const [lastLoaded, setLastLoaded] = useState<Record<string, string>>({});
-  const [studentStats, setStudentStats] = useState<Record<string, { place: string }>>({});
   const actionLock = useRef(false);
   const [nextSave, setNextSave] = useState<Record<string, string>>(() => Object.fromEntries(students.filter(student => student.role === "student").map(student => [student.email, faultChoice(faults[student.email])])));
   const toastedNotice = useRef(false);
@@ -154,11 +141,6 @@ export function TestStudents({ students, password, notice, faults = {} }: { stud
       if (student.role === "student") {
         setNextSave(current => ({ ...current, [student.email]: nextSaveWorks }));
         setLastLoaded(current => {
-          const next = { ...current };
-          delete next[student.email];
-          return next;
-        });
-        setStudentStats(current => {
           const next = { ...current };
           delete next[student.email];
           return next;
@@ -224,15 +206,6 @@ export function TestStudents({ students, password, notice, faults = {} }: { stud
       const result = await postFixture(student.email, fixtureId);
       setLastLoaded(current => ({ ...current, [student.email]: result.fixture }));
       setNextSave(current => ({ ...current, [student.email]: nextSaveAfterFixture(previousSave, { ok: true, accountChanged: true }) }));
-      
-      // Fetch updated stats to show current standing
-      try {
-        const stats = await fetchStudentStats();
-        setStudentStats(stats);
-      } catch (statsError) {
-        console.error("Failed to fetch stats:", statsError);
-      }
-      
       toast.add({ type: "success", title: fixtureLoadedSummary(result) });
       router.refresh();
     } catch (caught) {
@@ -313,11 +286,9 @@ export function TestStudents({ students, password, notice, faults = {} }: { stud
         {studentAccounts.map(student => {
           const selected = fixtureChoice[student.email] ?? "";
           const loaded = lastLoaded[student.email];
-          const stats = studentStats[student.email];
-          const displayPlace = stats?.place || student.place;
           return <section key={student.email} className="flex flex-col rounded-xl border bg-background p-4">
             <h3 className="text-lg font-semibold">{student.name}</h3>
-            <p className="mt-1 text-sm leading-6 text-muted-foreground">{displayPlace}</p>
+            <p className="mt-1 text-sm leading-6 text-muted-foreground">{student.place}</p>
             <dl className="mt-4 space-y-2 text-sm">
               <div><dt className="text-muted-foreground">Email</dt><dd className="font-mono">{student.email}</dd></div>
               <div><dt className="text-muted-foreground">Password</dt><dd className="font-mono">{password || "Not configured"}</dd></div>
