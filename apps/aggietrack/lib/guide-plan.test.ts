@@ -145,7 +145,7 @@ test("every named guide course can be planned in the semester the guide assigns"
     const completed = new Set<string>();
     for (const term of program.curriculum.recommended) {
       const season = guideSeason(term.sequence);
-      const selected = new Set(selectPlannableCourses(catalog, season, completed, new Set(), new Set()).map((course) => course.id));
+      const selected = new Set(selectPlannableCourses(catalog, season, completed, new Set(), new Set(), new Set()).map((course) => course.id));
       const ids = term.courses.map((course) => courseKey(course));
       for (const id of ids) {
         assert.equal(selected.has(id), true, `${program.name} semester ${term.sequence} leaves out ${id.replace("-", " ")}`);
@@ -167,11 +167,11 @@ test("every named guide course can be planned in the semester the guide assigns"
 test("a new Information Technology student can plan MATH 110 in fall and in spring", () => {
   const math = courseKey({ subject: "MATH", number: "110" });
   for (const season of [TermSeason.FALL, TermSeason.SPRING]) {
-    const selected = selectPlannableCourses(catalog, season, new Set(), new Set(), new Set());
+    const selected = selectPlannableCourses(catalog, season, new Set(), new Set(), new Set(), new Set());
     assert.equal(selected.some((course) => course.id === math), true, `MATH 110 is missing in ${season}`);
   }
   const first = info2025.recommended[0]?.courses.map((course) => courseKey(course)) ?? [];
-  const fall = new Set(selectPlannableCourses(catalog, TermSeason.FALL, new Set(), new Set(), new Set()).map((course) => course.id));
+  const fall = new Set(selectPlannableCourses(catalog, TermSeason.FALL, new Set(), new Set(), new Set(), new Set()).map((course) => course.id));
   for (const id of first) {
     assert.equal(fall.has(id), true, `${id.replace("-", " ")} is missing from the first semester`);
   }
@@ -184,8 +184,8 @@ test("a guide course stays out of a season the guide and the catalog both omit",
       .filter((term) => term.sequence <= 2)
       .flatMap((term) => term.courses.map((course) => courseKey(course))),
   );
-  const spring = selectPlannableCourses(catalog, TermSeason.SPRING, completed, new Set(), new Set());
+  const spring = selectPlannableCourses(catalog, TermSeason.SPRING, completed, new Set(), new Set(), new Set());
   assert.equal(spring.some((course) => course.id === web), false);
-  const fall = selectPlannableCourses(catalog, TermSeason.FALL, completed, new Set(), new Set());
+  const fall = selectPlannableCourses(catalog, TermSeason.FALL, completed, new Set(), new Set(), new Set());
   assert.equal(fall.some((course) => course.id === web), true);
 });

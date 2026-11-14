@@ -89,7 +89,42 @@ test("planner search leaves out a course whose prerequisites could not be checke
         new Set(),
         new Set(),
         new Set(),
+        new Set(),
     ).filter((course) => courseMatchesSearch(course, "cst"));
 
     assert.deepEqual(matches.map((course) => course.number), ["130"]);
+});
+
+test("courses on the transcript (including Incomplete) are not plannable", () => {
+    const cst120: PlannableCourse = {
+        id: "cst-120",
+        subject: "CST",
+        number: "120",
+        title: "Computer Science I",
+        credits: 3,
+        offeredIn: [TermSeason.FALL, TermSeason.SPRING],
+        prerequisiteGroups: [],
+    };
+    
+    // Course not on transcript should be plannable
+    const withoutTranscript = selectPlannableCourses(
+        [cst120],
+        TermSeason.FALL,
+        new Set(),
+        new Set(),
+        new Set(),
+        new Set(),
+    );
+    assert.equal(withoutTranscript.length, 1, "Course should be plannable when not on transcript");
+    
+    // Course on transcript (even if Incomplete) should not be plannable
+    const withTranscript = selectPlannableCourses(
+        [cst120],
+        TermSeason.FALL,
+        new Set(),
+        new Set(),
+        new Set(),
+        new Set(["cst-120"]), // On transcript
+    );
+    assert.equal(withTranscript.length, 0, "Course on transcript should not be plannable");
 });
