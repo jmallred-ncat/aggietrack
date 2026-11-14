@@ -1043,7 +1043,9 @@ export default function ProgressForm({
                                             );
                                             const listKey = attemptListKey(attempts);
                                             const showCompleted = completionRowMode({ attempts }) === "menu";
-                                            const showAttempts = showCompleted || attempts.some((attempt) => attempt.status === "IN_PROGRESS");
+                                            const showAttempts = showCompleted || attempts.some((attempt) => 
+                                                attempt.status === "IN_PROGRESS" || attempt.status === "FAILED" || attempt.status === "WITHDRAWN"
+                                            );
                                             const slotSelection = row.kind === "slot" ? watchedSlots?.[row.id] : undefined;
                                             const slotCourse =
                                                 row.kind === "slot" && slotSelection?.courseId

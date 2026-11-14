@@ -398,12 +398,19 @@ async function writeTranscriptEntry(
     const grade = sameCourse && input.status === "complete" && input.existing?.grade && input.existing.grade !== "TR"
         ? input.existing.grade
         : fields.grade;
+    
+    // Preserve FAILED/WITHDRAWN status when saving the form (don't overwrite to COMPLETED)
+    const status = sameCourse && input.status === "complete" && input.existing?.status && 
+        (input.existing.status === "FAILED" || input.existing.status === "WITHDRAWN")
+        ? input.existing.status
+        : fields.status;
+    
     const data = {
         courseId: input.courseId,
         subject: input.courseId ? null : input.subject,
         number: input.courseId ? null : input.number,
         title: input.courseId ? null : input.title,
-        status: fields.status,
+        status,
         source: fields.source,
         grade,
         credits: input.credits,

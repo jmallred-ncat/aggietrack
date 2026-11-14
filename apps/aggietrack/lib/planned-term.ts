@@ -25,7 +25,8 @@ export async function courseStandingBefore(
             where: {
                 studentId,
                 courseId: { not: null },
-                status: { in: ["IN_PROGRESS", "COMPLETED"] },
+                // Only COMPLETED courses satisfy prerequisites (not IN_PROGRESS/Incomplete, FAILED, or WITHDRAWN)
+                status: "COMPLETED",
             },
             select: { courseId: true, status: true, source: true },
         }),
