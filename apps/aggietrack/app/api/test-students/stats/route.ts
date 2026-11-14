@@ -8,9 +8,19 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function POST(request: Request) {
+  // Guard returns void on success, throws TestStudentError with status on failure
   try {
     guardTestStudents(request);
-    
+  } catch (error) {
+    if (error && typeof error === "object" && "status" in error && "message" in error) {
+      const status = typeof error.status === "number" ? error.status : 500;
+      const message = typeof error.message === "string" ? error.message : "Unauthorized";
+      return Response.json({ error: message }, { status });
+    }
+    return Response.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  
+  try {
     const stats: Record<string, { credits: number; percentage: number; gpa: number | null; place: string }> = {};
     
     for (const student of testStudents) {
@@ -68,23 +78,13 @@ export async function POST(request: Request) {
         ]);
         
         const gpa = computeGpa(transcript);
-        const programName = user.studentProfile.catalogYear.program.name;
-        const catalogYear = user.studentProfile.catalogYear.year;
         
-        // Determine standing based on credits
-        let standing = "Freshman";
-        if (progress.earnedCredits >= 90) standing = "Senior";
-        else if (progress.earnedCredits >= 60) standing = "Junior";
-        else if (progress.earnedCredits >= 30) standing = "Sophomore";
-        
-        const gpaStr = gpa !== null ? `GPA ${gpa.toFixed(2)}` : "no GPA yet";
-        const place = `${programName} ${catalogYear}. ${standing}: ${progress.earnedCredits} credits, ${progress.percentage}%, ${gpaStr}.`;
-        
+        // Return just the numbers, let TM merge with scenario description
         stats[student.email] = {
           credits: progress.earnedCredits,
           percentage: progress.percentage,
           gpa,
-          place
+          place: ""  // TM will construct the full description
         };
       } catch (error) {
         console.error(`Failed to get stats for ${student.email}:`, error);

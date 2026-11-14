@@ -17,12 +17,20 @@ export type PlannedAttempt = FrozenCourse & {
 function attempt(
   course: FrozenCourse,
   grade: Grade | null,
-  status: TranscriptStatus = TranscriptStatus.COMPLETED,
+  status?: TranscriptStatus,
 ): PlannedAttempt {
+  // Determine status from grade if not explicitly provided
+  const finalStatus = status ?? (
+    grade === Grade.F ? TranscriptStatus.FAILED 
+    : grade === Grade.W ? TranscriptStatus.WITHDRAWN 
+    : grade === Grade.I ? TranscriptStatus.IN_PROGRESS 
+    : TranscriptStatus.COMPLETED
+  );
+  
   return {
     ...course,
-    grade: status === TranscriptStatus.IN_PROGRESS ? null : grade,
-    status,
+    grade: finalStatus === TranscriptStatus.IN_PROGRESS ? null : grade,
+    status: finalStatus,
     source: grade === Grade.TR ? TranscriptSource.TRANSFER : TranscriptSource.NCAT,
     outsidePlan: false,
     entered: null,

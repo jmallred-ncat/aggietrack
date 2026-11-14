@@ -1,7 +1,20 @@
 import { redirect } from "next/navigation";
 import { TestStudents } from "@/components/test-students";
 import { loadWorkspace } from "@/lib/load-workspace";
-import { callAggieTrack, plannerFaultMap, testAccountCards, testStudentConfig, type TestStudentCard } from "@/lib/test-students";
+import { callAggieTrack, plannerFaultMap, testAccountCards, testStudentConfig } from "@/lib/test-students";
+
+// Extract scenario notes from the static description (everything after the standing/stats)
+function getScenarioNotes(place: string): string {
+  // Match pattern: "Program Year. Standing: credits, %, GPA. [Scenario notes]"
+  const match = place.match(/\.\s+(?:Freshman|Sophomore|Junior|Senior):\s+\d+\s+credits?,\s+[\d.]+%,\s+(?:GPA\s+[\d.]+|no GPA yet)\.\s*(.*)/);
+  return match?.[1] || "";
+}
+
+// Get standing from the static description
+function getStanding(place: string): string {
+  const match = place.match(/\.\s+(Freshman|Sophomore|Junior|Senior):/);
+  return match?.[1] || "Freshman";
+}
 
 export default async function Page() {
   // The page renders alongside the layout, so the password is read only after the session check.
@@ -20,12 +33,19 @@ export default async function Page() {
       // Fetch live stats and merge into cards
       try {
         const statsResponse = await callAggieTrack("/api/test-students/stats");
-        const stats = statsResponse.stats as Record<string, { place: string }> | undefined;
+        const stats = statsResponse.stats as Record<string, { credits: number; percentage: number; gpa: number | null }> | undefined;
         if (stats) {
           students = testAccountCards.map((card) => {
             const stat = stats[card.email];
             if (stat && card.role === "student") {
-              return { ...card, place: stat.place };
+              const scenarioNotes = getScenarioNotes(card.place);
+              const standing = getStanding(card.place);
+              const gpaStr = stat.gpa !== null ? `GPA ${stat.gpa.toFixed(2)}` : "no GPA yet";
+              const statsStr = `${standing}: ${stat.credits} credits, ${stat.percentage}%, ${gpaStr}`;
+              const place = scenarioNotes 
+                ? `Information Technology 2025. ${statsStr}. ${scenarioNotes}`
+                : `Information Technology 2025. ${statsStr}.`;
+              return { ...card, place };
             }
             return card;
           });

@@ -106,6 +106,8 @@ export default async function ProgressPage() {
             courseId: entry.courseId,
             credits: entry.credits,
             status: entry.status,
+            grade: entry.grade,
+            createdAt: entry.createdAt,
             groupId: entry.recommendedTermCourseId ? groupBySlot.get(entry.recommendedTermCourseId) ?? null : null,
         })),
     );
