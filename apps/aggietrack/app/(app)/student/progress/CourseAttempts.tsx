@@ -305,7 +305,7 @@ export function CourseAttempts({
                                             Set final grade
                                             <CaretDownIcon className="size-4 text-muted-foreground" />
                                         </DropdownMenuTrigger>
-                                        <DropdownMenuContent align="end" className="min-w-36">
+                                        <DropdownMenuContent align="end" className="min-w-48">
                                             <DropdownMenuRadioGroup
                                                 value=""
                                                 onValueChange={(value) => {
@@ -326,7 +326,8 @@ export function CourseAttempts({
                             ) : (
                                 <>
                                     <Badge variant="secondary" className="h-11 px-3 text-xs sm:h-auto">
-                                        In progress
+                                        <span className="sm:hidden">In prog.</span>
+                                        <span className="hidden sm:inline">In progress</span>
                                     </Badge>
                                     <GradeSelect
                                         value={null}

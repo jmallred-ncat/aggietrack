@@ -104,7 +104,8 @@ test("form save preserves ordinary and slot FAILED/WITHDRAWN/IN_PROGRESS/Incompl
       })
     : electiveSlot1; // Reuse first slot if only one group
 
-  // Create transcript entries:
+  try {
+    // Create transcript entries:
   // 1. Ordinary FAILED
   const ordinaryFailed = await prisma.transcriptEntry.create({
     data: {
@@ -301,14 +302,12 @@ test("form save preserves ordinary and slot FAILED/WITHDRAWN/IN_PROGRESS/Incompl
   assert.ok(afterClear.some(e => e.id === inProgress.id), "IN_PROGRESS entry should still exist");
   assert.ok(afterClear.some(e => e.id === incomplete.id), "Incomplete entry should still exist");
 
-  console.log("✓ Clearing FAILED and WITHDRAWN entries deletes them as expected");
-
-  // Cleanup in try/finally since we added slots to shared curriculum
-  try {
+    console.log("✓ Clearing FAILED and WITHDRAWN entries deletes them as expected");
+  } finally {
+    // Cleanup runs even on assertion failure
     await prisma.transcriptEntry.deleteMany({ where: { studentId } });
     await prisma.studentProfile.delete({ where: { id: studentId } });
     await prisma.user.delete({ where: { id: user.id } });
-  } finally {
     // Clean up the recommended term course slots we created
     await prisma.recommendedTermCourse.deleteMany({ 
       where: { id: { in: [electiveSlot1.id, electiveSlot2.id] } } 

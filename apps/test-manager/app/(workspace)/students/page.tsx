@@ -10,12 +10,6 @@ function getScenarioNotes(place: string): string {
   return match?.[1] || "";
 }
 
-// Get standing from the static description
-function getStanding(place: string): string {
-  const match = place.match(/\.\s+(Freshman|Sophomore|Junior|Senior):/);
-  return match?.[1] || "Freshman";
-}
-
 export default async function Page() {
   // The page renders alongside the layout, so the password is read only after the session check.
   if (!await loadWorkspace()) redirect("/sign-in");
@@ -38,9 +32,6 @@ export default async function Page() {
           students = testAccountCards.map((card) => {
             const stat = stats[card.email];
             if (stat && card.role === "student") {
-              // Use the place string from the stats API which includes standing
-              // Append scenario notes for reset state
-              
               // Determine if this is reset state by comparing credits, GPA, and percentage to expected values
               const resetState: Record<string, { credits: number; gpa: number | null; percentage: number }> = {
                 "it.start@example.test": { credits: 0, gpa: null, percentage: 0 },
@@ -58,9 +49,13 @@ export default async function Page() {
                 expected.gpa === stat.gpa && 
                 expected.percentage === stat.percentage;
               
-              // After reset: append scenario notes from original card
-              // After fixture load: use stats place as-is (includes standing)
               if (isResetState) {
+                // Avery special case: preserve original wording for reset state
+                if (card.email === "it.start@example.test") {
+                  return card; // Keep original "Just started, with no prior coursework (0 credits)."
+                }
+                
+                // Other students: append scenario notes to stats
                 const scenarioNotes = getScenarioNotes(card.place);
                 const place = scenarioNotes
                   ? `${stat.place}. ${scenarioNotes}`

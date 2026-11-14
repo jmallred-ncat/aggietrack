@@ -1,5 +1,5 @@
 import { courseCodeLabel } from "@/lib/course-code";
-import { Prisma, type Grade, type TranscriptStatus, type StudentProfile } from "@/lib/generated/prisma/client";
+import { Prisma, type TranscriptStatus, type StudentProfile } from "@/lib/generated/prisma/client";
 import { progressStatuses, transcriptFieldsForProgressStatus } from "@/lib/transcript";
 
 type ProgressStatus = (typeof progressStatuses)[number];

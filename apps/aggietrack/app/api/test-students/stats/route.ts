@@ -85,11 +85,16 @@ export async function POST(request: Request) {
         const programName = user.studentProfile.catalogYear.program.name;
         const year = user.studentProfile.catalogYear.year;
         
+        // Format percentage: no decimal if whole number (40%, 100%), otherwise one decimal (24.2%, 76.7%)
+        const percentageStr = progress.percentage % 1 === 0 
+          ? progress.percentage.toFixed(0) 
+          : progress.percentage.toFixed(1);
+        
         // Format: "Information Technology 2025. Freshman: 3 credits, 2.5%, GPA 2.00"
         const gpaFormatted = gpa !== null ? gpa.toFixed(2) : "N/A";
         const place = standingLabel
-          ? `${programName} ${year}. ${standingLabel}: ${progress.earnedCredits} credits, ${progress.percentage.toFixed(1)}%, GPA ${gpaFormatted}`
-          : `${programName} ${year}. ${progress.earnedCredits} credits, ${progress.percentage.toFixed(1)}%, GPA ${gpaFormatted}`;
+          ? `${programName} ${year}. ${standingLabel}: ${progress.earnedCredits} credits, ${percentageStr}%, GPA ${gpaFormatted}`
+          : `${programName} ${year}. ${progress.earnedCredits} credits, ${percentageStr}%, GPA ${gpaFormatted}`;
         
         stats[student.email] = {
           credits: progress.earnedCredits,
