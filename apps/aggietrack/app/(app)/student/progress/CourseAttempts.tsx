@@ -282,19 +282,39 @@ export function CourseAttempts({
                     )}
                     {attempt.status === "IN_PROGRESS" ? (
                         <>
-                            <Badge variant="secondary" className="h-11 px-3 text-xs sm:h-auto">
-                                In progress
-                            </Badge>
-                            <GradeSelect
-                                value={null}
-                                onChange={(grade) => handleGradeChange(attempt.id, grade)}
-                                disabled={isPending}
-                                size="sm"
-                                placeholder="Set grade"
-                                label={sortedAttempts.length > 1
-                                    ? `Grade for ${courseCode}, attempt ${index + 1}`
-                                    : `Grade for ${courseCode}`}
-                            />
+                            {attempt.grade === "I" ? (
+                                <>
+                                    <Badge variant="secondary" className="h-11 px-3 text-xs sm:h-auto">
+                                        Incomplete (I)
+                                    </Badge>
+                                    <GradeSelect
+                                        value={attempt.grade}
+                                        onChange={(grade) => handleGradeChange(attempt.id, grade)}
+                                        disabled={isPending}
+                                        size="sm"
+                                        placeholder="Set grade"
+                                        label={sortedAttempts.length > 1
+                                            ? `Grade for ${courseCode}, attempt ${index + 1}`
+                                            : `Grade for ${courseCode}`}
+                                    />
+                                </>
+                            ) : (
+                                <>
+                                    <Badge variant="secondary" className="h-11 px-3 text-xs sm:h-auto">
+                                        In progress
+                                    </Badge>
+                                    <GradeSelect
+                                        value={null}
+                                        onChange={(grade) => handleGradeChange(attempt.id, grade)}
+                                        disabled={isPending}
+                                        size="sm"
+                                        placeholder="Set grade"
+                                        label={sortedAttempts.length > 1
+                                            ? `Grade for ${courseCode}, attempt ${index + 1}`
+                                            : `Grade for ${courseCode}`}
+                                    />
+                                </>
+                            )}
                         </>
                     ) : (
                         <DropdownMenu

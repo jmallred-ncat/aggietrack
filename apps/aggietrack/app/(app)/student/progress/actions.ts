@@ -387,7 +387,10 @@ async function writeTranscriptEntry(
     },
 ) {
     if (!input.status) {
-        if (input.existing && input.existing.status !== "IN_PROGRESS") {
+        // Don't delete FAILED or WITHDRAWN entries when saving the form
+        // They stay on the row (not marked complete) and should persist
+        if (input.existing && input.existing.status !== "IN_PROGRESS" && 
+            input.existing.status !== "FAILED" && input.existing.status !== "WITHDRAWN") {
             await tx.transcriptEntry.delete({ where: { id: input.existing.id } });
         }
         return;

@@ -43,28 +43,41 @@ export default async function Page() {
                 return card; // Keep original "Just started, with no prior coursework (0 credits)."
               }
               
-              // Determine if this is reset state by comparing credits to expected reset values
-              const resetCredits: Record<string, number> = {
-                "it.start@example.test": 0,
-                "it.mid@example.test": 48,
-                "it.late@example.test": 92,
-                "it.retake-f-to-pass@example.test": 29,
-                "it.retake-c-to-a@example.test": 32,
-                "it.diverse-grades@example.test": 44,
-                "it.over-credits@example.test": 120,
+              // Determine if this is reset state by comparing credits, GPA, and percentage to expected values
+              const resetState: Record<string, { credits: number; gpa: number | null; percentage: number }> = {
+                "it.start@example.test": { credits: 0, gpa: null, percentage: 0 },
+                "it.mid@example.test": { credits: 48, gpa: 3.41, percentage: 40 },
+                "it.late@example.test": { credits: 92, gpa: 3.64, percentage: 76.7 },
+                "it.retake-f-to-pass@example.test": { credits: 29, gpa: 3.02, percentage: 24.2 },
+                "it.retake-c-to-a@example.test": { credits: 32, gpa: 3.61, percentage: 26.7 },
+                "it.diverse-grades@example.test": { credits: 44, gpa: 2.83, percentage: 36.7 },
+                "it.over-credits@example.test": { credits: 120, gpa: 3.98, percentage: 100 },
               };
               
-              const isResetState = resetCredits[card.email] === stat.credits;
-              const scenarioNotes = getScenarioNotes(card.place);
-              const standing = getStanding(card.place);
-              const gpaStr = stat.gpa !== null ? `GPA ${stat.gpa.toFixed(2)}` : "no GPA yet";
-              const statsStr = `${standing}: ${stat.credits} credits, ${stat.percentage}%, ${gpaStr}`;
+              const expected = resetState[card.email];
+              const isResetState = expected && 
+                expected.credits === stat.credits && 
+                expected.gpa === stat.gpa && 
+                expected.percentage === stat.percentage;
               
-              // After fixture load, show generic description; after reset, show scenario notes
-              const place = isResetState && scenarioNotes
-                ? `Information Technology 2025. ${statsStr}. ${scenarioNotes}`
-                : `Information Technology 2025. ${statsStr}.`;
-              return { ...card, place };
+              const scenarioNotes = getScenarioNotes(card.place);
+              const gpaStr = stat.gpa !== null ? `GPA ${stat.gpa.toFixed(2)}` : "no GPA yet";
+              
+              // After reset: show standing + scenario notes
+              // After fixture load: show stats without standing
+              if (isResetState) {
+                const standing = getStanding(card.place);
+                const statsStr = `${standing}: ${stat.credits} credits, ${stat.percentage}%, ${gpaStr}`;
+                const place = scenarioNotes
+                  ? `Information Technology 2025. ${statsStr}. ${scenarioNotes}`
+                  : `Information Technology 2025. ${statsStr}.`;
+                return { ...card, place };
+              } else {
+                // Non-reset: show stats without standing
+                const statsStr = `${stat.credits} credits, ${stat.percentage}%, ${gpaStr}`;
+                const place = `Information Technology 2025. ${statsStr}.`;
+                return { ...card, place };
+              }
             }
             return card;
           });

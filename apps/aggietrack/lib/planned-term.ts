@@ -25,10 +25,9 @@ export async function courseStandingBefore(
             where: {
                 studentId,
                 courseId: { not: null },
-                // Only COMPLETED courses satisfy prerequisites (not IN_PROGRESS/Incomplete, FAILED, or WITHDRAWN)
-                status: "COMPLETED",
+                status: { in: ["IN_PROGRESS", "COMPLETED"] },
             },
-            select: { courseId: true, status: true, source: true },
+            select: { courseId: true, status: true, source: true, grade: true },
         }),
         db.plannedCourse.findMany({
             where: {
@@ -46,6 +45,8 @@ export async function courseStandingBefore(
     const completedSources = new Map<string, TranscriptSource>();
     for (const entry of entries) {
         if (!entry.courseId) continue;
+        // Exclude Incomplete (grade I with IN_PROGRESS status) from satisfying prerequisites
+        if (entry.status === "IN_PROGRESS" && entry.grade === "I") continue;
         satisfied.add(entry.courseId);
         if (entry.status !== "COMPLETED") continue;
         completed.add(entry.courseId);
