@@ -224,7 +224,8 @@ test("reset state: Taylor has CST 112 F and B, should count once (14 earned for 
     
     const summary = loggedRequirementCredits(groups, entries);
     const cstCore = summary.groups.find((group) => group.name === "CST Major Core");
-    assert.equal(cstCore?.earnedCredits, 14, "Taylor: CST Major Core should have 14 earned credits (CST 112 counted once)");
+    assert.ok(cstCore, "CST Major Core group should exist");
+    assert.equal(cstCore.earnedCredits, 14, "Taylor: CST Major Core should have 14 earned credits (CST 112 counted once)");
 });
 
 test("reset state: Casey has CST 130 W, should not count (14 earned for CST Major Core)", () => {
