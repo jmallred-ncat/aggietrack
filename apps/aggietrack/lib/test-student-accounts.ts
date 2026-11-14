@@ -353,6 +353,7 @@ async function cleanAdvisorAvailability(db: Db = prisma) {
   await db.meetingAvailability.deleteMany({ where: { advisorId: sarahId } });
   await db.advisorTermSchedule.deleteMany({ where: { advisorId: sarahId } });
   await db.advisorTermDraft.deleteMany({ where: { advisorId: sarahId } });
+  await db.advisorMeetingSettings.deleteMany({ where: { advisorId: sarahId } });
 }
 
 async function writeFrozen(userId: string, student: TestStudent, catalogYearId: string, advisorId: string | null) {

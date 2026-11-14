@@ -18,7 +18,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { advisorRescheduleSuccess, studentBookingNoteHelper } from "@/lib/advising-copy";
 import type { MeetingCard, MeetingResult, OpenSlotChoice, StudentAdvisingView } from "@/lib/advising-types";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 
 export type StudentActions = {
     book: (slotId: string, topic: string) => Promise<MeetingResult>;
@@ -31,8 +31,8 @@ function lengthHelper(view: StudentAdvisingView) {
     const saved = view.sessionMinutes ?? 30;
     const visible = [...view.slots, ...view.upcoming].map((item) => item.durationMinutes);
     const mixed = visible.some((minutes) => minutes !== saved);
-    if (mixed) return "Session length is shown on each time. Times are in Eastern Time.";
-    return `Each session is ${saved} minutes. Times are in Eastern Time.`;
+    if (mixed) return "Session length is shown on each time.";
+    return `Each session is ${saved} minutes.`;
 }
 
 export function StudentBoard({
@@ -55,6 +55,10 @@ export function StudentBoard({
     const [moveNote, setMoveNote] = useState("");
     const [choices, setChoices] = useState<OpenSlotChoice[]>([]);
     const [nextSlot, setNextSlot] = useState<string>("");
+    const [scrollOverflows, setScrollOverflows] = useState(false);
+    const [showTopFade, setShowTopFade] = useState(false);
+    const [showBottomFade, setShowBottomFade] = useState(false);
+    const scrollRef = useRef<HTMLDivElement>(null);
 
     const groups = new Map<string, OpenSlotChoice[]>();
     for (const slot of view.slots) {
@@ -62,6 +66,45 @@ export function StudentBoard({
         list.push(slot);
         groups.set(slot.dateHeading, list);
     }
+
+    // Measure overflow and scroll position for reschedule dialog
+    useEffect(() => {
+        const container = scrollRef.current;
+        if (!container || choices.length === 0) {
+            setScrollOverflows(false);
+            setShowTopFade(false);
+            setShowBottomFade(false);
+            return;
+        }
+
+        function checkOverflow() {
+            if (!container) return;
+            const overflows = container.scrollHeight > container.clientHeight;
+            setScrollOverflows(overflows);
+            
+            if (overflows) {
+                const atTop = container.scrollTop <= 1;
+                const atBottom = container.scrollTop + container.clientHeight >= container.scrollHeight - 1;
+                setShowTopFade(!atTop);
+                setShowBottomFade(!atBottom);
+            } else {
+                setShowTopFade(false);
+                setShowBottomFade(false);
+            }
+        }
+
+        checkOverflow();
+
+        const observer = new ResizeObserver(checkOverflow);
+        observer.observe(container);
+
+        container.addEventListener("scroll", checkOverflow);
+
+        return () => {
+            observer.disconnect();
+            container.removeEventListener("scroll", checkOverflow);
+        };
+    }, [choices]);
 
     function openReschedule(card: MeetingCard) {
         setMoving(card);
@@ -118,8 +161,12 @@ export function StudentBoard({
                     {view.slots.length === 0 ? (
                         <Empty className="border border-dashed">
                             <EmptyHeader>
-                                <EmptyTitle>No times are open</EmptyTitle>
-                                <EmptyDescription>{view.advisorName} has not posted any open times yet. Check back soon.</EmptyDescription>
+                                <EmptyTitle>{view.hasTimesOutsideHorizon ? "No bookable times yet" : "No times are open"}</EmptyTitle>
+                                <EmptyDescription>
+                                    {view.hasTimesOutsideHorizon
+                                        ? `${view.advisorName}’s next open times are more than 8 weeks away. You can book up to 8 weeks ahead.`
+                                        : `${view.advisorName} has not posted any open times yet. Check back soon.`}
+                                </EmptyDescription>
                             </EmptyHeader>
                         </Empty>
                     ) : (
@@ -254,24 +301,50 @@ export function StudentBoard({
                             Your current session is <MeetingStamp value={moving?.fullTimestamp ?? ""} />. Choose another open time with {moving?.personName}.
                         </AlertDialogDescription>
                     </MeetingHeader>
-                    <div className="flex max-h-80 flex-col gap-2 overflow-y-auto px-6 pb-4">
-                        {choices.length === 0 ? (
-                            <Empty className="border-0">
-                                <EmptyHeader>
-                                    <EmptyTitle>No other times are open</EmptyTitle>
-                                    <EmptyDescription>Cancel this session, or wait for your advisor to add more times.</EmptyDescription>
-                                </EmptyHeader>
-                            </Empty>
-                        ) : choices.map((slot) => (
-                            <Button key={slot.id} type="button" variant={nextSlot === slot.id ? "default" : "outline"} className="h-11 whitespace-normal" aria-label={slot.accessibleName} onClick={() => setNextSlot(slot.id)}>
-                                <span className="whitespace-nowrap">{slot.dateHeading}</span>
-                                <span className="whitespace-nowrap">{slot.slotLabel}</span>
-                                <span className="tabular-nums">{slot.durationLabel}</span>
-                            </Button>
-                        ))}
-                        <Label htmlFor="student-move-note">Add a note (optional)</Label>
-                        <Textarea id="student-move-note" value={moveNote} maxLength={2000} onChange={(event) => setMoveNote(event.target.value)} />
-                        <p className="text-sm text-muted-foreground tabular-nums">{moveNote.length}/2,000 characters</p>
+                    <div className="flex min-h-0 flex-col gap-4 px-6 pb-4">
+                        {scrollOverflows ? (
+                            <p className="text-sm text-muted-foreground">
+                                {choices.length} open times. Scroll to see them all.
+                            </p>
+                        ) : null}
+                        <div className="relative">
+                            {showTopFade ? (
+                                <div className="pointer-events-none absolute left-0 right-0 top-0 z-10 h-8 rounded-t-lg bg-gradient-to-b from-background to-transparent" />
+                            ) : null}
+                            <div 
+                                ref={scrollRef}
+                                className="flex max-h-64 min-h-0 flex-col gap-2 overflow-y-auto rounded-lg border bg-muted/30 p-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                                tabIndex={choices.length > 0 ? 0 : undefined}
+                                role={choices.length > 0 ? "region" : undefined}
+                                aria-label={choices.length > 0 ? "Open times" : undefined}
+                            >
+                            {choices.length === 0 ? (
+                                <Empty className="border-0">
+                                    <EmptyHeader>
+                                        <EmptyTitle>No other times are open</EmptyTitle>
+                                        <EmptyDescription>Cancel this session, or wait for your advisor to add more times.</EmptyDescription>
+                                    </EmptyHeader>
+                                </Empty>
+                            ) : choices.map((slot) => (
+                                <Button key={slot.id} type="button" variant={nextSlot === slot.id ? "default" : "outline"} className="h-auto min-h-11 flex-col items-start gap-1 whitespace-normal px-4 py-2 text-left" aria-label={slot.accessibleName} onClick={() => setNextSlot(slot.id)}>
+                                    <span className="font-medium">{slot.dateHeading}</span>
+                                    <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
+                                        <span className="whitespace-nowrap">{slot.slotLabel}</span>
+                                        <span className="text-muted-foreground tabular-nums">·</span>
+                                        <span className="text-muted-foreground tabular-nums">{slot.durationLabel}</span>
+                                    </div>
+                                </Button>
+                            ))}
+                        </div>
+                        {showBottomFade ? (
+                            <div className="pointer-events-none absolute bottom-0 left-0 right-0 z-10 h-8 rounded-b-lg bg-gradient-to-t from-background to-transparent" />
+                        ) : null}
+                    </div>
+                        <div className="flex flex-col gap-2">
+                            <Label htmlFor="student-move-note">Add a note (optional)</Label>
+                            <Textarea id="student-move-note" value={moveNote} maxLength={2000} onChange={(event) => setMoveNote(event.target.value)} />
+                            <p className="text-sm text-muted-foreground tabular-nums">{moveNote.length}/2,000 characters</p>
+                        </div>
                     </div>
                     <MeetingFooter>
                         <Button type="button" variant="outline" className={meetingButtonClass} autoFocus onClick={() => setMoving(null)}>Keep current time</Button>

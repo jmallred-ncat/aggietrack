@@ -13,7 +13,7 @@ test("the testing site shows the Information Technology students and the reset i
     "it.over-credits@example.test",
   ]);
   assert.match(resetAfterUse, /after every use/);
-  assert.match(jordanPlanReset, /Reset Jordan Hale puts his Spring 2027 plan back to Waiting for review/);
+  assert.match(jordanPlanReset, /Resetting clears Jordan Hale.s planner and restores the advising session with Sarah Martinez/);
   assert.equal(testStudentByEmail("it.late@example.test")?.name, "Riley Brooks");
   assert.equal(testStudentByEmail("someone@example.test"), null);
 });

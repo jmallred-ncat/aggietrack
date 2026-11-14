@@ -106,7 +106,7 @@ test("meeting tests return before the fixture and connect only through the targe
     const source = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "advising-meetings.test.ts"), "utf8");
     const returns = source.match(/if \(skip\(t\)\) return;/g) ?? [];
     const skips = source.match(/skip\(t\)/g) ?? [];
-    assert.equal(returns.length, 13);
+    assert.equal(returns.length, 17);
     assert.equal(skips.length, returns.length);
     assert.match(source, /if \(!target\.ok\)/);
     assert.match(source, /openAdvisingTestClient\(target/);
