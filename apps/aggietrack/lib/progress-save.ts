@@ -1,7 +1,6 @@
-import { getProgressSlotCourses } from "@/lib/catalog";
 import { courseCodeLabel, parseCourseCode } from "@/lib/course-code";
 import { Prisma, RequirementSlot, type Grade, type TranscriptStatus, type StudentProfile } from "@/lib/generated/prisma/client";
-import { progressStatuses, transcriptFieldsForProgressStatus, type ProgressStatus } from "@/lib/transcript";
+import { transcriptFieldsForProgressStatus, type ProgressStatus } from "@/lib/transcript";
 
 export type SaveProgressInput = {
     standing: "FRESHMAN" | "SOPHOMORE" | "JUNIOR" | "SENIOR" | null;
@@ -368,7 +367,7 @@ export async function saveProgressCore(
     });
 
     // Final check: if confirmStart was requested but nothing was recorded, return error
-    // This check happens after the transaction writes, so it will be rolled back
+    // The caller must handle this error return to abort the transaction
     if (confirmStart && !startConfirmed) {
         return { success: false, error: "Mark the courses you have completed, or say you have no prior coursework." };
     }

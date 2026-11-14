@@ -284,7 +284,7 @@ export function CourseAttempts({
                         <>
                             {attempt.grade === "I" ? (
                                 <>
-                                    <Badge variant="secondary" className="h-11 px-3 text-xs sm:h-auto">
+                                    <Badge variant="secondary" className="order-first w-full px-3 text-xs sm:order-none sm:h-auto sm:w-auto">
                                         Incomplete (I)
                                     </Badge>
                                     <DropdownMenu
@@ -325,9 +325,8 @@ export function CourseAttempts({
                                 </>
                             ) : (
                                 <>
-                                    <Badge variant="secondary" className="h-11 px-3 text-xs sm:h-auto">
-                                        <span className="sm:hidden">In prog.</span>
-                                        <span className="hidden sm:inline">In progress</span>
+                                    <Badge variant="secondary" className="order-first w-full px-3 text-xs sm:order-none sm:h-auto sm:w-auto">
+                                        In progress
                                     </Badge>
                                     <GradeSelect
                                         value={null}
