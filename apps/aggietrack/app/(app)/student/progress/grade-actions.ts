@@ -66,7 +66,8 @@ export async function updateTranscriptGrade(input: unknown) {
     // Allow converting IN_PROGRESS to COMPLETED by setting a grade
     // Update the grade and set status based on grade
     const status = grade === Grade.F ? "FAILED" 
-        : grade === Grade.W ? "WITHDRAWN" 
+        : grade === Grade.W ? "WITHDRAWN"
+        : grade === Grade.I ? "IN_PROGRESS"
         : "COMPLETED";
     
     await prisma.transcriptEntry.update({
@@ -146,7 +147,8 @@ export async function addTranscriptAttempt(input: unknown) {
 
     // Create the new transcript entry with status based on grade
     const status = grade === Grade.F ? "FAILED" 
-        : grade === Grade.W ? "WITHDRAWN" 
+        : grade === Grade.W ? "WITHDRAWN"
+        : grade === Grade.I ? "IN_PROGRESS"
         : "COMPLETED";
     
     const newEntry = await prisma.transcriptEntry.create({

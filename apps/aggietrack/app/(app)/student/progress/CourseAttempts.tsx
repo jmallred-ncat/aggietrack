@@ -287,16 +287,41 @@ export function CourseAttempts({
                                     <Badge variant="secondary" className="h-11 px-3 text-xs sm:h-auto">
                                         Incomplete (I)
                                     </Badge>
-                                    <GradeSelect
-                                        value={attempt.grade}
-                                        onChange={(grade) => handleGradeChange(attempt.id, grade)}
-                                        disabled={isPending}
-                                        size="sm"
-                                        placeholder="Set grade"
-                                        label={sortedAttempts.length > 1
-                                            ? `Grade for ${courseCode}, attempt ${index + 1}`
-                                            : `Grade for ${courseCode}`}
-                                    />
+                                    <DropdownMenu
+                                        open={openMenuId === attempt.id}
+                                        onOpenChange={(open) => setOpenMenuId(open ? attempt.id : null)}
+                                    >
+                                        <DropdownMenuTrigger
+                                            type="button"
+                                            disabled={isPending}
+                                            aria-label={sortedAttempts.length > 1
+                                                ? `${subject} ${number} attempt ${index + 1}, grade Incomplete. Set final grade`
+                                                : `${subject} ${number}, grade Incomplete. Set final grade`}
+                                            className={cn(
+                                                buttonVariants({ variant: "outline", size: "sm" }),
+                                                "h-11 gap-1 px-2.5 sm:h-7",
+                                            )}
+                                        >
+                                            Set final grade
+                                            <CaretDownIcon className="size-4 text-muted-foreground" />
+                                        </DropdownMenuTrigger>
+                                        <DropdownMenuContent align="end" className="min-w-36">
+                                            <DropdownMenuRadioGroup
+                                                value=""
+                                                onValueChange={(value) => {
+                                                    if (typeof value === "string" && isCompletionGrade(value)) {
+                                                        handleGradeChange(attempt.id, value);
+                                                    }
+                                                }}
+                                            >
+                                                {gradeChoices.map((choice) => (
+                                                    <DropdownMenuRadioItem key={choice.value} value={choice.value} closeOnClick>
+                                                        {choice.label}
+                                                    </DropdownMenuRadioItem>
+                                                ))}
+                                            </DropdownMenuRadioGroup>
+                                        </DropdownMenuContent>
+                                    </DropdownMenu>
                                 </>
                             ) : (
                                 <>

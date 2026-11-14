@@ -47,42 +47,47 @@ const slotSchema = z.object({
     status: statusSchema,
 });
 
-const formSchema = z.object({
-    standing: standingSchema,
-    courses: z.record(z.string(), statusSchema),
-    slots: z.record(z.string(), slotSchema),
-}).superRefine((data, ctx) => {
-    for (const [id, slot] of Object.entries(data.slots)) {
-        const entered = !slot.courseId && Boolean(slot.subject || slot.number);
-        if ((slot.courseId || entered) && !slot.status) {
-            ctx.addIssue({
-                code: "custom",
-                path: ["slots", id, "status"],
-                message: "Choose complete or transfer for this course.",
-            });
+function createFormSchema(inProgressSlotIds: string[]) {
+    const inProgressSlots = new Set(inProgressSlotIds);
+    return z.object({
+        standing: standingSchema,
+        courses: z.record(z.string(), statusSchema),
+        slots: z.record(z.string(), slotSchema),
+    }).superRefine((data, ctx) => {
+        for (const [id, slot] of Object.entries(data.slots)) {
+            const entered = !slot.courseId && Boolean(slot.subject || slot.number);
+            // Skip validation for slots with existing IN_PROGRESS entries
+            const isInProgress = inProgressSlots.has(id);
+            if ((slot.courseId || entered) && !slot.status && !isInProgress) {
+                ctx.addIssue({
+                    code: "custom",
+                    path: ["slots", id, "status"],
+                    message: "Choose complete or transfer for this course.",
+                });
+            }
+            if (!entered) {
+                continue;
+            }
+            if (!slot.title.trim()) {
+                ctx.addIssue({
+                    code: "custom",
+                    path: ["slots", id, "title"],
+                    message: "Enter the course title.",
+                });
+            }
+            const credits = Number(slot.credits);
+            if (!Number.isInteger(credits) || credits < 1 || credits > 6) {
+                ctx.addIssue({
+                    code: "custom",
+                    path: ["slots", id, "credits"],
+                    message: "Enter credit hours from 1 to 6.",
+                });
+            }
         }
-        if (!entered) {
-            continue;
-        }
-        if (!slot.title.trim()) {
-            ctx.addIssue({
-                code: "custom",
-                path: ["slots", id, "title"],
-                message: "Enter the course title.",
-            });
-        }
-        const credits = Number(slot.credits);
-        if (!Number.isInteger(credits) || credits < 1 || credits > 6) {
-            ctx.addIssue({
-                code: "custom",
-                path: ["slots", id, "credits"],
-                message: "Enter credit hours from 1 to 6.",
-            });
-        }
-    }
-});
+    });
+}
 
-type ProgressFormValues = z.infer<typeof formSchema>;
+type ProgressFormValues = z.infer<ReturnType<typeof createFormSchema>>;
 type SlotValue = z.infer<typeof slotSchema>;
 
 export const emptySlotValue: SlotValue = {
@@ -799,6 +804,7 @@ export default function ProgressForm({
     }>({ courses: {}, slots: {} });
     const [releasedRows, setReleasedRows] = useState<Record<string, true>>({});
     const restoredDefaults = useRef<Array<{ kind: "course"; courseId: string } | { kind: "slot"; slotId: string; value: SlotValue }>>([]);
+    const formSchema = createFormSchema(inProgressSlotIds);
     const form = useForm<ProgressFormValues>({
         resolver: zodResolver(formSchema),
         defaultValues: { standing, courses: defaultCourses, slots: defaultSlots },
