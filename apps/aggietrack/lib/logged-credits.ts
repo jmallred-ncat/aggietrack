@@ -1,4 +1,11 @@
-import { earnsDegreeCredit } from "./applicable-credits";
+import { Grade } from "./generated/prisma/browser";
+
+// F, W, I don't earn degree credit
+const NON_CREDIT_GRADES = new Set([Grade.F, Grade.W, Grade.I, "F", "W", "I"]);
+
+function earnsDegreeCredit(grade: string | null): boolean {
+    return grade != null && !NON_CREDIT_GRADES.has(grade as any);
+}
 
 /**
  * Credits the catalog requires, next to credits the student has logged.
@@ -58,12 +65,12 @@ export function loggedRequirementCredits(
     // Group entries by course to handle retakes
     const entriesByCourse = new Map<string, LoggedEntry[]>();
     for (const entry of entries) {
-        // Skip entries that don't earn degree credit (F, W, I)
-        if (!earnsDegreeCredit(entry.grade as any)) {
+        // Skip non-completed entries first
+        if (entry.status !== "COMPLETED") {
             continue;
         }
-        // Skip non-completed entries
-        if (entry.status !== "COMPLETED") {
+        // Skip entries that don't earn degree credit (F, W, I)
+        if (!earnsDegreeCredit(entry.grade)) {
             continue;
         }
         
