@@ -1261,18 +1261,22 @@ export default function ProgressForm({
                                 }
                                 return (
                                     <div key={`${course.subject} ${course.number}`} className="not-typeset flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
-                                        <div className="flex min-w-0 flex-wrap items-start gap-2 text-sm font-medium sm:items-center">
-                                            <Badge className="shrink-0 font-mono">{course.subject} {course.number}</Badge>
-                                            <span className="min-w-0 whitespace-normal sm:truncate">{course.title}</span>
-                                            <span className="shrink-0 text-muted-foreground">{course.credits} credits</span>
-                                            {(() => {
-                                                const badgeText = getInProgressBadgeText(attempts);
-                                                return badgeText ? (
-                                                    <Badge variant="secondary" className="px-3 text-xs sm:hidden">
-                                                        {badgeText}
-                                                    </Badge>
-                                                ) : null;
-                                            })()}
+                                        <div className="flex min-w-0 flex-col gap-1 text-sm font-medium sm:flex-row sm:items-center sm:gap-2">
+                                            <div className="flex min-w-0 items-start gap-2">
+                                                <Badge className="shrink-0 font-mono">{course.subject} {course.number}</Badge>
+                                                <span className="min-w-0 flex-1 whitespace-normal sm:flex-none sm:truncate">{course.title}</span>
+                                            </div>
+                                            <div className="flex flex-wrap items-center gap-2">
+                                                <span className="shrink-0 text-muted-foreground">{course.credits} credits</span>
+                                                {(() => {
+                                                    const badgeText = getInProgressBadgeText(attempts);
+                                                    return badgeText ? (
+                                                        <Badge variant="secondary" className="px-3 text-xs sm:hidden">
+                                                            {badgeText}
+                                                        </Badge>
+                                                    ) : null;
+                                                })()}
+                                            </div>
                                         </div>
                                         {course.courseId ? (
                                             <CourseAttempts
