@@ -558,3 +558,84 @@ test("student view detects times beyond the 8-week horizon", async (t) => {
         await cleanup(people);
     }
 });
+
+test("empty state shows correct session length from advisor settings, not stale data", async (t) => {
+    if (skip(t)) return;
+    const people = await fixture();
+    try {
+        await client().advisorMeetingSettings.create({
+            data: { advisorId: people.advisor.id, durationMinutes: 60 },
+        });
+        const viewWith60 = await loadStudentAdvising(client(), people.studentUser.id, now);
+        assert.ok(viewWith60);
+        assert.equal(viewWith60.sessionMinutes, 60);
+        assert.equal(viewWith60.slots.length, 0);
+        await saveDuration(client(), people.advisor.id, 30);
+        const viewWith30 = await loadStudentAdvising(client(), people.studentUser.id, now);
+        assert.ok(viewWith30);
+        assert.equal(viewWith30.sessionMinutes, 30);
+        const slot1 = await twoSlots(people.advisor.id, now);
+        const booked = await bookSlot(client(), people.studentUser.id, slot1.id, null, now);
+        assert.equal(booked.ok, true);
+        if (!booked.ok) return;
+        const canceled = await cancelSession(client(), people.studentUser.id, booked.sessionId, "Need to reschedule", now);
+        assert.equal(canceled.ok, true);
+        const viewAfterCancel = await loadStudentAdvising(client(), people.studentUser.id, now);
+        assert.ok(viewAfterCancel);
+        assert.equal(viewAfterCancel.sessionMinutes, 30);
+    } finally {
+        await cleanup(people);
+    }
+});
+
+test("student sees canceled session in canceled section immediately after canceling", async (t) => {
+    if (skip(t)) return;
+    const people = await fixture();
+    try {
+        const slot1 = await twoSlots(people.advisor.id, now);
+        const booked = await bookSlot(client(), people.studentUser.id, slot1.id, "Test topic", now);
+        assert.equal(booked.ok, true);
+        if (!booked.ok) return;
+        const viewBeforeCancel = await loadStudentAdvising(client(), people.studentUser.id, now);
+        assert.ok(viewBeforeCancel);
+        assert.equal(viewBeforeCancel.upcoming.length, 1);
+        assert.equal(viewBeforeCancel.canceled.length, 0);
+        const canceled = await cancelSession(client(), people.studentUser.id, booked.sessionId, "Need to reschedule", now);
+        assert.equal(canceled.ok, true);
+        const viewAfterCancel = await loadStudentAdvising(client(), people.studentUser.id, now);
+        assert.ok(viewAfterCancel);
+        assert.equal(viewAfterCancel.upcoming.length, 0);
+        assert.equal(viewAfterCancel.canceled.length, 1);
+        assert.equal(viewAfterCancel.canceled[0]?.statusLabel, "Canceled");
+        const advisorView = await loadAdvisorAppointments(client(), people.advisor.id, now);
+        assert.ok(advisorView);
+        assert.equal(advisorView.canceled.length, 1);
+    } finally {
+        await cleanup(people);
+    }
+});
+
+test("canceled session stays visible for 30 days after original start time", async (t) => {
+    if (skip(t)) return;
+    const people = await fixture();
+    try {
+        const slot1 = await twoSlots(people.advisor.id, now);
+        const booked = await bookSlot(client(), people.studentUser.id, slot1.id, null, now);
+        assert.equal(booked.ok, true);
+        if (!booked.ok) return;
+        await cancelSession(client(), people.studentUser.id, booked.sessionId, null, now);
+        const viewJustAfter = await loadStudentAdvising(client(), people.studentUser.id, now);
+        assert.ok(viewJustAfter);
+        assert.equal(viewJustAfter.canceled.length, 1);
+        const twentyNineDaysLater = new Date(now.getTime() + 29 * 24 * 60 * 60 * 1000);
+        const viewAt29Days = await loadStudentAdvising(client(), people.studentUser.id, twentyNineDaysLater);
+        assert.ok(viewAt29Days);
+        assert.equal(viewAt29Days.canceled.length, 1);
+        const thirtyOneDaysAfterStart = new Date(now.getTime() + 4 * 24 * 60 * 60 * 1000 + 31 * 24 * 60 * 60 * 1000);
+        const viewAfter30DaysFromStart = await loadStudentAdvising(client(), people.studentUser.id, thirtyOneDaysAfterStart);
+        assert.ok(viewAfter30DaysFromStart);
+        assert.equal(viewAfter30DaysFromStart.canceled.length, 0);
+    } finally {
+        await cleanup(people);
+    }
+});
