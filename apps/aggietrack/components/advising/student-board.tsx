@@ -18,7 +18,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { advisorRescheduleSuccess, studentBookingNoteHelper } from "@/lib/advising-copy";
 import type { MeetingCard, MeetingResult, OpenSlotChoice, StudentAdvisingView } from "@/lib/advising-types";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 
 export type StudentActions = {
     book: (slotId: string, topic: string) => Promise<MeetingResult>;
@@ -55,6 +55,10 @@ export function StudentBoard({
     const [moveNote, setMoveNote] = useState("");
     const [choices, setChoices] = useState<OpenSlotChoice[]>([]);
     const [nextSlot, setNextSlot] = useState<string>("");
+    const [scrollOverflows, setScrollOverflows] = useState(false);
+    const [showTopFade, setShowTopFade] = useState(false);
+    const [showBottomFade, setShowBottomFade] = useState(false);
+    const scrollRef = useRef<HTMLDivElement>(null);
 
     const groups = new Map<string, OpenSlotChoice[]>();
     for (const slot of view.slots) {
@@ -62,6 +66,45 @@ export function StudentBoard({
         list.push(slot);
         groups.set(slot.dateHeading, list);
     }
+
+    // Measure overflow and scroll position for reschedule dialog
+    useEffect(() => {
+        const container = scrollRef.current;
+        if (!container || choices.length === 0) {
+            setScrollOverflows(false);
+            setShowTopFade(false);
+            setShowBottomFade(false);
+            return;
+        }
+
+        function checkOverflow() {
+            if (!container) return;
+            const overflows = container.scrollHeight > container.clientHeight;
+            setScrollOverflows(overflows);
+            
+            if (overflows) {
+                const atTop = container.scrollTop <= 1;
+                const atBottom = container.scrollTop + container.clientHeight >= container.scrollHeight - 1;
+                setShowTopFade(!atTop);
+                setShowBottomFade(!atBottom);
+            } else {
+                setShowTopFade(false);
+                setShowBottomFade(false);
+            }
+        }
+
+        checkOverflow();
+
+        const observer = new ResizeObserver(checkOverflow);
+        observer.observe(container);
+
+        container.addEventListener("scroll", checkOverflow);
+
+        return () => {
+            observer.disconnect();
+            container.removeEventListener("scroll", checkOverflow);
+        };
+    }, [choices]);
 
     function openReschedule(card: MeetingCard) {
         setMoving(card);
@@ -121,7 +164,7 @@ export function StudentBoard({
                                 <EmptyTitle>{view.hasTimesOutsideHorizon ? "No bookable times yet" : "No times are open"}</EmptyTitle>
                                 <EmptyDescription>
                                     {view.hasTimesOutsideHorizon
-                                        ? `${view.advisorName}'s next open times are more than 8 weeks away. You can book up to 8 weeks ahead.`
+                                        ? `${view.advisorName}’s next open times are more than 8 weeks away. You can book up to 8 weeks ahead.`
                                         : `${view.advisorName} has not posted any open times yet. Check back soon.`}
                                 </EmptyDescription>
                             </EmptyHeader>
@@ -259,17 +302,22 @@ export function StudentBoard({
                         </AlertDialogDescription>
                     </MeetingHeader>
                     <div className="flex min-h-0 flex-col gap-4 px-6 pb-4">
-                        {choices.length > 0 ? (
+                        {scrollOverflows ? (
                             <p className="text-sm text-muted-foreground">
                                 {choices.length} open {choices.length === 1 ? "time" : "times"}. Scroll to see them all.
                             </p>
                         ) : null}
-                        <div 
-                            className="flex max-h-64 min-h-0 flex-col gap-2 overflow-y-auto rounded-lg border bg-muted/30 p-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                            tabIndex={choices.length > 0 ? 0 : undefined}
-                            role={choices.length > 0 ? "region" : undefined}
-                            aria-label={choices.length > 0 ? "Open times" : undefined}
-                        >
+                        <div className="relative">
+                            {showTopFade ? (
+                                <div className="pointer-events-none absolute left-0 right-0 top-0 z-10 h-8 rounded-t-lg bg-gradient-to-b from-background to-transparent" />
+                            ) : null}
+                            <div 
+                                ref={scrollRef}
+                                className="flex max-h-64 min-h-0 flex-col gap-2 overflow-y-auto rounded-lg border bg-muted/30 p-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                                tabIndex={choices.length > 0 ? 0 : undefined}
+                                role={choices.length > 0 ? "region" : undefined}
+                                aria-label={choices.length > 0 ? "Open times" : undefined}
+                            >
                             {choices.length === 0 ? (
                                 <Empty className="border-0">
                                     <EmptyHeader>
@@ -288,6 +336,10 @@ export function StudentBoard({
                                 </Button>
                             ))}
                         </div>
+                        {showBottomFade ? (
+                            <div className="pointer-events-none absolute bottom-0 left-0 right-0 z-10 h-8 rounded-b-lg bg-gradient-to-t from-background to-transparent" />
+                        ) : null}
+                    </div>
                         <div className="flex flex-col gap-2">
                             <Label htmlFor="student-move-note">Add a note (optional)</Label>
                             <Textarea id="student-move-note" value={moveNote} maxLength={2000} onChange={(event) => setMoveNote(event.target.value)} />

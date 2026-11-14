@@ -27,7 +27,7 @@ export const testAdvisorCards: TestStudentCard[] = [
 export const testAccountCards = [...testStudentCards, ...testAdvisorCards];
 
 export const resetAfterUse = "Reset this student after every use.";
-export const jordanPlanReset = "Reset Jordan Hale puts his Spring 2027 plan back to Waiting for review.";
+export const jordanPlanReset = "Reset leaves planner empty and restores Jordan Hale’s advising session with Sarah Martinez.";
 export const transcriptFixtureChoices = [
   { id: "none", label: "No credits yet" },
   { id: "credits-3", label: "3 credits" },
