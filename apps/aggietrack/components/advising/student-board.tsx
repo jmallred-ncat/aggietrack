@@ -304,7 +304,7 @@ export function StudentBoard({
                     <div className="flex min-h-0 flex-col gap-4 px-6 pb-4">
                         {scrollOverflows ? (
                             <p className="text-sm text-muted-foreground">
-                                {choices.length} open {choices.length === 1 ? "time" : "times"}. Scroll to see them all.
+                                {choices.length} open times. Scroll to see them all.
                             </p>
                         ) : null}
                         <div className="relative">
