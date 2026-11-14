@@ -584,6 +584,7 @@ test("empty state shows correct session length from advisor settings, not stale 
         const booked = await bookSlot(client(), people.studentUser.id, slot1.id, null, now);
         assert.equal(booked.ok, true);
         if (!booked.ok) return;
+        assert.ok(booked.sessionId);
         const canceled = await cancelSession(client(), people.studentUser.id, booked.sessionId, "Need to reschedule", now);
         assert.equal(canceled.ok, true);
         const viewAfterCancel = await loadStudentAdvising(client(), people.studentUser.id, now);
@@ -602,6 +603,7 @@ test("student sees canceled session in canceled section immediately after cancel
         const booked = await bookSlot(client(), people.studentUser.id, slot1.id, "Test topic", now);
         assert.equal(booked.ok, true);
         if (!booked.ok) return;
+        assert.ok(booked.sessionId);
         const viewBeforeCancel = await loadStudentAdvising(client(), people.studentUser.id, now);
         assert.ok(viewBeforeCancel);
         assert.equal(viewBeforeCancel.upcoming.length, 1);
@@ -629,6 +631,7 @@ test("canceled session stays visible for 30 days after original start time", asy
         const booked = await bookSlot(client(), people.studentUser.id, slot1.id, null, now);
         assert.equal(booked.ok, true);
         if (!booked.ok) return;
+        assert.ok(booked.sessionId);
         const session = await client().meetingSession.findUnique({ where: { id: booked.sessionId } });
         assert.ok(session);
         const sessionStart = session.startsAt;
