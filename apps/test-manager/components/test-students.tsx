@@ -255,12 +255,12 @@ export function TestStudents({ students, password, notice, faults = {} }: { stud
           <AlertDialogHeader>
             <AlertDialogTitle>Reset all test students?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will reset all {studentAccounts.length} test student accounts to their frozen state, clear test advisor availability and sessions (except Jordan Hale's seeded session with Sarah Martinez, which is restored), and sign everyone out of AggieTrack. This action cannot be undone.
+              This resets all {studentAccounts.length} test student accounts to their frozen state and signs everyone out of AggieTrack. It also clears test advisor availability and sessions, then restores Jordan Hale's seeded session with Sarah Martinez. This can't be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={pendingAll}>Cancel</AlertDialogCancel>
-            <AlertDialogAction type="button" disabled={pendingAll} onClick={resetAll}>Reset All</AlertDialogAction>
+            <AlertDialogAction type="button" variant="destructive" disabled={pendingAll} onClick={resetAll}>Reset All</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

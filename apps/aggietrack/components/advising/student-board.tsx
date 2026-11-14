@@ -31,8 +31,8 @@ function lengthHelper(view: StudentAdvisingView) {
     const saved = view.sessionMinutes ?? 30;
     const visible = [...view.slots, ...view.upcoming].map((item) => item.durationMinutes);
     const mixed = visible.some((minutes) => minutes !== saved);
-    if (mixed) return "Session length is shown on each time. Times are in Eastern Time.";
-    return `Each session is ${saved} minutes. Times are in Eastern Time.`;
+    if (mixed) return "Session length is shown on each time.";
+    return `Each session is ${saved} minutes.`;
 }
 
 export function StudentBoard({
@@ -118,10 +118,10 @@ export function StudentBoard({
                     {view.slots.length === 0 ? (
                         <Empty className="border border-dashed">
                             <EmptyHeader>
-                                <EmptyTitle>No times are open</EmptyTitle>
+                                <EmptyTitle>{view.hasTimesOutsideHorizon ? "No bookable times yet" : "No times are open"}</EmptyTitle>
                                 <EmptyDescription>
                                     {view.hasTimesOutsideHorizon
-                                        ? `${view.advisorName}'s next open times aren't bookable yet. Times become available 8 weeks in advance.`
+                                        ? `${view.advisorName}'s next open times are more than 8 weeks away. You can book up to 8 weeks ahead.`
                                         : `${view.advisorName} has not posted any open times yet. Check back soon.`}
                                 </EmptyDescription>
                             </EmptyHeader>
@@ -259,7 +259,17 @@ export function StudentBoard({
                         </AlertDialogDescription>
                     </MeetingHeader>
                     <div className="flex min-h-0 flex-col gap-4 px-6 pb-4">
-                        <div className="flex max-h-64 min-h-0 flex-col gap-2 overflow-y-auto">
+                        {choices.length > 0 ? (
+                            <p className="text-sm text-muted-foreground">
+                                {choices.length} open {choices.length === 1 ? "time" : "times"}. Scroll to see them all.
+                            </p>
+                        ) : null}
+                        <div 
+                            className="flex max-h-64 min-h-0 flex-col gap-2 overflow-y-auto rounded-lg border bg-muted/30 p-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                            tabIndex={choices.length > 0 ? 0 : undefined}
+                            role={choices.length > 0 ? "region" : undefined}
+                            aria-label={choices.length > 0 ? "Open times" : undefined}
+                        >
                             {choices.length === 0 ? (
                                 <Empty className="border-0">
                                     <EmptyHeader>
