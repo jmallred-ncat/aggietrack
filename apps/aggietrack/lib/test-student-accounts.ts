@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { hashPassword } from "better-auth/crypto";
-import { MeetingSessionStatus, MeetingSlotStatus, MeetingSlotSource, PlannedTermStatus, Prisma, TranscriptStatus, UserRole } from "./generated/prisma/client";
+import { MeetingSessionStatus, MeetingSlotStatus, MeetingSlotSource, PlannedTermStatus, Prisma, UserRole } from "./generated/prisma/client";
 import { plannedAttempts } from "./frozen-transcript";
 import { describeFixtureLoad, runFixtureLoad, type FixtureAttempt } from "./transcript-fixtures";
 import { prisma } from "./prisma";

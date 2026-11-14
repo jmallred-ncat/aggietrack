@@ -43,11 +43,25 @@ export default async function Page() {
                 return card; // Keep original "Just started, with no prior coursework (0 credits)."
               }
               
+              // Determine if this is reset state by comparing credits to expected reset values
+              const resetCredits: Record<string, number> = {
+                "it.start@example.test": 0,
+                "it.mid@example.test": 48,
+                "it.late@example.test": 92,
+                "it.retake-f-to-pass@example.test": 29,
+                "it.retake-c-to-a@example.test": 32,
+                "it.diverse-grades@example.test": 44,
+                "it.over-credits@example.test": 120,
+              };
+              
+              const isResetState = resetCredits[card.email] === stat.credits;
               const scenarioNotes = getScenarioNotes(card.place);
               const standing = getStanding(card.place);
               const gpaStr = stat.gpa !== null ? `GPA ${stat.gpa.toFixed(2)}` : "no GPA yet";
               const statsStr = `${standing}: ${stat.credits} credits, ${stat.percentage}%, ${gpaStr}`;
-              const place = scenarioNotes 
+              
+              // After fixture load, show generic description; after reset, show scenario notes
+              const place = isResetState && scenarioNotes
                 ? `Information Technology 2025. ${statsStr}. ${scenarioNotes}`
                 : `Information Technology 2025. ${statsStr}.`;
               return { ...card, place };

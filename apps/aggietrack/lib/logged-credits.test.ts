@@ -319,3 +319,29 @@ test("student-entered retake with FAILED status: F then passing grade counts onc
     const cstCore = summary.groups.find((group) => group.name === "CST Major Core");
     assert.equal(cstCore?.earnedCredits, 3, "FAILED F doesn't count, only passing attempt counts");
 });
+
+test("multiple typed-in free electives (no courseId) each count separately", () => {
+    const groups = groupsFromSeed(info2025);
+    const freeElectivesGroupId = "Free Electives";
+    
+    const elective1: LoggedEntry = {
+        courseId: null, // Typed-in, no catalog course
+        credits: 3,
+        status: "COMPLETED",
+        grade: "B",
+        createdAt: new Date(Date.UTC(2024, 0, 1)),
+        groupId: freeElectivesGroupId,
+    };
+    const elective2: LoggedEntry = {
+        courseId: null, // Another typed-in elective
+        credits: 3,
+        status: "COMPLETED",
+        grade: "A",
+        createdAt: new Date(Date.UTC(2024, 1, 1)),
+        groupId: freeElectivesGroupId,
+    };
+    
+    const summary = loggedRequirementCredits(groups, [elective1, elective2]);
+    const freeElectives = summary.groups.find((group) => group.name === "Free Electives");
+    assert.equal(freeElectives?.earnedCredits, 6, "Both typed-in electives should count (3 + 3 = 6)");
+});
