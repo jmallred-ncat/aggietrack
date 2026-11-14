@@ -1,6 +1,9 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { courses } from "../prisma/seed/courses";
+import { gecCourses } from "../prisma/seed/gec";
+import { cstCatalogCourses } from "../prisma/seed/cst-catalog";
+import { mgmtCourses } from "../prisma/seed/mgmt";
 import { elet2025 } from "../prisma/seed/elet-2025";
 import { info2025 } from "../prisma/seed/info-2025";
 import type { CurriculumSeed } from "../prisma/seed/curriculum";
@@ -10,13 +13,14 @@ import { plannedAttempts } from "./frozen-transcript";
 import { testStudents } from "./test-students";
 
 const PROGRAM_TOTAL = 120;
+const allCourses = [...courses, ...gecCourses, ...cstCatalogCourses, ...mgmtCourses];
 
 function courseId(subject: string, number: string) {
     return `${subject} ${number}`;
 }
 
 function creditsFor(subject: string, number: string) {
-    const course = courses.find((item) => item.subject === subject && item.number === number);
+    const course = allCourses.find((item) => item.subject === subject && item.number === number);
     assert.ok(course, `${subject} ${number} is in the course seed`);
     return course.credits;
 }
