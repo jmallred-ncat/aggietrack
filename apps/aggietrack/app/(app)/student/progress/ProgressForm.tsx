@@ -20,7 +20,7 @@ import { Controller, useForm, useWatch } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
 import { confirmNoPriorCoursework, saveTranscriptProgress } from "./actions";
-import { CourseAttempts } from "./CourseAttempts";
+import { CourseAttempts, getInProgressBadgeText } from "./CourseAttempts";
 
 const courseStatuses = [
     { value: "complete", label: "Complete", icon: CheckCircleIcon },
@@ -1078,6 +1078,14 @@ export default function ProgressForm({
                                                                 <>
                                                                     <Badge className="shrink-0 font-mono">{row.subject} {row.number}</Badge>
                                                                     <span className="min-w-0 whitespace-normal">{row.title}</span>
+                                                                    {(() => {
+                                                                        const badgeText = getInProgressBadgeText(attempts);
+                                                                        return badgeText ? (
+                                                                            <Badge variant="secondary" className="px-3 text-xs sm:hidden">
+                                                                                {badgeText}
+                                                                            </Badge>
+                                                                        ) : null;
+                                                                    })()}
                                                                 </>
                                                             ) : (
                                                                 <>
@@ -1089,6 +1097,14 @@ export default function ProgressForm({
                                                                         <Badge variant="outline" className="shrink-0 font-mono">{row.badge}</Badge>
                                                                     ) : null}
                                                                     <span className="min-w-0 whitespace-normal">{slotCourse?.title ?? enteredCourse?.title ?? row.title}</span>
+                                                                    {(() => {
+                                                                        const badgeText = getInProgressBadgeText(attempts);
+                                                                        return badgeText ? (
+                                                                            <Badge variant="secondary" className="px-3 text-xs sm:hidden">
+                                                                                {badgeText}
+                                                                            </Badge>
+                                                                        ) : null;
+                                                                    })()}
                                                                 </>
                                                             )}
                                                         </div>
@@ -1249,6 +1265,14 @@ export default function ProgressForm({
                                             <Badge className="shrink-0 font-mono">{course.subject} {course.number}</Badge>
                                             <span className="min-w-0 truncate">{course.title}</span>
                                             <span className="shrink-0 text-muted-foreground">{course.credits} credits</span>
+                                            {(() => {
+                                                const badgeText = getInProgressBadgeText(attempts);
+                                                return badgeText ? (
+                                                    <Badge variant="secondary" className="px-3 text-xs sm:hidden">
+                                                        {badgeText}
+                                                    </Badge>
+                                                ) : null;
+                                            })()}
                                         </div>
                                         {course.courseId ? (
                                             <CourseAttempts

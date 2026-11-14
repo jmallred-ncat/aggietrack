@@ -61,6 +61,27 @@ type Attempt = {
 
 const gradeChoices = completionGradeChoices();
 
+/**
+ * Get mobile badge text for IN_PROGRESS attempts.
+ * Returns "Incomplete (I)" for grade I, "In progress" for other IN_PROGRESS, or null if no IN_PROGRESS.
+ */
+export function getInProgressBadgeText(attempts: Array<{ status: TranscriptStatus; grade: string | null }>): string | null {
+    const sorted = [...attempts].sort((a, b) => {
+        const statusOrder: Record<TranscriptStatus, number> = {
+            IN_PROGRESS: 0,
+            COMPLETED: 1,
+            FAILED: 2,
+            WITHDRAWN: 3,
+        };
+        return statusOrder[a.status] - statusOrder[b.status];
+    });
+    const inProgressAttempt = sorted.find(a => a.status === "IN_PROGRESS");
+    if (!inProgressAttempt) {
+        return null;
+    }
+    return inProgressAttempt.grade === "I" ? "Incomplete (I)" : "In progress";
+}
+
 export function CourseAttempts({
     courseId,
     subject,
@@ -271,19 +292,8 @@ export function CourseAttempts({
         return null;
     }
 
-    // Check if any attempt is IN_PROGRESS to show mobile badge
-    const inProgressAttempt = sortedAttempts.find(a => a.status === "IN_PROGRESS");
-    const showMobileBadge = inProgressAttempt !== undefined;
-    const mobileBadgeText = inProgressAttempt?.grade === "I" ? "Incomplete (I)" : "In progress";
-
     return (
-        <>
-            {showMobileBadge && (
-                <Badge variant="secondary" className="px-3 text-xs sm:hidden">
-                    {mobileBadgeText}
-                </Badge>
-            )}
-            <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
                 {sortedAttempts.map((attempt, index) => (
                 <div key={attempt.id} className="flex items-center gap-2">
                     {sortedAttempts.length > 1 && (
@@ -517,7 +527,6 @@ export function CourseAttempts({
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
-            </div>
-        </>
+        </div>
     );
 }
