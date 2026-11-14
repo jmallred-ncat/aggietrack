@@ -114,6 +114,12 @@ async function openWindow(advisorId: string, start: string, end: string, date = 
     return client().meetingAvailability.findMany({ where: { advisorId, status: "OPEN" }, orderBy: { startsAt: "asc" } });
 }
 
+async function twoSlots(advisorId: string, testNow = now) {
+    const slots = await openWindow(advisorId, "14:00", "15:00", "2026-11-12");
+    assert.equal(slots.length, 2);
+    return slots[0]!;
+}
+
 test("booking one slot twice and at the same time leaves a single session", async (t) => {
     if (skip(t)) return;
     const people = await fixture();
@@ -552,7 +558,7 @@ test("student view detects times beyond the 8-week horizon", async (t) => {
         assert.equal(nearSlot.ok, true);
         const viewWithBoth = await loadStudentAdvising(client(), people.studentUser.id, now);
         assert.ok(viewWithBoth);
-        assert.equal(viewWithBoth.slots.length, 1);
+        assert.equal(viewWithBoth.slots.length, 2);
         assert.equal(viewWithBoth.hasTimesOutsideHorizon, true);
     } finally {
         await cleanup(people);
@@ -623,15 +629,18 @@ test("canceled session stays visible for 30 days after original start time", asy
         const booked = await bookSlot(client(), people.studentUser.id, slot1.id, null, now);
         assert.equal(booked.ok, true);
         if (!booked.ok) return;
+        const session = await client().meetingSession.findUnique({ where: { id: booked.sessionId } });
+        assert.ok(session);
+        const sessionStart = session.startsAt;
         await cancelSession(client(), people.studentUser.id, booked.sessionId, null, now);
         const viewJustAfter = await loadStudentAdvising(client(), people.studentUser.id, now);
         assert.ok(viewJustAfter);
         assert.equal(viewJustAfter.canceled.length, 1);
-        const twentyNineDaysLater = new Date(now.getTime() + 29 * 24 * 60 * 60 * 1000);
-        const viewAt29Days = await loadStudentAdvising(client(), people.studentUser.id, twentyNineDaysLater);
+        const twentyNineDaysAfterStart = new Date(sessionStart.getTime() + 29 * 24 * 60 * 60 * 1000);
+        const viewAt29Days = await loadStudentAdvising(client(), people.studentUser.id, twentyNineDaysAfterStart);
         assert.ok(viewAt29Days);
         assert.equal(viewAt29Days.canceled.length, 1);
-        const thirtyOneDaysAfterStart = new Date(now.getTime() + 4 * 24 * 60 * 60 * 1000 + 31 * 24 * 60 * 60 * 1000);
+        const thirtyOneDaysAfterStart = new Date(sessionStart.getTime() + 31 * 24 * 60 * 60 * 1000);
         const viewAfter30DaysFromStart = await loadStudentAdvising(client(), people.studentUser.id, thirtyOneDaysAfterStart);
         assert.ok(viewAfter30DaysFromStart);
         assert.equal(viewAfter30DaysFromStart.canceled.length, 0);

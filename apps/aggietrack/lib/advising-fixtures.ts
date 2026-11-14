@@ -65,6 +65,7 @@ export const studentOpen: StudentAdvisingView = {
     upcoming: [],
     canceled: [],
     earlier: [],
+    hasTimesOutsideHorizon: false,
 };
 
 export const studentBooked: StudentAdvisingView = {
@@ -80,6 +81,7 @@ export const studentUnassigned: StudentAdvisingView = {
     upcoming: [],
     canceled: [],
     earlier: [],
+    hasTimesOutsideHorizon: false,
 };
 
 export const studentCanceled: StudentAdvisingView = {
@@ -109,6 +111,7 @@ export const studentCanceled: StudentAdvisingView = {
         ],
     }],
     earlier: [],
+    hasTimesOutsideHorizon: false,
 };
 
 export const studentRescheduled: StudentAdvisingView = {
@@ -187,6 +190,7 @@ export const studentLong: StudentAdvisingView = {
     }],
     canceled: [],
     earlier: [],
+    hasTimesOutsideHorizon: false,
 };
 
 export const advisorAvailability: AdvisorAppointmentsView = {
@@ -250,6 +254,7 @@ export const studentPast: StudentAdvisingView = {
         fullTimestamp: "Tuesday, October 20, 2026, 2:00–2:30 PM EDT",
         iso: "2026-10-20T18:00:00.000Z",
     }],
+    hasTimesOutsideHorizon: false,
 };
 
 export const advisorZoom: AdvisorAppointmentsView = {

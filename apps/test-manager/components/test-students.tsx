@@ -255,7 +255,7 @@ export function TestStudents({ students, password, notice, faults = {} }: { stud
           <AlertDialogHeader>
             <AlertDialogTitle>Reset all test students?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will reset all {studentAccounts.length} test student accounts to their frozen state, clear test advisor availability and sessions (except Jordan Hale's Dec 31 session with Sarah Martinez, which is restored), and sign everyone out of AggieTrack. This action cannot be undone.
+              This will reset all {studentAccounts.length} test student accounts to their frozen state, clear test advisor availability and sessions (except Jordan Hale's seeded session with Sarah Martinez, which is restored), and sign everyone out of AggieTrack. This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

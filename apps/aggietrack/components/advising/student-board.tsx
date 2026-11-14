@@ -258,8 +258,8 @@ export function StudentBoard({
                             Your current session is <MeetingStamp value={moving?.fullTimestamp ?? ""} />. Choose another open time with {moving?.personName}.
                         </AlertDialogDescription>
                     </MeetingHeader>
-                    <div className="flex min-h-0 flex-col gap-4 overflow-y-auto px-6 pb-4">
-                        <div className="flex flex-col gap-2">
+                    <div className="flex min-h-0 flex-col gap-4 px-6 pb-4">
+                        <div className="flex max-h-64 min-h-0 flex-col gap-2 overflow-y-auto">
                             {choices.length === 0 ? (
                                 <Empty className="border-0">
                                     <EmptyHeader>

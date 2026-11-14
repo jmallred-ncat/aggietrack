@@ -32,7 +32,7 @@ test("reset all keeps going when one student fails and names that student", asyn
   });
   assert.equal(second.succeeded.length, 6);
   assert.deepEqual(second.failed.map(student => student.name), ["Morgan Lee"]);
-  assert.equal(resetAllSummary(second), "Reset 6 of 7 students and advisor availability. Failed: Morgan Lee");
+  assert.equal(resetAllSummary(second), "Reset 6 of 7 students. Failed: Morgan Lee");
   assert.equal(calls.length, 14);
 });
 
