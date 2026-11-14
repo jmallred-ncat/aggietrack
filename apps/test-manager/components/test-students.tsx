@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Badge } from "@aggietrack/ui/badge";
 import { Button } from "@aggietrack/ui/button";
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@aggietrack/ui/empty";
@@ -92,6 +93,7 @@ async function postFixture(email: string, fixtureId: string) {
 }
 
 export function TestStudents({ students, password, notice, faults = {} }: { students: TestStudentCard[]; password: string; notice: string; faults?: Record<string, string | null> }) {
+  const router = useRouter();
   const [pending, setPending] = useState("");
   const [arming, setArming] = useState("");
   const [pendingAll, setPendingAll] = useState(false);
@@ -145,6 +147,7 @@ export function TestStudents({ students, password, notice, faults = {} }: { stud
         });
       }
       toast.add({ type: "success", title: `${student.name} is back to the frozen place and signed out of AggieTrack.` });
+      router.refresh();
     } catch (caught) {
       toast.add({ type: "error", title: caught instanceof Error ? caught.message : "That account could not be reset." });
     } finally {
@@ -185,6 +188,7 @@ export function TestStudents({ students, password, notice, faults = {} }: { stud
         return next;
       });
       toast.add({ type: result.failed.length > 0 ? "error" : "success", title: resetAllSummary(result) });
+      router.refresh();
     } catch (caught) {
       toast.add({ type: "error", title: caught instanceof Error ? caught.message : "Test students could not be reset." });
     } finally {
@@ -203,6 +207,7 @@ export function TestStudents({ students, password, notice, faults = {} }: { stud
       setLastLoaded(current => ({ ...current, [student.email]: result.fixture }));
       setNextSave(current => ({ ...current, [student.email]: nextSaveAfterFixture(previousSave, { ok: true, accountChanged: true }) }));
       toast.add({ type: "success", title: fixtureLoadedSummary(result) });
+      router.refresh();
     } catch (caught) {
       const accountChanged = caught instanceof Error && "accountChanged" in caught && caught.accountChanged === true;
       if (accountChanged) {

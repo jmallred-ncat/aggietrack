@@ -60,12 +60,15 @@ function requiredThreeCredit(subject: string, number: string, grade: Grade): Fix
     if (course.credits !== 3) {
         throw new Error(`${code} is ${course.credits} credits in the catalog, and this fixture expects 3.`);
     }
+    const status = grade === Grade.F ? TranscriptStatus.FAILED 
+        : grade === Grade.W ? TranscriptStatus.WITHDRAWN 
+        : TranscriptStatus.COMPLETED;
     return {
         subject,
         number,
         credits: course.credits,
         grade,
-        status: TranscriptStatus.COMPLETED,
+        status,
         source: TranscriptSource.NCAT,
     };
 }

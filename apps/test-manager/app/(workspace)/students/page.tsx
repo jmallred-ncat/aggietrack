@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { TestStudents } from "@/components/test-students";
 import { loadWorkspace } from "@/lib/load-workspace";
-import { callAggieTrack, plannerFaultMap, testAccountCards, testStudentConfig } from "@/lib/test-students";
+import { callAggieTrack, plannerFaultMap, testAccountCards, testStudentConfig, type TestStudentCard } from "@/lib/test-students";
 
 export default async function Page() {
   // The page renders alongside the layout, so the password is read only after the session check.
@@ -9,14 +9,34 @@ export default async function Page() {
   const config = testStudentConfig();
   let notice = "";
   let faults: Record<string, string | null> = {};
+  let students = testAccountCards;
+  
   if (!config.ready) {
     notice = "Set TEST_STUDENT_PASSWORD and TEST_STUDENT_RESET_SECRET on this site and on AggieTrack. Leave them unset on the live site.";
   } else {
     try {
       faults = plannerFaultMap(await callAggieTrack("/api/test-students/ensure"));
+      
+      // Fetch live stats and merge into cards
+      try {
+        const statsResponse = await callAggieTrack("/api/test-students/stats");
+        const stats = statsResponse.stats as Record<string, { place: string }> | undefined;
+        if (stats) {
+          students = testAccountCards.map((card) => {
+            const stat = stats[card.email];
+            if (stat && card.role === "student") {
+              return { ...card, place: stat.place };
+            }
+            return card;
+          });
+        }
+      } catch (error) {
+        // Silently fall back to static descriptions if stats fetch fails
+        console.error("Failed to fetch student stats:", error);
+      }
     } catch (error) {
       notice = error instanceof Error ? error.message : "AggieTrack could not prepare the test accounts.";
     }
   }
-  return <TestStudents students={testAccountCards} password={config.password} notice={notice} faults={faults}/>;
+  return <TestStudents students={students} password={config.password} notice={notice} faults={faults}/>;
 }

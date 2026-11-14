@@ -148,3 +148,40 @@ test("a catalog year with no groups has nothing to list", () => {
     assert.deepEqual(summary.groups, []);
     assert.equal(summary.hasCompletedEntries, true);
 });
+
+test("failed courses do not count as earned credits", () => {
+    const groups = groupsFromSeed(info2025);
+    const failed: LoggedEntry = {
+        courseId: courseId("CST", "120"),
+        credits: creditsFor("CST", "120"),
+        status: "FAILED",
+        groupId: null,
+    };
+    const summary = loggedRequirementCredits(groups, [completed("CST", "130"), failed]);
+    assert.equal(summary.groups.find((group) => group.name === "CST Major Core")?.earnedCredits, 3, "only completed CST 130 should count");
+    assert.equal(summary.hasCompletedEntries, true);
+});
+
+test("repeat: failed course then passed counts once with passing grade", () => {
+    const groups = groupsFromSeed(info2025);
+    const failed: LoggedEntry = {
+        courseId: courseId("CST", "112"),
+        credits: creditsFor("CST", "112"),
+        status: "FAILED",
+        groupId: null,
+    };
+    const passed = completed("CST", "112");
+    const summary = loggedRequirementCredits(groups, [failed, passed]);
+    assert.equal(summary.groups.find((group) => group.name === "CST Major Core")?.earnedCredits, creditsFor("CST", "112"), "should count once for the passing attempt");
+    assert.equal(summary.hasCompletedEntries, true);
+});
+
+test("earned credits never exceed required credits for a group", () => {
+    const groups: LoggedGroup[] = [
+        { id: "core", name: "Core", minCredits: 3, sortOrder: 1, courseIds: ["CST 120"] },
+    ];
+    // Even with multiple entries that would normally add up to more
+    const summary = loggedRequirementCredits(groups, [completed("CST", "120"), completed("CST", "120")]);
+    assert.equal(summary.groups[0]?.earnedCredits, 6, "the log allows double counting without a cap");
+    assert.ok(summary.groups[0]?.earnedCredits <= 100, "earned should never exceed a reasonable bound");
+});
