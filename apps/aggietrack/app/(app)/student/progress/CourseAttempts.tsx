@@ -61,6 +61,27 @@ type Attempt = {
 
 const gradeChoices = completionGradeChoices();
 
+/**
+ * Get mobile badge text for IN_PROGRESS attempts.
+ * Returns "Incomplete (I)" for grade I, "In progress" for other IN_PROGRESS, or null if no IN_PROGRESS.
+ */
+export function getInProgressBadgeText(attempts: Array<{ status: TranscriptStatus; grade: string | null }>): string | null {
+    const sorted = [...attempts].sort((a, b) => {
+        const statusOrder: Record<TranscriptStatus, number> = {
+            IN_PROGRESS: 0,
+            COMPLETED: 1,
+            FAILED: 2,
+            WITHDRAWN: 3,
+        };
+        return statusOrder[a.status] - statusOrder[b.status];
+    });
+    const inProgressAttempt = sorted.find(a => a.status === "IN_PROGRESS");
+    if (!inProgressAttempt) {
+        return null;
+    }
+    return inProgressAttempt.grade === "I" ? "Incomplete (I)" : "In progress";
+}
+
 export function CourseAttempts({
     courseId,
     subject,
@@ -273,7 +294,7 @@ export function CourseAttempts({
 
     return (
         <div className="flex flex-wrap items-center gap-2">
-            {sortedAttempts.map((attempt, index) => (
+                {sortedAttempts.map((attempt, index) => (
                 <div key={attempt.id} className="flex items-center gap-2">
                     {sortedAttempts.length > 1 && (
                         <span className="text-xs text-muted-foreground">
@@ -282,19 +303,65 @@ export function CourseAttempts({
                     )}
                     {attempt.status === "IN_PROGRESS" ? (
                         <>
-                            <Badge variant="secondary" className="h-11 px-3 text-xs sm:h-auto">
-                                In progress
-                            </Badge>
-                            <GradeSelect
-                                value={null}
-                                onChange={(grade) => handleGradeChange(attempt.id, grade)}
-                                disabled={isPending}
-                                size="sm"
-                                placeholder="Set grade"
-                                label={sortedAttempts.length > 1
-                                    ? `Grade for ${courseCode}, attempt ${index + 1}`
-                                    : `Grade for ${courseCode}`}
-                            />
+                            {attempt.grade === "I" ? (
+                                <>
+                                    <Badge variant="secondary" className="hidden px-3 text-xs sm:inline-flex sm:h-auto">
+                                        Incomplete (I)
+                                    </Badge>
+                                    <DropdownMenu
+                                        open={openMenuId === attempt.id}
+                                        onOpenChange={(open) => setOpenMenuId(open ? attempt.id : null)}
+                                    >
+                                        <DropdownMenuTrigger
+                                            type="button"
+                                            disabled={isPending}
+                                            aria-label={sortedAttempts.length > 1
+                                                ? `${subject} ${number} attempt ${index + 1}, grade Incomplete. Set final grade`
+                                                : `${subject} ${number}, grade Incomplete. Set final grade`}
+                                            className={cn(
+                                                buttonVariants({ variant: "outline", size: "sm" }),
+                                                "h-11 min-w-fit gap-1 whitespace-nowrap px-2.5 sm:h-7",
+                                            )}
+                                        >
+                                            Set final grade
+                                            <CaretDownIcon className="size-4 text-muted-foreground" />
+                                        </DropdownMenuTrigger>
+                                        <DropdownMenuContent align="end" className="min-w-48">
+                                            <DropdownMenuRadioGroup
+                                                value=""
+                                                onValueChange={(value) => {
+                                                    if (typeof value === "string" && isCompletionGrade(value)) {
+                                                        handleGradeChange(attempt.id, value);
+                                                    }
+                                                }}
+                                            >
+                                                {gradeChoices.filter(choice => choice.value !== Grade.I).map((choice) => (
+                                                    <DropdownMenuRadioItem key={choice.value} value={choice.value} closeOnClick>
+                                                        {choice.label}
+                                                    </DropdownMenuRadioItem>
+                                                ))}
+                                            </DropdownMenuRadioGroup>
+                                        </DropdownMenuContent>
+                                    </DropdownMenu>
+                                </>
+                            ) : (
+                                <>
+                                    <Badge variant="secondary" className="hidden px-3 text-xs sm:inline-flex sm:h-auto">
+                                        In progress
+                                    </Badge>
+                                    <GradeSelect
+                                        value={null}
+                                        onChange={(grade) => handleGradeChange(attempt.id, grade)}
+                                        disabled={isPending}
+                                        size="sm"
+                                        placeholder="Set grade"
+                                        className="min-w-fit whitespace-nowrap data-[size=sm]:h-11 sm:data-[size=sm]:h-7"
+                                        label={sortedAttempts.length > 1
+                                            ? `Grade for ${courseCode}, attempt ${index + 1}`
+                                            : `Grade for ${courseCode}`}
+                                    />
+                                </>
+                            )}
                         </>
                     ) : (
                         <DropdownMenu

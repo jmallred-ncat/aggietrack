@@ -172,3 +172,29 @@ test("computeHonors: P/I/IN_PROGRESS excluded from adjusted GPA", () => {
   assert.equal(honors.adjustedGpa, 4.0);
   assert.equal(honors.residentHours, 3);
 });
+
+test("computeHonors: F grade included in adjusted GPA even when stored as FAILED", () => {
+  const transcript = [
+    { ...baseEntry, id: "1", courseId: "c1", grade: Grade.A, credits: 3 }, // 12
+    { ...baseEntry, id: "2", courseId: "c2", grade: Grade.F, credits: 3, status: "FAILED" as const }, // 0
+  ];
+  // Total: (12 + 0) / 6 = 2.0
+  const honors = computeHonors(transcript);
+  assert.equal(honors.adjustedGpa, 2.0);
+  assert.equal(honors.residentHours, 6); // Both attempts count toward resident hours
+  assert.equal(honors.honor, null); // < 3.25
+  assert.equal(honors.eligible, false);
+});
+
+test("computeHonors: F never retaken lowers honors GPA but still qualifies for honors", () => {
+  const transcript = [
+    { ...baseEntry, id: "1", courseId: "c1", grade: Grade.A, credits: 48 }, // 192
+    { ...baseEntry, id: "2", courseId: "c2", grade: Grade.F, credits: 3, status: "FAILED" as const }, // 0
+  ];
+  // Total: 192 / 51 = 3.76 (Summa threshold is >= 3.75)
+  const honors = computeHonors(transcript);
+  assert.equal(honors.adjustedGpa, 3.76);
+  assert.equal(honors.residentHours, 51);
+  assert.equal(honors.honor, "Summa Cum Laude");
+  assert.equal(honors.eligible, true);
+});

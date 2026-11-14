@@ -106,6 +106,8 @@ export default async function ProgressPage() {
             courseId: entry.courseId,
             credits: entry.credits,
             status: entry.status,
+            grade: entry.grade,
+            createdAt: entry.createdAt,
             groupId: entry.recommendedTermCourseId ? groupBySlot.get(entry.recommendedTermCourseId) ?? null : null,
         })),
     );
@@ -184,7 +186,8 @@ export default async function ProgressPage() {
         }
     }
     for (const entry of [...transcript].reverse()) {
-        if (entry.status === "IN_PROGRESS") {
+        // Track IN_PROGRESS, FAILED, and WITHDRAWN for validation exemption
+        if (entry.status === "IN_PROGRESS" || entry.status === "FAILED" || entry.status === "WITHDRAWN") {
             if (entry.recommendedTermCourseId) {
                 inProgressSlotIds.add(entry.recommendedTermCourseId);
             } else if (entry.courseId) {

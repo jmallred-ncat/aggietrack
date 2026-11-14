@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { test } from "node:test";
-import { Grade } from "./generated/prisma/client";
+import { Grade, TranscriptStatus } from "./generated/prisma/client";
 import { authorizeTestStudents, stateAfterReset, testStudentByEmail } from "./test-students";
 import { runPlanNoteReset } from "./test-plan-notes";
 import {
@@ -246,4 +246,25 @@ test("the load route rejects a wrong role and a catalog mismatch before replacem
         accounts.indexOf("async function fixtureCatalogMismatches"),
     );
     assert.match(reset, /ensureUser\(student, password, true\)/);
+});
+
+test("failed fixture sets FAILED status for F grade and COMPLETED for passing grade", () => {
+    const attempts = fixtureAttempts("failed");
+    assert.equal(attempts.length, 2);
+    const passed = attempts.find((attempt) => attempt.grade === Grade.A);
+    const failed = attempts.find((attempt) => attempt.grade === Grade.F);
+    assert.ok(passed, "failed fixture should have a passing grade");
+    assert.ok(failed, "failed fixture should have an F grade");
+    assert.equal(passed?.status, TranscriptStatus.COMPLETED, "passing grade should have COMPLETED status");
+    assert.equal(failed?.status, TranscriptStatus.FAILED, "F grade should have FAILED status");
+});
+
+test("repeat fixture sets FAILED status for first attempt and COMPLETED for second attempt", () => {
+    const attempts = fixtureAttempts("repeat");
+    assert.equal(attempts.length, 2);
+    const [first, second] = attempts;
+    assert.equal(first?.grade, Grade.F, "first attempt should be F");
+    assert.equal(second?.grade, Grade.B, "second attempt should be B");
+    assert.equal(first?.status, TranscriptStatus.FAILED, "first attempt should have FAILED status");
+    assert.equal(second?.status, TranscriptStatus.COMPLETED, "second attempt should have COMPLETED status");
 });

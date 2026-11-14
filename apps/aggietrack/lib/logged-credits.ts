@@ -1,10 +1,19 @@
+import { Grade } from "./generated/prisma/browser";
+
+// F, W, I don't earn degree credit
+const NON_CREDIT_GRADES = new Set([Grade.F, Grade.W, Grade.I, "F", "W", "I"]);
+
+function earnsDegreeCredit(grade: string | null): boolean {
+    return grade != null && !NON_CREDIT_GRADES.has(grade);
+}
+
 /**
  * Credits the catalog requires, next to credits the student has logged.
  *
  * This is a log, not a degree audit. A completed entry adds its credits to
  * every group that lists the course, and to the group of a handbook slot the
- * entry fills. In-progress, withdrawn, and failed rows are left out. Grades,
- * pool rules, and double-counting are left out too.
+ * entry fills. In-progress, withdrawn, and failed rows are left out. For
+ * retakes, only the best passing attempt counts.
  */
 
 export type LoggedGroup = {
@@ -19,6 +28,8 @@ export type LoggedEntry = {
     courseId: string | null;
     credits: number;
     status: string;
+    grade: string | null;
+    createdAt: Date;
     /** Requirement group of the handbook slot this entry fills, if any. */
     groupId: string | null;
 };
@@ -51,25 +62,63 @@ export function loggedRequirementCredits(
         }
     }
 
-    const earned = new Map<string, number>(sorted.map((group) => [group.id, 0]));
-    let hasCompletedEntries = false;
-
+    // Group entries by course to handle retakes
+    // Entries without courseId (typed-in) are treated as separate courses
+    const entriesByCourse = new Map<string, LoggedEntry[]>();
+    let slotCounter = 0;
     for (const entry of entries) {
+        // Skip non-completed entries first
         if (entry.status !== "COMPLETED") {
             continue;
         }
+        // Skip entries that don't earn degree credit (F, W, I)
+        if (!earnsDegreeCredit(entry.grade)) {
+            continue;
+        }
+        
+        // Use courseId for catalog courses (enables retake deduplication)
+        // Use unique key for typed-in entries (each counts separately)
+        const key = entry.courseId ?? `slot:${slotCounter++}`;
+        const attempts = entriesByCourse.get(key) ?? [];
+        attempts.push(entry);
+        entriesByCourse.set(key, attempts);
+    }
+
+    const earned = new Map<string, number>(sorted.map((group) => [group.id, 0]));
+    let hasCompletedEntries = false;
+
+    // For each course, count only the most recent passing attempt
+    for (const attempts of entriesByCourse.values()) {
+        if (!attempts || attempts.length === 0) continue;
+        
+        const best = attempts.sort((a, b) => {
+            const aTime = a.createdAt?.getTime() ?? 0;
+            const bTime = b.createdAt?.getTime() ?? 0;
+            return bTime - aTime;
+        })[0];
+        
+        if (!best) continue;
+        
+        // Validate credits is a valid number
+        const credits = typeof best.credits === 'number' && !isNaN(best.credits) && isFinite(best.credits) 
+            ? best.credits 
+            : 0;
+        
+        if (credits <= 0) continue;
+        
         hasCompletedEntries = true;
         const targets = new Set<string>();
-        if (entry.groupId && knownGroups.has(entry.groupId)) {
-            targets.add(entry.groupId);
+        if (best.groupId && knownGroups.has(best.groupId)) {
+            targets.add(best.groupId);
         }
-        if (entry.courseId) {
-            for (const groupId of groupsByCourse.get(entry.courseId) ?? []) {
+        if (best.courseId) {
+            for (const groupId of groupsByCourse.get(best.courseId) ?? []) {
                 targets.add(groupId);
             }
         }
         for (const groupId of targets) {
-            earned.set(groupId, (earned.get(groupId) ?? 0) + entry.credits);
+            const current = earned.get(groupId) ?? 0;
+            earned.set(groupId, current + credits);
         }
     }
 

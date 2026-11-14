@@ -31,12 +31,17 @@ export function selectPlannableCourses(
     satisfiedCourseIds: ReadonlySet<string>,
     onThisPlan: ReadonlySet<string>,
     onAnotherPlan: ReadonlySet<string>,
+    onTranscript: ReadonlySet<string>,
 ) {
     const byId = new Map(courses.map((course) => [course.id, course]));
 
     function canPlan(course: PlannableCourse, stack: ReadonlySet<string>): boolean {
         if (stack.has(course.id)) {
             return true;
+        }
+        // Exclude courses already on the transcript (including Incomplete)
+        if (onTranscript.has(course.id)) {
+            return false;
         }
         if (satisfiedCourseIds.has(course.id) || onAnotherPlan.has(course.id)) {
             return false;

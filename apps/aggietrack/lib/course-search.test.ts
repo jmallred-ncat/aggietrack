@@ -89,7 +89,54 @@ test("planner search leaves out a course whose prerequisites could not be checke
         new Set(),
         new Set(),
         new Set(),
+        new Set(),
     ).filter((course) => courseMatchesSearch(course, "cst"));
 
     assert.deepEqual(matches.map((course) => course.number), ["130"]);
+});
+
+test("courses on transcript with blocking status are not plannable; FAILED/WITHDRAWN are plannable for retakes", () => {
+    const cst120: PlannableCourse = {
+        id: "cst-120",
+        subject: "CST",
+        number: "120",
+        title: "Computer Science I",
+        credits: 3,
+        offeredIn: [TermSeason.FALL, TermSeason.SPRING],
+        prerequisiteGroups: [],
+    };
+    
+    // Course not on transcript should be plannable
+    const withoutTranscript = selectPlannableCourses(
+        [cst120],
+        TermSeason.FALL,
+        new Set(),
+        new Set(),
+        new Set(),
+        new Set(),
+    );
+    assert.equal(withoutTranscript.length, 1, "Course should be plannable when not on transcript");
+    
+    // Course with blocking status (COMPLETED, IN_PROGRESS, Incomplete) should not be plannable
+    const withBlockingStatus = selectPlannableCourses(
+        [cst120],
+        TermSeason.FALL,
+        new Set(),
+        new Set(),
+        new Set(),
+        new Set(["cst-120"]), // Blocking status on transcript
+    );
+    assert.equal(withBlockingStatus.length, 0, "Course with COMPLETED/IN_PROGRESS/Incomplete should not be plannable");
+    
+    // Course with FAILED or WITHDRAWN status should remain plannable for retakes
+    // (Not included in onTranscript set in getPlannableCourses)
+    const withNonBlockingStatus = selectPlannableCourses(
+        [cst120],
+        TermSeason.FALL,
+        new Set(),
+        new Set(),
+        new Set(),
+        new Set(), // FAILED/WITHDRAWN not included in onTranscript
+    );
+    assert.equal(withNonBlockingStatus.length, 1, "Course with FAILED/WITHDRAWN should be plannable for retakes");
 });

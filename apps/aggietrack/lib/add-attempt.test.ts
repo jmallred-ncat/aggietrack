@@ -34,8 +34,8 @@ test("the chosen grade is what would be saved, including A-, F, W, and TR", () =
     const cases = [
         { grade: Grade.A_MINUS, label: "A-" },
         { grade: Grade.F, label: "F" },
-        { grade: Grade.W, label: "W" },
-        { grade: Grade.TR, label: "TR" },
+        { grade: Grade.W, label: "Withdrawn (W)" },
+        { grade: Grade.TR, label: "Transfer credit (TR)" },
         { grade: Grade.C, label: "C" },
     ] as const;
 

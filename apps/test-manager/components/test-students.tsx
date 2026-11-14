@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Badge } from "@aggietrack/ui/badge";
 import { Button } from "@aggietrack/ui/button";
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@aggietrack/ui/empty";
@@ -92,6 +93,7 @@ async function postFixture(email: string, fixtureId: string) {
 }
 
 export function TestStudents({ students, password, notice, faults = {} }: { students: TestStudentCard[]; password: string; notice: string; faults?: Record<string, string | null> }) {
+  const router = useRouter();
   const [pending, setPending] = useState("");
   const [arming, setArming] = useState("");
   const [pendingAll, setPendingAll] = useState(false);
@@ -145,6 +147,7 @@ export function TestStudents({ students, password, notice, faults = {} }: { stud
         });
       }
       toast.add({ type: "success", title: `${student.name} is back to the frozen place and signed out of AggieTrack.` });
+      router.refresh();
     } catch (caught) {
       toast.add({ type: "error", title: caught instanceof Error ? caught.message : "That account could not be reset." });
     } finally {
@@ -185,6 +188,7 @@ export function TestStudents({ students, password, notice, faults = {} }: { stud
         return next;
       });
       toast.add({ type: result.failed.length > 0 ? "error" : "success", title: resetAllSummary(result) });
+      router.refresh();
     } catch (caught) {
       toast.add({ type: "error", title: caught instanceof Error ? caught.message : "Test students could not be reset." });
     } finally {
@@ -203,6 +207,7 @@ export function TestStudents({ students, password, notice, faults = {} }: { stud
       setLastLoaded(current => ({ ...current, [student.email]: result.fixture }));
       setNextSave(current => ({ ...current, [student.email]: nextSaveAfterFixture(previousSave, { ok: true, accountChanged: true }) }));
       toast.add({ type: "success", title: fixtureLoadedSummary(result) });
+      router.refresh();
     } catch (caught) {
       const accountChanged = caught instanceof Error && "accountChanged" in caught && caught.accountChanged === true;
       if (accountChanged) {
@@ -293,8 +298,8 @@ export function TestStudents({ students, password, notice, faults = {} }: { stud
               <ChoiceSelect id={`next-save-${student.email}`} label={`Next planner save for ${student.name}`} value={nextSave[student.email] ?? nextSaveWorks} options={nextSaveChoices} disabled={busy || !password} onChange={choice => { void arm(student, choice); }} className="w-full bg-background"/>
               <p className="text-sm leading-6 text-muted-foreground">Set this before the save. It turns off after one add or remove. The live site ignores it.</p>
             </div>
-            <p className="mt-4 text-sm leading-6">{student.email === "it.mid@example.test" ? jordanPlanReset : resetAfterUse}</p>
-            <div className="mt-4 space-y-2">
+            <p className="mt-4 text-sm leading-6 text-muted-foreground">{student.email === "it.mid@example.test" ? jordanPlanReset : resetAfterUse}</p>
+            <div className="mt-auto space-y-2 pt-4">
               <Label htmlFor={`fixture-${student.email}`}>Transcript fixture</Label>
               <ChoiceSelect id={`fixture-${student.email}`} label={`Transcript fixture for ${student.name}`} value={fixtureChoiceById(selected)?.label ?? ""} placeholder={transcriptFixturePlaceholder} options={transcriptFixtureChoices.map(choice => choice.label)} disabled={busy || !password} onChange={label => {
                 const choice = transcriptFixtureChoices.find(item => item.label === label);
@@ -303,8 +308,8 @@ export function TestStudents({ students, password, notice, faults = {} }: { stud
               }} className="w-full bg-background"/>
               <Button variant="outline" size="sm" className="w-full" disabled={!selected || busy || !password} onClick={() => setConfirmFixture({ email: student.email, fixtureId: selected })}>{loading === student.email ? fixtureLoadingAction : fixtureLoadAction}</Button>
               {loaded ? <p className="text-sm text-muted-foreground">Last loaded: {loaded}</p> : null}
+              <Button className="w-full" disabled={busy || !password} onClick={() => reset(student)}>{pending === student.email ? "Resetting…" : `Reset ${student.name}`}</Button>
             </div>
-            <Button className="mt-4 w-full" disabled={busy || !password} onClick={() => reset(student)}>{pending === student.email ? "Resetting…" : `Reset ${student.name}`}</Button>
           </section>;
         })}
       </div>}
