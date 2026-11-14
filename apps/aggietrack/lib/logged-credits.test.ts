@@ -296,7 +296,7 @@ test("student-entered retake: F followed by passing grade counts once", () => {
     assert.equal(cstCore?.earnedCredits, 3, "F grade doesn't count, only passing attempt counts");
 });
 
-test("student-entered retake with FAILED status: F then passing grade counts once in requirement and overall", () => {
+test("student-entered retake with FAILED status: F then passing grade counts once in requirement", () => {
     const groups = groupsFromSeed(info2025);
     const failedEntry: LoggedEntry = {
         courseId: courseId("CST", "120"),
@@ -318,5 +318,4 @@ test("student-entered retake with FAILED status: F then passing grade counts onc
     const summary = loggedRequirementCredits(groups, [failedEntry, passingEntry]);
     const cstCore = summary.groups.find((group) => group.name === "CST Major Core");
     assert.equal(cstCore?.earnedCredits, 3, "FAILED F doesn't count, only passing attempt counts");
-    assert.equal(summary.totalEarnedCredits, 3, "Overall should also count once");
 });

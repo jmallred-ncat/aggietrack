@@ -6,7 +6,7 @@ import { cstCatalogCourses } from "../prisma/seed/cst-catalog";
 import { gecAttributes, gecCourses } from "../prisma/seed/gec";
 import { info2025 } from "../prisma/seed/info-2025";
 import { mgmtCourses } from "../prisma/seed/mgmt";
-import { Grade } from "./generated/prisma/client";
+import { Grade, TranscriptSource } from "./generated/prisma/client";
 import { plannedAttempts, type PlannedAttempt } from "./frozen-transcript";
 import { computeGpa, computeHonors } from "./gpa";
 import { slotIsUnfilled } from "./progress-slots";

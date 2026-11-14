@@ -186,15 +186,15 @@ test("computeHonors: F grade included in adjusted GPA even when stored as FAILED
   assert.equal(honors.eligible, false);
 });
 
-test("computeHonors: F never retaken lowers honors GPA and prevents honors", () => {
+test("computeHonors: F never retaken lowers honors GPA but still qualifies for honors", () => {
   const transcript = [
     { ...baseEntry, id: "1", courseId: "c1", grade: Grade.A, credits: 48 }, // 192
     { ...baseEntry, id: "2", courseId: "c2", grade: Grade.F, credits: 3, status: "FAILED" as const }, // 0
   ];
-  // Total: 192 / 51 = 3.76 (Magna range is 3.5-3.74, Cum Laude is 3.25-3.49)
+  // Total: 192 / 51 = 3.76 (Summa threshold is >= 3.75)
   const honors = computeHonors(transcript);
   assert.equal(honors.adjustedGpa, 3.76);
   assert.equal(honors.residentHours, 51);
-  assert.equal(honors.honor, "Magna Cum Laude");
+  assert.equal(honors.honor, "Summa Cum Laude");
   assert.equal(honors.eligible, true);
 });
