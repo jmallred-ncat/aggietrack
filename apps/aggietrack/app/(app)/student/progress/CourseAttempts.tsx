@@ -299,7 +299,7 @@ export function CourseAttempts({
                                                 : `${subject} ${number}, grade Incomplete. Set final grade`}
                                             className={cn(
                                                 buttonVariants({ variant: "outline", size: "sm" }),
-                                                "h-11 gap-1 px-2.5 sm:h-7",
+                                                "h-11 min-w-fit gap-1 whitespace-nowrap px-2.5 sm:h-7",
                                             )}
                                         >
                                             Set final grade
@@ -314,7 +314,7 @@ export function CourseAttempts({
                                                     }
                                                 }}
                                             >
-                                                {gradeChoices.map((choice) => (
+                                                {gradeChoices.filter(choice => choice.value !== Grade.I).map((choice) => (
                                                     <DropdownMenuRadioItem key={choice.value} value={choice.value} closeOnClick>
                                                         {choice.label}
                                                     </DropdownMenuRadioItem>
@@ -334,6 +334,7 @@ export function CourseAttempts({
                                         disabled={isPending}
                                         size="sm"
                                         placeholder="Set grade"
+                                        className="h-11 min-w-fit whitespace-nowrap sm:h-7"
                                         label={sortedAttempts.length > 1
                                             ? `Grade for ${courseCode}, attempt ${index + 1}`
                                             : `Grade for ${courseCode}`}

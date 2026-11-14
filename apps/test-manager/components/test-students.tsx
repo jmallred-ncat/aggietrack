@@ -92,6 +92,18 @@ async function postFixture(email: string, fixtureId: string) {
   return fixtureLoadResult(body);
 }
 
+async function fetchStudentStats() {
+  const response = await fetch("/api/test-students/stats", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+  });
+  const body = await response.json().catch(() => ({}));
+  if (!response.ok || !body.stats) {
+    throw new Error("Could not fetch student stats.");
+  }
+  return body.stats as Record<string, { place: string }>;
+}
+
 export function TestStudents({ students, password, notice, faults = {} }: { students: TestStudentCard[]; password: string; notice: string; faults?: Record<string, string | null> }) {
   const router = useRouter();
   const [pending, setPending] = useState("");
@@ -104,6 +116,7 @@ export function TestStudents({ students, password, notice, faults = {} }: { stud
   const [confirmFixture, setConfirmFixture] = useState<{ email: string; fixtureId: string } | null>(null);
   const [fixtureChoice, setFixtureChoice] = useState<Record<string, string>>({});
   const [lastLoaded, setLastLoaded] = useState<Record<string, string>>({});
+  const [studentStats, setStudentStats] = useState<Record<string, { place: string }>>({});
   const actionLock = useRef(false);
   const [nextSave, setNextSave] = useState<Record<string, string>>(() => Object.fromEntries(students.filter(student => student.role === "student").map(student => [student.email, faultChoice(faults[student.email])])));
   const toastedNotice = useRef(false);
@@ -141,6 +154,11 @@ export function TestStudents({ students, password, notice, faults = {} }: { stud
       if (student.role === "student") {
         setNextSave(current => ({ ...current, [student.email]: nextSaveWorks }));
         setLastLoaded(current => {
+          const next = { ...current };
+          delete next[student.email];
+          return next;
+        });
+        setStudentStats(current => {
           const next = { ...current };
           delete next[student.email];
           return next;
@@ -206,6 +224,15 @@ export function TestStudents({ students, password, notice, faults = {} }: { stud
       const result = await postFixture(student.email, fixtureId);
       setLastLoaded(current => ({ ...current, [student.email]: result.fixture }));
       setNextSave(current => ({ ...current, [student.email]: nextSaveAfterFixture(previousSave, { ok: true, accountChanged: true }) }));
+      
+      // Fetch updated stats to show current standing
+      try {
+        const stats = await fetchStudentStats();
+        setStudentStats(stats);
+      } catch (statsError) {
+        console.error("Failed to fetch stats:", statsError);
+      }
+      
       toast.add({ type: "success", title: fixtureLoadedSummary(result) });
       router.refresh();
     } catch (caught) {
@@ -286,9 +313,11 @@ export function TestStudents({ students, password, notice, faults = {} }: { stud
         {studentAccounts.map(student => {
           const selected = fixtureChoice[student.email] ?? "";
           const loaded = lastLoaded[student.email];
+          const stats = studentStats[student.email];
+          const displayPlace = stats?.place || student.place;
           return <section key={student.email} className="flex flex-col rounded-xl border bg-background p-4">
             <h3 className="text-lg font-semibold">{student.name}</h3>
-            <p className="mt-1 text-sm leading-6 text-muted-foreground">{student.place}</p>
+            <p className="mt-1 text-sm leading-6 text-muted-foreground">{displayPlace}</p>
             <dl className="mt-4 space-y-2 text-sm">
               <div><dt className="text-muted-foreground">Email</dt><dd className="font-mono">{student.email}</dd></div>
               <div><dt className="text-muted-foreground">Password</dt><dd className="font-mono">{password || "Not configured"}</dd></div>
@@ -298,8 +327,8 @@ export function TestStudents({ students, password, notice, faults = {} }: { stud
               <ChoiceSelect id={`next-save-${student.email}`} label={`Next planner save for ${student.name}`} value={nextSave[student.email] ?? nextSaveWorks} options={nextSaveChoices} disabled={busy || !password} onChange={choice => { void arm(student, choice); }} className="w-full bg-background"/>
               <p className="text-sm leading-6 text-muted-foreground">Set this before the save. It turns off after one add or remove. The live site ignores it.</p>
             </div>
-            <p className="mt-4 text-sm leading-6">{student.email === "it.mid@example.test" ? jordanPlanReset : resetAfterUse}</p>
-            <div className="mt-4 space-y-2">
+            <p className="mt-4 text-sm leading-6 text-muted-foreground">{student.email === "it.mid@example.test" ? jordanPlanReset : resetAfterUse}</p>
+            <div className="mt-auto space-y-2 pt-4">
               <Label htmlFor={`fixture-${student.email}`}>Transcript fixture</Label>
               <ChoiceSelect id={`fixture-${student.email}`} label={`Transcript fixture for ${student.name}`} value={fixtureChoiceById(selected)?.label ?? ""} placeholder={transcriptFixturePlaceholder} options={transcriptFixtureChoices.map(choice => choice.label)} disabled={busy || !password} onChange={label => {
                 const choice = transcriptFixtureChoices.find(item => item.label === label);
@@ -308,8 +337,8 @@ export function TestStudents({ students, password, notice, faults = {} }: { stud
               }} className="w-full bg-background"/>
               <Button variant="outline" size="sm" className="w-full" disabled={!selected || busy || !password} onClick={() => setConfirmFixture({ email: student.email, fixtureId: selected })}>{loading === student.email ? fixtureLoadingAction : fixtureLoadAction}</Button>
               {loaded ? <p className="text-sm text-muted-foreground">Last loaded: {loaded}</p> : null}
+              <Button className="w-full" disabled={busy || !password} onClick={() => reset(student)}>{pending === student.email ? "Resetting…" : `Reset ${student.name}`}</Button>
             </div>
-            <Button className="mt-4 w-full" disabled={busy || !password} onClick={() => reset(student)}>{pending === student.email ? "Resetting…" : `Reset ${student.name}`}</Button>
           </section>;
         })}
       </div>}

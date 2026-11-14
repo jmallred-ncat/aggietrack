@@ -21,7 +21,7 @@ export async function POST(request: Request) {
   }
   
   try {
-    const stats: Record<string, { credits: number; percentage: number; gpa: number | null; place: string }> = {};
+    const stats: Record<string, { credits: number; percentage: number; gpa: number | null; standing: string | null; place: string }> = {};
     
     for (const student of testStudents) {
       try {
@@ -32,6 +32,7 @@ export async function POST(request: Request) {
             studentProfile: {
               select: {
                 id: true,
+                standing: true,
                 catalogYear: {
                   select: {
                     year: true,
@@ -53,6 +54,7 @@ export async function POST(request: Request) {
             credits: 0,
             percentage: 0,
             gpa: null,
+            standing: null,
             place: `${user?.studentProfile?.catalogYear.program.name ?? "Information Technology"} ${user?.studentProfile?.catalogYear.year ?? 2025}. Just started, with no prior coursework (0 credits).`
           };
           continue;
@@ -78,13 +80,23 @@ export async function POST(request: Request) {
         ]);
         
         const gpa = computeGpa(transcript);
+        const standing = user.studentProfile.standing;
+        const standingLabel = standing ? standing.charAt(0) + standing.slice(1).toLowerCase() : null;
+        const programName = user.studentProfile.catalogYear.program.name;
+        const year = user.studentProfile.catalogYear.year;
         
-        // Return just the numbers, let TM merge with scenario description
+        // Format: "Information Technology 2025. Freshman: 3 credits, 2.5%, GPA 2.00"
+        const gpaFormatted = gpa !== null ? gpa.toFixed(2) : "N/A";
+        const place = standingLabel
+          ? `${programName} ${year}. ${standingLabel}: ${progress.earnedCredits} credits, ${progress.percentage.toFixed(1)}%, GPA ${gpaFormatted}`
+          : `${programName} ${year}. ${progress.earnedCredits} credits, ${progress.percentage.toFixed(1)}%, GPA ${gpaFormatted}`;
+        
         stats[student.email] = {
           credits: progress.earnedCredits,
           percentage: progress.percentage,
           gpa,
-          place: ""  // TM will construct the full description
+          standing: standingLabel,
+          place
         };
       } catch (error) {
         console.error(`Failed to get stats for ${student.email}:`, error);
@@ -93,7 +105,8 @@ export async function POST(request: Request) {
           credits: 0,
           percentage: 0,
           gpa: null,
-          place: `${student.firstName} ${student.lastName}. Information Technology 2025. Stats unavailable.`
+          standing: null,
+          place: `${student.name}. Information Technology 2025. Stats unavailable.`
         };
       }
     }
