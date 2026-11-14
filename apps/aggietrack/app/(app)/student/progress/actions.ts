@@ -197,7 +197,11 @@ export async function saveTranscriptProgress(input: unknown) {
             });
 
             if (!slot.status || (!slot.courseId && !slot.subject)) {
-                if (existing && !(existing.status === "IN_PROGRESS" && !slot.status)) {
+                // Don't delete FAILED, WITHDRAWN, or IN_PROGRESS entries when form status is blank
+                if (existing && 
+                    !(existing.status === "IN_PROGRESS" && !slot.status) &&
+                    !(existing.status === "FAILED") &&
+                    !(existing.status === "WITHDRAWN")) {
                     await tx.transcriptEntry.delete({ where: { id: existing.id } });
                 }
                 continue;

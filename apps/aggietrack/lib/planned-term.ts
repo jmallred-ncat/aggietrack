@@ -319,7 +319,7 @@ export async function getPlannableCourses(term: { id: string; season: TermSeason
         }),
         prisma.transcriptEntry.findMany({
             where: { studentId: profile.id, courseId: { not: null } },
-            select: { courseId: true },
+            select: { courseId: true, status: true, grade: true },
         }),
     ]);
     const onThisPlan = new Set(
@@ -328,8 +328,18 @@ export async function getPlannableCourses(term: { id: string; season: TermSeason
     const onAnotherPlan = new Set(
         planned.filter((row) => row.plannedTerm.termId !== term.id).map((row) => row.courseId),
     );
+    // Only exclude courses that block planning: COMPLETED, ordinary IN_PROGRESS, and Incomplete (I)
+    // FAILED and WITHDRAWN remain plannable for retakes
     const onTranscript = new Set(
-        transcript.map((entry) => entry.courseId).filter((id): id is string => id !== null),
+        transcript
+            .filter((entry) => {
+                if (entry.status === "COMPLETED") return true;
+                if (entry.status === "IN_PROGRESS" && entry.grade !== "I") return true;
+                if (entry.status === "IN_PROGRESS" && entry.grade === "I") return true;
+                return false;
+            })
+            .map((entry) => entry.courseId)
+            .filter((id): id is string => id !== null),
     );
 
     return selectPlannableCourses(
