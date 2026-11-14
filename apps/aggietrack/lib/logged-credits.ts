@@ -85,8 +85,22 @@ export function loggedRequirementCredits(
 
     // For each course, count only the most recent passing attempt
     for (const [key, attempts] of entriesByCourse) {
-        const best = attempts.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())[0];
+        if (!attempts || attempts.length === 0) continue;
+        
+        const best = attempts.sort((a, b) => {
+            const aTime = a.createdAt?.getTime() ?? 0;
+            const bTime = b.createdAt?.getTime() ?? 0;
+            return bTime - aTime;
+        })[0];
+        
         if (!best) continue;
+        
+        // Validate credits is a valid number
+        const credits = typeof best.credits === 'number' && !isNaN(best.credits) && isFinite(best.credits) 
+            ? best.credits 
+            : 0;
+        
+        if (credits <= 0) continue;
         
         hasCompletedEntries = true;
         const targets = new Set<string>();
@@ -99,7 +113,8 @@ export function loggedRequirementCredits(
             }
         }
         for (const groupId of targets) {
-            earned.set(groupId, (earned.get(groupId) ?? 0) + best.credits);
+            const current = earned.get(groupId) ?? 0;
+            earned.set(groupId, current + credits);
         }
     }
 
