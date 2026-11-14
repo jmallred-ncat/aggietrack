@@ -454,7 +454,7 @@ async function writeFrozen(userId: string, student: TestStudent, catalogYearId: 
         title: null,
         recommendedTermCourseId: placed.recommendedTermCourseId,
         credits: placed.credits,
-        grade: course.status === TranscriptStatus.IN_PROGRESS ? null : course.grade,
+        grade: course.grade, // Keep grade visible (including I for in-progress)
         status: course.status,
         source: course.source,
         createdAt,
