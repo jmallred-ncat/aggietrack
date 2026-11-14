@@ -132,7 +132,8 @@ function handCalculation(student: TestStudent) {
       progressByGroup.set(group.id, (progressByGroup.get(group.id) ?? 0) + best.credits);
     }
 
-    const graded = rows.filter(row => row.status === "COMPLETED" && row.grade && QUALITY_TENTHS[row.grade] != null);
+    // Cumulative GPA: best letter grade per course (includes F if no passing attempt, excludes W)
+    const graded = rows.filter(row => row.status !== "IN_PROGRESS" && row.grade && row.grade !== Grade.W && QUALITY_TENTHS[row.grade] != null);
     if (graded.length > 0) {
       const best = [...graded].sort((left, right) => {
         const delta = (QUALITY_TENTHS[right.grade!] ?? 0) - (QUALITY_TENTHS[left.grade!] ?? 0);
