@@ -214,7 +214,7 @@ test("reset state: Taylor has CST 112 F and B, should count once (14 earned for 
     
     const attempts = plannedAttempts(taylor);
     const entries: LoggedEntry[] = attempts.map((attempt, index) => ({
-        courseId: `${attempt.subject} ${attempt.number}`,
+        courseId: courseId(attempt.subject, attempt.number),
         credits: attempt.credits,
         status: attempt.status,
         grade: attempt.grade,
@@ -234,7 +234,7 @@ test("reset state: Casey has CST 130 W, should not count (14 earned for CST Majo
     
     const attempts = plannedAttempts(casey);
     const entries: LoggedEntry[] = attempts.map((attempt, index) => ({
-        courseId: `${attempt.subject} ${attempt.number}`,
+        courseId: courseId(attempt.subject, attempt.number),
         credits: attempt.credits,
         status: attempt.status,
         grade: attempt.grade,
@@ -254,7 +254,7 @@ test("reset state: Alex has W/I/F attempts, none should count (16 earned for CST
     
     const attempts = plannedAttempts(alex);
     const entries: LoggedEntry[] = attempts.map((attempt, index) => ({
-        courseId: `${attempt.subject} ${attempt.number}`,
+        courseId: courseId(attempt.subject, attempt.number),
         credits: attempt.credits,
         status: attempt.status,
         grade: attempt.grade,
