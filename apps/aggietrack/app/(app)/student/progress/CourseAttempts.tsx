@@ -271,9 +271,20 @@ export function CourseAttempts({
         return null;
     }
 
+    // Check if any attempt is IN_PROGRESS to show mobile badge
+    const inProgressAttempt = sortedAttempts.find(a => a.status === "IN_PROGRESS");
+    const showMobileBadge = inProgressAttempt !== undefined;
+    const mobileBadgeText = inProgressAttempt?.grade === "I" ? "Incomplete (I)" : "In progress";
+
     return (
-        <div className="flex flex-wrap items-center gap-2">
-            {sortedAttempts.map((attempt, index) => (
+        <>
+            {showMobileBadge && (
+                <Badge variant="secondary" className="px-3 text-xs sm:hidden">
+                    {mobileBadgeText}
+                </Badge>
+            )}
+            <div className="flex flex-wrap items-center gap-2">
+                {sortedAttempts.map((attempt, index) => (
                 <div key={attempt.id} className="flex items-center gap-2">
                     {sortedAttempts.length > 1 && (
                         <span className="text-xs text-muted-foreground">
@@ -284,7 +295,7 @@ export function CourseAttempts({
                         <>
                             {attempt.grade === "I" ? (
                                 <>
-                                    <Badge variant="secondary" className="order-first w-full px-3 text-xs sm:order-none sm:h-auto sm:w-auto">
+                                    <Badge variant="secondary" className="hidden px-3 text-xs sm:inline-flex sm:h-auto">
                                         Incomplete (I)
                                     </Badge>
                                     <DropdownMenu
@@ -325,7 +336,7 @@ export function CourseAttempts({
                                 </>
                             ) : (
                                 <>
-                                    <Badge variant="secondary" className="order-first w-full px-3 text-xs sm:order-none sm:h-auto sm:w-auto">
+                                    <Badge variant="secondary" className="hidden px-3 text-xs sm:inline-flex sm:h-auto">
                                         In progress
                                     </Badge>
                                     <GradeSelect
@@ -506,6 +517,7 @@ export function CourseAttempts({
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
-        </div>
+            </div>
+        </>
     );
 }

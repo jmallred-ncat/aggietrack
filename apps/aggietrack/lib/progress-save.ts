@@ -367,7 +367,7 @@ export async function saveProgressCore(
     });
 
     // Final check: if confirmStart was requested but nothing was recorded, return error
-    // The caller must handle this error return to abort the transaction
+    // Returning from inside the transaction commits. However, no writes have occurred in this case.
     if (confirmStart && !startConfirmed) {
         return { success: false, error: "Mark the courses you have completed, or say you have no prior coursework." };
     }
