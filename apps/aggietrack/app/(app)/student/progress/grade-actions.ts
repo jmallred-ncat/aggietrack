@@ -64,12 +64,17 @@ export async function updateTranscriptGrade(input: unknown) {
     }
 
     // Allow converting IN_PROGRESS to COMPLETED by setting a grade
-    // Update the grade and mark as completed
+    // Update the grade and set status based on grade
+    const status = grade === Grade.F ? "FAILED" 
+        : grade === Grade.W ? "WITHDRAWN"
+        : grade === Grade.I ? "IN_PROGRESS"
+        : "COMPLETED";
+    
     await prisma.transcriptEntry.update({
         where: { id: entryId },
         data: {
             grade,
-            status: "COMPLETED",
+            status,
             source: grade === Grade.TR ? "TRANSFER" : "NCAT",
         },
     });
@@ -140,7 +145,12 @@ export async function addTranscriptAttempt(input: unknown) {
         return { success: false as const, error: resolvedCredits.error };
     }
 
-    // Create the new transcript entry
+    // Create the new transcript entry with status based on grade
+    const status = grade === Grade.F ? "FAILED" 
+        : grade === Grade.W ? "WITHDRAWN"
+        : grade === Grade.I ? "IN_PROGRESS"
+        : "COMPLETED";
+    
     const newEntry = await prisma.transcriptEntry.create({
         data: {
             studentId: profile.id,
@@ -150,7 +160,7 @@ export async function addTranscriptAttempt(input: unknown) {
             title: courseId ? null : title,
             credits: resolvedCredits.credits,
             grade,
-            status: "COMPLETED" satisfies TranscriptStatus,
+            status: status satisfies TranscriptStatus,
             source: grade === Grade.TR ? "TRANSFER" : "NCAT",
             recommendedTermCourseId,
         },

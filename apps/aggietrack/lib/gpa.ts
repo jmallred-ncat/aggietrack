@@ -138,7 +138,7 @@ export function computeHonors(transcript: TranscriptEntry[]): {
     // Skip non-GPA grades (P, TR, I)
     if (QUALITY_POINTS[entry.grade] === null) continue;
     
-    // Count all NC A&T letter-graded attempts (including repeats)
+    // Count all NC A&T letter-graded attempts (including repeats and F)
     const qualityPoints = QUALITY_POINTS[entry.grade] ?? 0;
     totalQualityPoints += qualityPoints * entry.credits;
     totalCredits += entry.credits;

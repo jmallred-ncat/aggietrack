@@ -41,14 +41,18 @@ export function isCompletionGrade(value: string): value is Grade {
 /** Label shown on the course row. Never the stored enum, such as A_MINUS. */
 export function completionGradeLabel(grade: string | null): string {
     if (grade && isCompletionGrade(grade)) {
+        // Show clear label for Incomplete grades
+        if (grade === Grade.I) {
+            return "Incomplete (I)";
+        }
         return gradeLabel(grade);
     }
     return "Grade";
 }
 
-/** A recorded completion can be cleared even when it is the only attempt. */
+/** A recorded completion can be cleared even when it is the only attempt. FAILED and WITHDRAWN can also be cleared. */
 export function canClearAttempt(attempt: { status: string }): boolean {
-    return attempt.status === "COMPLETED";
+    return attempt.status === "COMPLETED" || attempt.status === "FAILED" || attempt.status === "WITHDRAWN";
 }
 
 /**
@@ -72,9 +76,11 @@ export type CompletionRow = {
     status: "" | "complete" | "transfer";
 };
 
-/** The grade menu is showing only while a completed attempt is on the row. */
+/** The grade menu is showing when a completed, failed, or withdrawn attempt is on the row. */
 export function completionRowMode(row: Pick<CompletionRow, "attempts">): "menu" | "checkmark" {
-    return row.attempts.some((attempt) => attempt.status === "COMPLETED") ? "menu" : "checkmark";
+    return row.attempts.some((attempt) => 
+        attempt.status === "COMPLETED" || attempt.status === "FAILED" || attempt.status === "WITHDRAWN"
+    ) ? "menu" : "checkmark";
 }
 
 /** Drop a cleared attempt. The last one returns the row to an empty checkmark. */

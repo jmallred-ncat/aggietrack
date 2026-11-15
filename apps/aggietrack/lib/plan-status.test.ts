@@ -61,7 +61,11 @@ test("an approved plan is in progress before its term starts", () => {
     assert.match(review, /Registration confirmed\./);
     assert.doesNotMatch(review, /These courses are in progress/);
     assert.doesNotMatch(review, /readOnly/);
-    assert.match(progress, /attempts\.some\(\(attempt\) => attempt\.status === "IN_PROGRESS"\)/);
+    // Check that showAttempts includes IN_PROGRESS, FAILED, and WITHDRAWN attempts
+    assert.match(progress, /attempts\.some\(\(attempt\) =>/);
+    assert.match(progress, /attempt\.status === "IN_PROGRESS"/);
+    assert.match(progress, /attempt\.status === "FAILED"/);
+    assert.match(progress, /attempt\.status === "WITHDRAWN"/);
 });
 
 test("only draft and returned plans can be edited", () => {

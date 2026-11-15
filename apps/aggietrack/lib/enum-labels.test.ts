@@ -44,8 +44,8 @@ test("grade labels are correct", () => {
   assert.equal(gradeLabel(Grade.D_PLUS), "D+");
   assert.equal(gradeLabel(Grade.D), "D");
   assert.equal(gradeLabel(Grade.F), "F");
-  assert.equal(gradeLabel(Grade.P), "P");
-  assert.equal(gradeLabel(Grade.TR), "TR");
-  assert.equal(gradeLabel(Grade.W), "W");
-  assert.equal(gradeLabel(Grade.I), "I");
+  assert.equal(gradeLabel(Grade.P), "Pass (P)");
+  assert.equal(gradeLabel(Grade.TR), "Transfer credit (TR)");
+  assert.equal(gradeLabel(Grade.W), "Withdrawn (W)");
+  assert.equal(gradeLabel(Grade.I), "Incomplete (I)");
 });

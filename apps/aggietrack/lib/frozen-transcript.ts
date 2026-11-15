@@ -17,12 +17,20 @@ export type PlannedAttempt = FrozenCourse & {
 function attempt(
   course: FrozenCourse,
   grade: Grade | null,
-  status: TranscriptStatus = TranscriptStatus.COMPLETED,
+  status?: TranscriptStatus,
 ): PlannedAttempt {
+  // Determine status from grade if not explicitly provided
+  const finalStatus = status ?? (
+    grade === Grade.F ? TranscriptStatus.FAILED 
+    : grade === Grade.W ? TranscriptStatus.WITHDRAWN 
+    : grade === Grade.I ? TranscriptStatus.IN_PROGRESS 
+    : TranscriptStatus.COMPLETED
+  );
+  
   return {
     ...course,
-    grade: status === TranscriptStatus.IN_PROGRESS ? null : grade,
-    status,
+    grade, // Keep the grade visible (including I for in-progress)
+    status: finalStatus,
     source: grade === Grade.TR ? TranscriptSource.TRANSFER : TranscriptSource.NCAT,
     outsidePlan: false,
     entered: null,
@@ -161,11 +169,13 @@ const ALEX: Record<string, Grade> = {
 };
 
 function fromTable(courses: FrozenCourse[], table: Record<string, Grade>, inProgressFrom?: number) {
-  return courses.map(course => attempt(
-    course,
-    inProgressFrom != null && course.sequence >= inProgressFrom ? null : requireGrade(table, codeOf(course)),
-    inProgressFrom != null && course.sequence >= inProgressFrom ? TranscriptStatus.IN_PROGRESS : TranscriptStatus.COMPLETED,
-  ));
+  return courses.map(course => {
+    const isInProgress = inProgressFrom != null && course.sequence >= inProgressFrom;
+    const grade = isInProgress ? null : requireGrade(table, codeOf(course));
+    // Pass explicit IN_PROGRESS status for in-progress courses
+    // For completed courses, omit status to use automatic mapping (F→FAILED, W→WITHDRAWN, etc.)
+    return attempt(course, grade, isInProgress ? TranscriptStatus.IN_PROGRESS : undefined);
+  });
 }
 
 function withRetake(courses: FrozenCourse[], table: Record<string, Grade>, code: string, first: Grade, second: Grade) {

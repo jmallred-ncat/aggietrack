@@ -18,10 +18,10 @@ export function gradeLabel(grade: Grade | null): string {
     [Grade.D_PLUS]: "D+",
     [Grade.D]: "D",
     [Grade.F]: "F",
-    [Grade.P]: "P",
-    [Grade.TR]: "TR",
-    [Grade.W]: "W",
-    [Grade.I]: "I",
+    [Grade.P]: "Pass (P)",
+    [Grade.TR]: "Transfer credit (TR)",
+    [Grade.W]: "Withdrawn (W)",
+    [Grade.I]: "Incomplete (I)",
   };
   
   return labels[grade];

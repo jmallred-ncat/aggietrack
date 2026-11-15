@@ -155,7 +155,7 @@ export function testStudentByEmail(email: string) {
   return testAccountCards.find(account => account.email === normalized) ?? null;
 }
 
-export function aggietrackRequest(path: "/api/test-students/ensure" | "/api/test-students/reset" | "/api/test-students/reset-plan-notes" | "/api/test-students/load-fixture" | "/api/test-students/write-fault", config: { origin: string; secret: string }, email?: string, extra?: Record<string, unknown>) {
+export function aggietrackRequest(path: "/api/test-students/ensure" | "/api/test-students/reset" | "/api/test-students/reset-plan-notes" | "/api/test-students/load-fixture" | "/api/test-students/write-fault" | "/api/test-students/stats", config: { origin: string; secret: string }, email?: string, extra?: Record<string, unknown>) {
   return new Request(new URL(path, config.origin), {
     method: "POST",
     headers: { Authorization: `Bearer ${config.secret}`, "Content-Type": "application/json" },
@@ -164,7 +164,7 @@ export function aggietrackRequest(path: "/api/test-students/ensure" | "/api/test
   });
 }
 
-export async function callAggieTrack(path: "/api/test-students/ensure" | "/api/test-students/reset" | "/api/test-students/reset-plan-notes" | "/api/test-students/load-fixture" | "/api/test-students/write-fault", email?: string, extra?: Record<string, unknown>) {
+export async function callAggieTrack(path: "/api/test-students/ensure" | "/api/test-students/reset" | "/api/test-students/reset-plan-notes" | "/api/test-students/load-fixture" | "/api/test-students/write-fault" | "/api/test-students/stats", email?: string, extra?: Record<string, unknown>) {
   const config = testStudentConfig();
   if (!config.ready) throw new Error("Set TEST_STUDENT_PASSWORD and TEST_STUDENT_RESET_SECRET on this site and on AggieTrack. Leave them unset on the live site.");
   const student = email ? testStudentByEmail(email) : null;

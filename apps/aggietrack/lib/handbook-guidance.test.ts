@@ -151,8 +151,8 @@ test("spring planning does not list CST 231 as a course that can be added", () =
         offeredIn: [...webSystems.offeredIn],
         prerequisiteGroups: [{ isConcurrent: false, optionIds: [] }],
     };
-    const spring = selectPlannableCourses([course], TermSeason.SPRING, new Set(), new Set(), new Set());
-    const fall = selectPlannableCourses([course], TermSeason.FALL, new Set(), new Set(), new Set());
+    const spring = selectPlannableCourses([course], TermSeason.SPRING, new Set(), new Set(), new Set(), new Set());
+    const fall = selectPlannableCourses([course], TermSeason.FALL, new Set(), new Set(), new Set(), new Set());
     assert.deepEqual(spring.map((row) => row.number), []);
     assert.deepEqual(fall.map((row) => row.number), ["231"]);
 });

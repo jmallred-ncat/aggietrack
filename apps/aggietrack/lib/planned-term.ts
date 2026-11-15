@@ -27,7 +27,7 @@ export async function courseStandingBefore(
                 courseId: { not: null },
                 status: { in: ["IN_PROGRESS", "COMPLETED"] },
             },
-            select: { courseId: true, status: true, source: true },
+            select: { courseId: true, status: true, source: true, grade: true },
         }),
         db.plannedCourse.findMany({
             where: {
@@ -45,6 +45,8 @@ export async function courseStandingBefore(
     const completedSources = new Map<string, TranscriptSource>();
     for (const entry of entries) {
         if (!entry.courseId) continue;
+        // Exclude Incomplete (grade I with IN_PROGRESS status) from satisfying prerequisites
+        if (entry.status === "IN_PROGRESS" && entry.grade === "I") continue;
         satisfied.add(entry.courseId);
         if (entry.status !== "COMPLETED") continue;
         completed.add(entry.courseId);
@@ -294,7 +296,7 @@ export async function getCatalogCourses() {
 
 export async function getPlannableCourses(term: { id: string; season: TermSeason; startsOn: Date }) {
     const profile = await requireStudentProfile();
-    const [courses, satisfied, planned] = await Promise.all([
+    const [courses, satisfied, planned, transcript] = await Promise.all([
         prisma.course.findMany({
             select: {
                 ...courseSelect,
@@ -315,12 +317,29 @@ export async function getPlannableCourses(term: { id: string; season: TermSeason
             where: { plannedTerm: { studentId: profile.id } },
             select: { courseId: true, plannedTerm: { select: { termId: true } } },
         }),
+        prisma.transcriptEntry.findMany({
+            where: { studentId: profile.id, courseId: { not: null } },
+            select: { courseId: true, status: true, grade: true },
+        }),
     ]);
     const onThisPlan = new Set(
         planned.filter((row) => row.plannedTerm.termId === term.id).map((row) => row.courseId),
     );
     const onAnotherPlan = new Set(
         planned.filter((row) => row.plannedTerm.termId !== term.id).map((row) => row.courseId),
+    );
+    // Only exclude courses that block planning: COMPLETED, ordinary IN_PROGRESS, and Incomplete (I)
+    // FAILED and WITHDRAWN remain plannable for retakes
+    const onTranscript = new Set(
+        transcript
+            .filter((entry) => {
+                if (entry.status === "COMPLETED") return true;
+                if (entry.status === "IN_PROGRESS" && entry.grade !== "I") return true;
+                if (entry.status === "IN_PROGRESS" && entry.grade === "I") return true;
+                return false;
+            })
+            .map((entry) => entry.courseId)
+            .filter((id): id is string => id !== null),
     );
 
     return selectPlannableCourses(
@@ -344,5 +363,6 @@ export async function getPlannableCourses(term: { id: string; season: TermSeason
         satisfied,
         onThisPlan,
         onAnotherPlan,
+        onTranscript,
     ).map(({ id, subject, number, title, credits }) => ({ id, subject, number, title, credits }));
 }

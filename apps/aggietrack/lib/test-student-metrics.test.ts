@@ -6,7 +6,7 @@ import { cstCatalogCourses } from "../prisma/seed/cst-catalog";
 import { gecAttributes, gecCourses } from "../prisma/seed/gec";
 import { info2025 } from "../prisma/seed/info-2025";
 import { mgmtCourses } from "../prisma/seed/mgmt";
-import { Grade } from "./generated/prisma/client";
+import { Grade, TranscriptSource } from "./generated/prisma/client";
 import { plannedAttempts, type PlannedAttempt } from "./frozen-transcript";
 import { computeGpa, computeHonors } from "./gpa";
 import { slotIsUnfilled } from "./progress-slots";
@@ -116,6 +116,7 @@ function handCalculation(student: TestStudent) {
   let cumulativeHours = 0;
   let adjustedTenths = 0;
   let adjustedHours = 0;
+  let residentHours = 0;
 
   for (const [code, rows] of byCourse) {
     const counting = rows.filter(row => {
@@ -131,7 +132,8 @@ function handCalculation(student: TestStudent) {
       progressByGroup.set(group.id, (progressByGroup.get(group.id) ?? 0) + best.credits);
     }
 
-    const graded = rows.filter(row => row.status === "COMPLETED" && row.grade && QUALITY_TENTHS[row.grade] != null);
+    // Cumulative GPA: best letter grade per course (includes F if no passing attempt, excludes W)
+    const graded = rows.filter(row => row.status !== "IN_PROGRESS" && row.grade && row.grade !== Grade.W && QUALITY_TENTHS[row.grade] != null);
     if (graded.length > 0) {
       const best = [...graded].sort((left, right) => {
         const delta = (QUALITY_TENTHS[right.grade!] ?? 0) - (QUALITY_TENTHS[left.grade!] ?? 0);
@@ -141,10 +143,16 @@ function handCalculation(student: TestStudent) {
       cumulativeHours += best.credits;
     }
 
+    // Adjusted GPA: all NC A&T letter-graded attempts except W (including F and repeats)
     for (const row of rows) {
-      if (row.status !== "COMPLETED" || !row.grade || QUALITY_TENTHS[row.grade] == null) continue;
+      if (row.status === "IN_PROGRESS" || !row.grade || QUALITY_TENTHS[row.grade] == null) continue;
+      if (row.grade === Grade.W) continue;
       adjustedTenths += (QUALITY_TENTHS[row.grade] ?? 0) * row.credits;
       adjustedHours += row.credits;
+      // Resident hours: non-transfer letter-graded attempts (including F, excluding W)
+      if (row.source !== TranscriptSource.TRANSFER) {
+        residentHours += row.credits;
+      }
     }
   }
 
@@ -158,7 +166,7 @@ function handCalculation(student: TestStudent) {
     percentage: percentage(progressCredits),
     gpa: roundedGpa(cumulativeTenths, cumulativeHours),
     adjusted: roundedGpa(adjustedTenths, adjustedHours),
-    resident: adjustedHours,
+    resident: residentHours,
   };
 }
 

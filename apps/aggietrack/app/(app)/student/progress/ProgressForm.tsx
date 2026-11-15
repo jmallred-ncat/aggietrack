@@ -20,7 +20,7 @@ import { Controller, useForm, useWatch } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
 import { confirmNoPriorCoursework, saveTranscriptProgress } from "./actions";
-import { CourseAttempts } from "./CourseAttempts";
+import { CourseAttempts, getInProgressBadgeText } from "./CourseAttempts";
 
 const courseStatuses = [
     { value: "complete", label: "Complete", icon: CheckCircleIcon },
@@ -47,42 +47,47 @@ const slotSchema = z.object({
     status: statusSchema,
 });
 
-const formSchema = z.object({
-    standing: standingSchema,
-    courses: z.record(z.string(), statusSchema),
-    slots: z.record(z.string(), slotSchema),
-}).superRefine((data, ctx) => {
-    for (const [id, slot] of Object.entries(data.slots)) {
-        const entered = !slot.courseId && Boolean(slot.subject || slot.number);
-        if ((slot.courseId || entered) && !slot.status) {
-            ctx.addIssue({
-                code: "custom",
-                path: ["slots", id, "status"],
-                message: "Choose complete or transfer for this course.",
-            });
+function createFormSchema(inProgressSlotIds: string[]) {
+    const inProgressSlots = new Set(inProgressSlotIds);
+    return z.object({
+        standing: standingSchema,
+        courses: z.record(z.string(), statusSchema),
+        slots: z.record(z.string(), slotSchema),
+    }).superRefine((data, ctx) => {
+        for (const [id, slot] of Object.entries(data.slots)) {
+            const entered = !slot.courseId && Boolean(slot.subject || slot.number);
+            // Skip validation for slots with existing IN_PROGRESS entries
+            const isInProgress = inProgressSlots.has(id);
+            if ((slot.courseId || entered) && !slot.status && !isInProgress) {
+                ctx.addIssue({
+                    code: "custom",
+                    path: ["slots", id, "status"],
+                    message: "Choose complete or transfer for this course.",
+                });
+            }
+            if (!entered) {
+                continue;
+            }
+            if (!slot.title.trim()) {
+                ctx.addIssue({
+                    code: "custom",
+                    path: ["slots", id, "title"],
+                    message: "Enter the course title.",
+                });
+            }
+            const credits = Number(slot.credits);
+            if (!Number.isInteger(credits) || credits < 1 || credits > 6) {
+                ctx.addIssue({
+                    code: "custom",
+                    path: ["slots", id, "credits"],
+                    message: "Enter credit hours from 1 to 6.",
+                });
+            }
         }
-        if (!entered) {
-            continue;
-        }
-        if (!slot.title.trim()) {
-            ctx.addIssue({
-                code: "custom",
-                path: ["slots", id, "title"],
-                message: "Enter the course title.",
-            });
-        }
-        const credits = Number(slot.credits);
-        if (!Number.isInteger(credits) || credits < 1 || credits > 6) {
-            ctx.addIssue({
-                code: "custom",
-                path: ["slots", id, "credits"],
-                message: "Enter credit hours from 1 to 6.",
-            });
-        }
-    }
-});
+    });
+}
 
-type ProgressFormValues = z.infer<typeof formSchema>;
+type ProgressFormValues = z.infer<ReturnType<typeof createFormSchema>>;
 type SlotValue = z.infer<typeof slotSchema>;
 
 export const emptySlotValue: SlotValue = {
@@ -799,6 +804,7 @@ export default function ProgressForm({
     }>({ courses: {}, slots: {} });
     const [releasedRows, setReleasedRows] = useState<Record<string, true>>({});
     const restoredDefaults = useRef<Array<{ kind: "course"; courseId: string } | { kind: "slot"; slotId: string; value: SlotValue }>>([]);
+    const formSchema = createFormSchema(inProgressSlotIds);
     const form = useForm<ProgressFormValues>({
         resolver: zodResolver(formSchema),
         defaultValues: { standing, courses: defaultCourses, slots: defaultSlots },
@@ -1043,7 +1049,9 @@ export default function ProgressForm({
                                             );
                                             const listKey = attemptListKey(attempts);
                                             const showCompleted = completionRowMode({ attempts }) === "menu";
-                                            const showAttempts = showCompleted || attempts.some((attempt) => attempt.status === "IN_PROGRESS");
+                                            const showAttempts = showCompleted || attempts.some((attempt) => 
+                                                attempt.status === "IN_PROGRESS" || attempt.status === "FAILED" || attempt.status === "WITHDRAWN"
+                                            );
                                             const slotSelection = row.kind === "slot" ? watchedSlots?.[row.id] : undefined;
                                             const slotCourse =
                                                 row.kind === "slot" && slotSelection?.courseId
@@ -1065,11 +1073,19 @@ export default function ProgressForm({
                                                     {/* Desktop: single row with centered items */}
                                                     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
                                                         {/* Course info */}
-                                                        <div className="flex min-w-0 items-center gap-2 text-sm font-medium">
+                                                        <div className="flex min-w-0 items-start gap-2 text-sm font-medium sm:items-center">
                                                             {row.kind === "course" ? (
                                                                 <>
                                                                     <Badge className="shrink-0 font-mono">{row.subject} {row.number}</Badge>
                                                                     <span className="min-w-0 whitespace-normal">{row.title}</span>
+                                                                    {(() => {
+                                                                        const badgeText = getInProgressBadgeText(attempts);
+                                                                        return badgeText ? (
+                                                                            <Badge variant="secondary" className="px-3 text-xs sm:hidden">
+                                                                                {badgeText}
+                                                                            </Badge>
+                                                                        ) : null;
+                                                                    })()}
                                                                 </>
                                                             ) : (
                                                                 <>
@@ -1081,6 +1097,14 @@ export default function ProgressForm({
                                                                         <Badge variant="outline" className="shrink-0 font-mono">{row.badge}</Badge>
                                                                     ) : null}
                                                                     <span className="min-w-0 whitespace-normal">{slotCourse?.title ?? enteredCourse?.title ?? row.title}</span>
+                                                                    {(() => {
+                                                                        const badgeText = getInProgressBadgeText(attempts);
+                                                                        return badgeText ? (
+                                                                            <Badge variant="secondary" className="px-3 text-xs sm:hidden">
+                                                                                {badgeText}
+                                                                            </Badge>
+                                                                        ) : null;
+                                                                    })()}
                                                                 </>
                                                             )}
                                                         </div>
@@ -1237,10 +1261,22 @@ export default function ProgressForm({
                                 }
                                 return (
                                     <div key={`${course.subject} ${course.number}`} className="not-typeset flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
-                                        <div className="flex min-w-0 items-center gap-2 text-sm font-medium">
-                                            <Badge className="shrink-0 font-mono">{course.subject} {course.number}</Badge>
-                                            <span className="min-w-0 truncate">{course.title}</span>
-                                            <span className="shrink-0 text-muted-foreground">{course.credits} credits</span>
+                                        <div className="flex min-w-0 flex-col gap-1 text-sm font-medium sm:flex-row sm:items-center sm:gap-2">
+                                            <div className="flex min-w-0 items-start gap-2">
+                                                <Badge className="shrink-0 font-mono">{course.subject} {course.number}</Badge>
+                                                <span className="min-w-0 flex-1 whitespace-normal sm:flex-none sm:truncate">{course.title}</span>
+                                            </div>
+                                            <div className="flex flex-wrap items-center gap-2">
+                                                <span className="shrink-0 text-muted-foreground">{course.credits} credits</span>
+                                                {(() => {
+                                                    const badgeText = getInProgressBadgeText(attempts);
+                                                    return badgeText ? (
+                                                        <Badge variant="secondary" className="px-3 text-xs sm:hidden">
+                                                            {badgeText}
+                                                        </Badge>
+                                                    ) : null;
+                                                })()}
+                                            </div>
                                         </div>
                                         {course.courseId ? (
                                             <CourseAttempts
