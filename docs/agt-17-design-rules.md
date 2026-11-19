@@ -130,7 +130,7 @@ Use these strings verbatim unless a later Wanda review amends them. `{Name}` is 
 34. Student title: **Advising**. Advisor title: **Appointments**.
 35. Student assigned intro: **Your advisor is {Name}.**
 36. Shared zone helper: **Times are shown in Eastern Time (EST or EDT).**
-37. Book section title: **Book a session**. Book section helper: **Each session is {n} minutes. Times are in Eastern Time.**
+37. Book section title: **Book a session**.
 38. Upcoming section title: **Upcoming sessions**. Canceled: **Canceled sessions**. Past: **Past sessions**.
 39. Advisor length title: **Session length**. Availability title: **Availability**.
 
@@ -497,7 +497,7 @@ These sections replace rules 24, 37, 135, 136, and the slot clauses of 180 and 1
 
 ### S4. Helper line and time zone
 
-1. The page keeps rule 36 in the header. The Book section uses the helper "All times are in Eastern Time." (rule 37 above).
+1. The page keeps rule 36 in the header: "Times are shown in Eastern Time (EST or EDT)."
 2. The reschedule description ends "...Choose another open time with {advisorName}. All times are in Eastern Time." Its first sentence still states the current session as a full timestamp with EST or EDT.
 3. Keep the overflow hint from the earlier review, "{n} open times. Scroll to see them all.", shown only when the list overflows.
 

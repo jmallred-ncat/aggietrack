@@ -28,10 +28,6 @@ export type StudentActions = {
     choices: (sessionId: string) => Promise<OpenSlotChoice[]>;
 };
 
-function timeZoneHelper() {
-    return "All times are in Eastern Time.";
-}
-
 export function StudentBoard({
     view,
     actions,
@@ -134,6 +130,11 @@ export function StudentBoard({
         }
     }, [view.upcoming]);
 
+    // Cleanup focus timeout on unmount
+    useEffect(() => () => {
+        if (focusTimeoutRef.current) clearTimeout(focusTimeoutRef.current);
+    }, []);
+
     function setPendingFocus(sessionId: string) {
         pendingFocusRef.current = sessionId;
         // Last-resort timeout: focus heading if card hasn't appeared after 3s
@@ -198,10 +199,7 @@ export function StudentBoard({
 
             {view.advisorName ? (
                 <section className="flex flex-col gap-4">
-                    <header className="space-y-2">
-                        <h2 className="text-2xl font-bold">Book a session</h2>
-                        <p className="text-sm text-muted-foreground">{timeZoneHelper()}</p>
-                    </header>
+                    <h2 className="text-2xl font-bold">Book a session</h2>
                     {view.slots.length === 0 ? (
                         <Empty className="border border-dashed">
                             <EmptyHeader>
