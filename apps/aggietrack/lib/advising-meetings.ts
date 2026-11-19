@@ -260,6 +260,7 @@ function toSlot(slot: { id: string; startsAt: Date; endsAt: Date; durationMinute
     return {
         id: slot.id,
         dateHeading: stamp.dateHeading,
+        pickerHeading: stamp.pickerHeading,
         dateTime,
         slotLabel: stamp.slotLabel,
         startTime: stamp.startTime,

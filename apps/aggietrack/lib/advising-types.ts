@@ -41,6 +41,7 @@ export type MeetingCard = {
 export type OpenSlotChoice = {
     id: string;
     dateHeading: string;
+    pickerHeading: string;
     dateTime: string;
     slotLabel: string;
     startTime: string;

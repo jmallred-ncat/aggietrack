@@ -46,7 +46,8 @@ const confirmed: MeetingCard = {
 
 const slot = (id: string, label: string, minutes: number, accessible: string, startTime: string): OpenSlotChoice => ({
     id,
-    dateHeading: "Tuesday, November 10",
+    dateHeading: "Tuesday, November 10, 2026",
+    pickerHeading: "Tuesday, November 10",
     dateTime: "2026-11-10",
     slotLabel: label,
     startTime,

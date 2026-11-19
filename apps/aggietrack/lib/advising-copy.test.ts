@@ -11,6 +11,7 @@ function slot(id: string, heading: string, label: string, accessible: string, da
     return {
         id,
         dateHeading: heading,
+        pickerHeading: heading.replace(/, \d{4}$/, ""), // Remove year
         dateTime,
         slotLabel: label,
         startTime,

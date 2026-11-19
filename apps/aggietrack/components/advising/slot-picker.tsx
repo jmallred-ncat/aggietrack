@@ -1,5 +1,4 @@
 import { Button } from "@/components/ui/button";
-import type { ReactNode } from "react";
 
 export type SlotChoice = {
     id: string;
@@ -21,23 +20,29 @@ export function SlotPicker({
     onSelect,
     disabled = false,
     stickyHeadings = false,
+    variant = "page",
 }: {
     groups: SlotGroup[];
     selected?: string;
     onSelect: (id: string) => void;
     disabled?: boolean;
     stickyHeadings?: boolean;
+    variant?: "page" | "dialog";
 }) {
+    const gridClass = variant === "dialog" 
+        ? "grid grid-cols-[repeat(auto-fill,minmax(7.5rem,1fr))] gap-2"
+        : "grid grid-cols-[repeat(auto-fill,minmax(9rem,1fr))] gap-2";
+    
     return (
         <div className="space-y-6">
             {groups.map((group) => (
                 <div key={group.heading} className="space-y-2">
                     <h3
-                        className={`text-base font-semibold text-foreground ${stickyHeadings ? "sticky top-0 z-10 bg-background py-1" : ""}`}
+                        className={`text-base font-semibold text-foreground ${stickyHeadings ? "sticky -top-2 z-10 bg-background py-1" : ""}`}
                     >
                         <time dateTime={group.dateTime}>{group.heading}</time>
                     </h3>
-                    <div className="grid grid-cols-[repeat(auto-fill,minmax(9rem,1fr))] gap-2">
+                    <div className={gridClass}>
                         {group.slots.map((slot) => (
                             <Button
                                 key={slot.id}
@@ -45,7 +50,9 @@ export function SlotPicker({
                                 variant={selected === slot.id ? "default" : "outline"}
                                 disabled={disabled}
                                 aria-label={slot.accessibleName}
+                                aria-pressed={selected === slot.id}
                                 onClick={() => onSelect(slot.id)}
+                                data-slot-id={slot.id}
                                 className={`
                                     group min-h-16 w-full flex-col items-center justify-center gap-0.5 rounded-lg px-3 py-3 text-center
                                     ${selected === slot.id

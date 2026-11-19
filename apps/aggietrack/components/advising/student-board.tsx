@@ -56,12 +56,13 @@ export function StudentBoard({
     const [showTopFade, setShowTopFade] = useState(false);
     const [showBottomFade, setShowBottomFade] = useState(false);
     const scrollRef = useRef<HTMLDivElement>(null);
+    const selectedSlotRef = useRef<HTMLButtonElement>(null);
 
     const groups = new Map<string, OpenSlotChoice[]>();
     for (const slot of view.slots) {
-        const list = groups.get(slot.dateHeading) ?? [];
+        const list = groups.get(slot.pickerHeading) ?? [];
         list.push(slot);
-        groups.set(slot.dateHeading, list);
+        groups.set(slot.pickerHeading, list);
     }
 
     // Measure overflow and scroll position for reschedule dialog
@@ -188,6 +189,7 @@ export function StudentBoard({
                                     setDialogAlert(null);
                                 }
                             }}
+                            disabled={flow.pending !== null}
                         />
                     )}
                 </section>
@@ -213,7 +215,19 @@ export function StudentBoard({
                 </section>
             ) : null}
 
-            <AlertDialog open={selected !== null} onOpenChange={(open) => { if (!open) setSelected(null); }}>
+            <AlertDialog open={selected !== null} onOpenChange={(open) => { 
+                if (!open) {
+                    const slotId = selected?.id;
+                    setSelected(null);
+                    if (slotId) {
+                        // Refocus the slot button after dialog closes
+                        setTimeout(() => {
+                            const button = document.querySelector(`[data-slot-id="${slotId}"]`) as HTMLButtonElement;
+                            button?.focus();
+                        }, 0);
+                    }
+                }
+            }}>
                 <MeetingAlertContent>
                     <MeetingHeader>
                         <AlertDialogTitle className="text-lg font-semibold leading-tight">Book this session?</AlertDialogTitle>
@@ -329,9 +343,9 @@ export function StudentBoard({
                                     groups={(() => {
                                         const rescheduleGroups = new Map<string, OpenSlotChoice[]>();
                                         for (const slot of choices) {
-                                            const list = rescheduleGroups.get(slot.dateHeading) ?? [];
+                                            const list = rescheduleGroups.get(slot.pickerHeading) ?? [];
                                             list.push(slot);
-                                            rescheduleGroups.set(slot.dateHeading, list);
+                                            rescheduleGroups.set(slot.pickerHeading, list);
                                         }
                                         return [...rescheduleGroups.entries()].map(([heading, slots]): SlotGroup => ({
                                             heading,
@@ -348,6 +362,8 @@ export function StudentBoard({
                                     selected={nextSlot}
                                     onSelect={(id) => setNextSlot(id)}
                                     stickyHeadings={true}
+                                    variant="dialog"
+                                    disabled={flow.pending !== null}
                                 />
                             )}
                         </div>
