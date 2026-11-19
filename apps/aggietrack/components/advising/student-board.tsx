@@ -4,6 +4,7 @@ import { MeetingAlert, MeetingPending } from "@/components/advising/meeting-stat
 import { MeetingAlertContent, MeetingFooter, MeetingHeader, meetingButtonClass } from "@/components/advising/meeting-dialog";
 import { MeetingStamp } from "@/components/advising/meeting-time";
 import { SessionCard } from "@/components/advising/session-card";
+import { SlotPicker, type SlotGroup } from "@/components/advising/slot-picker";
 import { useMeetingAction } from "@/components/advising/use-meeting-action";
 import { DismissibleAlert } from "@/components/dismissible-alert";
 import {
@@ -27,12 +28,8 @@ export type StudentActions = {
     choices: (sessionId: string) => Promise<OpenSlotChoice[]>;
 };
 
-function lengthHelper(view: StudentAdvisingView) {
-    const saved = view.sessionMinutes ?? 30;
-    const visible = [...view.slots, ...view.upcoming].map((item) => item.durationMinutes);
-    const mixed = visible.some((minutes) => minutes !== saved);
-    if (mixed) return "Session length is shown on each time.";
-    return `Each session is ${saved} minutes.`;
+function timeZoneHelper() {
+    return "All times are in Eastern Time.";
 }
 
 export function StudentBoard({
@@ -156,7 +153,7 @@ export function StudentBoard({
                 <section className="flex flex-col gap-4">
                     <header className="space-y-2">
                         <h2 className="text-2xl font-bold">Book a session</h2>
-                        <p className="text-sm text-muted-foreground">{lengthHelper(view)}</p>
+                        <p className="text-sm text-muted-foreground">{timeZoneHelper()}</p>
                     </header>
                     {view.slots.length === 0 ? (
                         <Empty className="border border-dashed">
@@ -170,26 +167,28 @@ export function StudentBoard({
                             </EmptyHeader>
                         </Empty>
                     ) : (
-                        [...groups.entries()].map(([heading, slots]) => (
-                            <div key={heading} className="flex flex-col gap-2">
-                                <h3 className="text-base font-medium">{heading}</h3>
-                                <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
-                                    {slots.map((slot) => (
-                                        <Button
-                                            key={slot.id}
-                                            type="button"
-                                            variant={selected?.id === slot.id ? "default" : "outline"}
-                                            className="h-11 min-w-0 flex-col whitespace-normal sm:h-auto sm:min-h-11"
-                                            aria-label={`${slot.accessibleName}, ${slot.durationLabel}`}
-                                            onClick={() => { setSelected(slot); setTopic(""); setDialogAlert(null); }}
-                                        >
-                                            <span className="whitespace-nowrap">{slot.slotLabel}</span>
-                                            <span className="tabular-nums">{slot.durationLabel}</span>
-                                        </Button>
-                                    ))}
-                                </div>
-                            </div>
-                        ))
+                        <SlotPicker
+                            groups={[...groups.entries()].map(([heading, slots]): SlotGroup => ({
+                                heading,
+                                dateTime: slots[0]?.dateTime ?? "",
+                                slots: slots.map(slot => ({
+                                    id: slot.id,
+                                    dateHeading: slot.dateHeading,
+                                    startTime: slot.startTime,
+                                    durationLabel: slot.durationLabel,
+                                    accessibleName: slot.accessibleName,
+                                })),
+                            }))}
+                            selected={selected?.id}
+                            onSelect={(id) => {
+                                const slot = view.slots.find(s => s.id === id);
+                                if (slot) {
+                                    setSelected(slot);
+                                    setTopic("");
+                                    setDialogAlert(null);
+                                }
+                            }}
+                        />
                     )}
                 </section>
             ) : (
@@ -298,7 +297,7 @@ export function StudentBoard({
                     <MeetingHeader>
                         <AlertDialogTitle className="text-lg font-semibold leading-tight">Pick a new time</AlertDialogTitle>
                         <AlertDialogDescription className="text-sm text-muted-foreground">
-                            Your current session is <MeetingStamp value={moving?.fullTimestamp ?? ""} />. Choose another open time with {moving?.personName}.
+                            Your current session is <MeetingStamp value={moving?.fullTimestamp ?? ""} />. Choose another open time with {moving?.personName}. All times are in Eastern Time.
                         </AlertDialogDescription>
                     </MeetingHeader>
                     <div className="flex min-h-0 flex-col gap-4 px-6 pb-4">
@@ -313,7 +312,7 @@ export function StudentBoard({
                             ) : null}
                             <div 
                                 ref={scrollRef}
-                                className="flex max-h-64 min-h-0 flex-col gap-2 overflow-y-auto rounded-lg border bg-muted/30 p-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                                className="max-h-64 min-h-0 overflow-y-auto rounded-lg border bg-muted/30 p-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                                 tabIndex={choices.length > 0 ? 0 : undefined}
                                 role={choices.length > 0 ? "region" : undefined}
                                 aria-label={choices.length > 0 ? "Open times" : undefined}
@@ -325,16 +324,32 @@ export function StudentBoard({
                                         <EmptyDescription>Cancel this session, or wait for your advisor to add more times.</EmptyDescription>
                                     </EmptyHeader>
                                 </Empty>
-                            ) : choices.map((slot) => (
-                                <Button key={slot.id} type="button" variant={nextSlot === slot.id ? "default" : "outline"} className="h-auto min-h-11 flex-col items-start gap-1 whitespace-normal px-4 py-2 text-left" aria-label={slot.accessibleName} onClick={() => setNextSlot(slot.id)}>
-                                    <span className="font-medium">{slot.dateHeading}</span>
-                                    <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
-                                        <span className="whitespace-nowrap">{slot.slotLabel}</span>
-                                        <span className="text-muted-foreground tabular-nums">·</span>
-                                        <span className="text-muted-foreground tabular-nums">{slot.durationLabel}</span>
-                                    </div>
-                                </Button>
-                            ))}
+                            ) : (
+                                <SlotPicker
+                                    groups={(() => {
+                                        const rescheduleGroups = new Map<string, OpenSlotChoice[]>();
+                                        for (const slot of choices) {
+                                            const list = rescheduleGroups.get(slot.dateHeading) ?? [];
+                                            list.push(slot);
+                                            rescheduleGroups.set(slot.dateHeading, list);
+                                        }
+                                        return [...rescheduleGroups.entries()].map(([heading, slots]): SlotGroup => ({
+                                            heading,
+                                            dateTime: slots[0]?.dateTime ?? "",
+                                            slots: slots.map(slot => ({
+                                                id: slot.id,
+                                                dateHeading: slot.dateHeading,
+                                                startTime: slot.startTime,
+                                                durationLabel: slot.durationLabel,
+                                                accessibleName: slot.accessibleName,
+                                            })),
+                                        }));
+                                    })()}
+                                    selected={nextSlot}
+                                    onSelect={(id) => setNextSlot(id)}
+                                    stickyHeadings={true}
+                                />
+                            )}
                         </div>
                         {showBottomFade ? (
                             <div className="pointer-events-none absolute bottom-0 left-0 right-0 z-10 h-8 rounded-b-lg bg-gradient-to-t from-background to-transparent" />

@@ -44,10 +44,12 @@ const confirmed: MeetingCard = {
     ],
 };
 
-const slot = (id: string, label: string, minutes: number, accessible: string): OpenSlotChoice => ({
+const slot = (id: string, label: string, minutes: number, accessible: string, startTime: string): OpenSlotChoice => ({
     id,
-    dateHeading: "Tuesday, November 10, 2026",
+    dateHeading: "Tuesday, November 10",
+    dateTime: "2026-11-10",
     slotLabel: label,
+    startTime,
     accessibleName: accessible,
     fullTimestamp: `Tuesday, November 10, 2026, ${label} EST`,
     durationMinutes: minutes,
@@ -59,8 +61,8 @@ export const studentOpen: StudentAdvisingView = {
     advisorName: "Sarah Martinez",
     sessionMinutes: 30,
     slots: [
-        slot("slot-30", "2:00–2:30 PM", 30, "Tuesday, November 10, 2:00 to 2:30 PM Eastern Time"),
-        slot("slot-20", "3:00–3:20 PM", 20, "Tuesday, November 10, 3:00 to 3:20 PM Eastern Time"),
+        slot("slot-30", "2:00–2:30 PM", 30, "Tuesday, November 10, 2:00 to 2:30 PM Eastern Time", "2:00 PM"),
+        slot("slot-20", "3:00–3:20 PM", 20, "Tuesday, November 10, 3:00 to 3:20 PM Eastern Time", "3:00 PM"),
     ],
     upcoming: [],
     canceled: [],

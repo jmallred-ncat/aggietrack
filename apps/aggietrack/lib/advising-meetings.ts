@@ -256,10 +256,13 @@ function toSlot(slot: { id: string; startsAt: Date; endsAt: Date; durationMinute
     const stamp = meetingStamp(slot.startsAt, slot.endsAt);
     const start = easternParts(slot.startsAt);
     const months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+    const dateTime = `${start.year}-${String(start.month).padStart(2, "0")}-${String(start.day).padStart(2, "0")}`;
     return {
         id: slot.id,
         dateHeading: stamp.dateHeading,
+        dateTime,
         slotLabel: stamp.slotLabel,
+        startTime: stamp.startTime,
         accessibleName: `${start.weekday}, ${months[start.month - 1]} ${start.day}, ${stamp.slotLabel.replace("–", " to ")} Eastern Time`,
         fullTimestamp: stamp.full,
         durationMinutes: slot.durationMinutes,

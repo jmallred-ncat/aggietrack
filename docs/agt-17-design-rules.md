@@ -8,6 +8,10 @@
 
 ---
 
+**AMENDMENTS (Nov 18, 2026):** Rules 24, 37, 135, 136, and the slot clauses of 180 and 182 are replaced by sections S1-S6 below. Every other rule stands as written.
+
+---
+
 ## How this gate works
 
 1. **Design approval names evidence and outstanding gaps.** An approval lists the screenshot and interaction files inspected, the rules and acceptance criteria that passed, and anything still open. It never says “looks done.”

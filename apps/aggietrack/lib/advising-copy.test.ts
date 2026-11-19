@@ -7,11 +7,13 @@ import { advisorCancelLabel, advisorCancelSuccess, advisorChangeNoteHelper, advi
 import { personName } from "./plan-status";
 import type { OpenSlotChoice } from "./advising-types";
 
-function slot(id: string, heading: string, label: string, accessible: string): OpenSlotChoice {
+function slot(id: string, heading: string, label: string, accessible: string, dateTime = "2026-12-03", startTime = "4:30 PM"): OpenSlotChoice {
     return {
         id,
         dateHeading: heading,
+        dateTime,
         slotLabel: label,
+        startTime,
         accessibleName: accessible,
         fullTimestamp: `${heading}, ${label} EST`,
         durationMinutes: 30,
