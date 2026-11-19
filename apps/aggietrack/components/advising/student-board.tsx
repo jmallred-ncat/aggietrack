@@ -57,6 +57,8 @@ export function StudentBoard({
     const [showBottomFade, setShowBottomFade] = useState(false);
     const scrollRef = useRef<HTMLDivElement>(null);
     const openerRef = useRef<HTMLElement | null>(null);
+    const pendingFocusRef = useRef<string | null>(null);
+    const focusTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
     const groups = new Map<string, OpenSlotChoice[]>();
     for (const slot of view.slots) {
@@ -104,25 +106,56 @@ export function StudentBoard({
         };
     }, [choices]);
 
+    // Focus session card after successful booking/reschedule
+    useEffect(() => {
+        if (!pendingFocusRef.current) return;
+
+        const sessionId = pendingFocusRef.current;
+        const card = document.getElementById(`session-${sessionId}`);
+        
+        if (card) {
+            card.focus({ preventScroll: false });
+            pendingFocusRef.current = null;
+            if (focusTimeoutRef.current) {
+                clearTimeout(focusTimeoutRef.current);
+                focusTimeoutRef.current = null;
+            }
+            return;
+        }
+
+        const heading = document.getElementById("upcoming-sessions-heading");
+        if (heading) {
+            heading.focus({ preventScroll: false });
+            pendingFocusRef.current = null;
+            if (focusTimeoutRef.current) {
+                clearTimeout(focusTimeoutRef.current);
+                focusTimeoutRef.current = null;
+            }
+        }
+    }, [view.upcoming]);
+
+    function setPendingFocus(sessionId: string) {
+        pendingFocusRef.current = sessionId;
+        // Last-resort timeout: focus heading if card hasn't appeared after 3s
+        if (focusTimeoutRef.current) {
+            clearTimeout(focusTimeoutRef.current);
+        }
+        focusTimeoutRef.current = setTimeout(() => {
+            if (pendingFocusRef.current) {
+                const heading = document.getElementById("upcoming-sessions-heading");
+                heading?.focus({ preventScroll: false });
+                pendingFocusRef.current = null;
+            }
+            focusTimeoutRef.current = null;
+        }, 3000);
+    }
+
     function openReschedule(card: MeetingCard) {
         setMoving(card);
         setMoveNote("");
         setNextSlot("");
         setDialogAlert(null);
         void actions.choices(card.id).then(setChoices);
-    }
-
-    function focusSessionCard(sessionId: string) {
-        // Focus the session card after it renders, or fallback to the heading
-        setTimeout(() => {
-            const card = document.getElementById(`session-${sessionId}`);
-            if (card) {
-                card.focus({ preventScroll: false });
-            } else {
-                const heading = document.getElementById("upcoming-sessions-heading");
-                heading?.focus({ preventScroll: false });
-            }
-        }, 100);
     }
 
     return (
@@ -268,7 +301,7 @@ export function StudentBoard({
                                     async () => {
                                         const result = await actions.book(slot.id, topic);
                                         if (result.ok && result.sessionId) {
-                                            focusSessionCard(result.sessionId);
+                                            setPendingFocus(result.sessionId);
                                         }
                                         return result;
                                     },
@@ -408,7 +441,7 @@ export function StudentBoard({
                                     async () => {
                                         const result = await actions.reschedule(card.id, slotId, moveNote);
                                         if (result.ok) {
-                                            focusSessionCard(card.id);
+                                            setPendingFocus(card.id);
                                         }
                                         return result;
                                     },
