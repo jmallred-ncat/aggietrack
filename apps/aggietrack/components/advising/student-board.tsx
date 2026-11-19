@@ -4,6 +4,7 @@ import { MeetingAlert, MeetingPending } from "@/components/advising/meeting-stat
 import { MeetingAlertContent, MeetingFooter, MeetingHeader, meetingButtonClass } from "@/components/advising/meeting-dialog";
 import { MeetingStamp } from "@/components/advising/meeting-time";
 import { SessionCard } from "@/components/advising/session-card";
+import { SlotPicker, type SlotGroup } from "@/components/advising/slot-picker";
 import { useMeetingAction } from "@/components/advising/use-meeting-action";
 import { DismissibleAlert } from "@/components/dismissible-alert";
 import {
@@ -26,14 +27,6 @@ export type StudentActions = {
     reschedule: (sessionId: string, slotId: string, note: string) => Promise<MeetingResult>;
     choices: (sessionId: string) => Promise<OpenSlotChoice[]>;
 };
-
-function lengthHelper(view: StudentAdvisingView) {
-    const saved = view.sessionMinutes ?? 30;
-    const visible = [...view.slots, ...view.upcoming].map((item) => item.durationMinutes);
-    const mixed = visible.some((minutes) => minutes !== saved);
-    if (mixed) return "Session length is shown on each time.";
-    return `Each session is ${saved} minutes.`;
-}
 
 export function StudentBoard({
     view,
@@ -59,12 +52,15 @@ export function StudentBoard({
     const [showTopFade, setShowTopFade] = useState(false);
     const [showBottomFade, setShowBottomFade] = useState(false);
     const scrollRef = useRef<HTMLDivElement>(null);
+    const openerRef = useRef<HTMLElement | null>(null);
+    const pendingFocusRef = useRef<string | null>(null);
+    const focusTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
     const groups = new Map<string, OpenSlotChoice[]>();
     for (const slot of view.slots) {
-        const list = groups.get(slot.dateHeading) ?? [];
+        const list = groups.get(slot.pickerHeading) ?? [];
         list.push(slot);
-        groups.set(slot.dateHeading, list);
+        groups.set(slot.pickerHeading, list);
     }
 
     // Measure overflow and scroll position for reschedule dialog
@@ -106,6 +102,55 @@ export function StudentBoard({
         };
     }, [choices]);
 
+    // Focus session card after successful booking/reschedule
+    useEffect(() => {
+        if (!pendingFocusRef.current) return;
+
+        const sessionId = pendingFocusRef.current;
+        const card = document.getElementById(`session-${sessionId}`);
+        
+        if (card) {
+            card.focus({ preventScroll: false });
+            pendingFocusRef.current = null;
+            if (focusTimeoutRef.current) {
+                clearTimeout(focusTimeoutRef.current);
+                focusTimeoutRef.current = null;
+            }
+            return;
+        }
+
+        const heading = document.getElementById("upcoming-sessions-heading");
+        if (heading) {
+            heading.focus({ preventScroll: false });
+            pendingFocusRef.current = null;
+            if (focusTimeoutRef.current) {
+                clearTimeout(focusTimeoutRef.current);
+                focusTimeoutRef.current = null;
+            }
+        }
+    }, [view.upcoming]);
+
+    // Cleanup focus timeout on unmount
+    useEffect(() => () => {
+        if (focusTimeoutRef.current) clearTimeout(focusTimeoutRef.current);
+    }, []);
+
+    function setPendingFocus(sessionId: string) {
+        pendingFocusRef.current = sessionId;
+        // Last-resort timeout: focus heading if card hasn't appeared after 3s
+        if (focusTimeoutRef.current) {
+            clearTimeout(focusTimeoutRef.current);
+        }
+        focusTimeoutRef.current = setTimeout(() => {
+            if (pendingFocusRef.current) {
+                const heading = document.getElementById("upcoming-sessions-heading");
+                heading?.focus({ preventScroll: false });
+                pendingFocusRef.current = null;
+            }
+            focusTimeoutRef.current = null;
+        }, 3000);
+    }
+
     function openReschedule(card: MeetingCard) {
         setMoving(card);
         setMoveNote("");
@@ -134,12 +179,12 @@ export function StudentBoard({
 
             {view.upcoming.length > 0 ? (
                 <section className="flex flex-col gap-4">
-                    <h2 className="text-2xl font-bold">Upcoming sessions</h2>
+                    <h2 id="upcoming-sessions-heading" tabIndex={-1} className="text-2xl font-bold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">Upcoming sessions</h2>
                     {view.upcoming.map((card) => (
                         <SessionCard key={card.id} card={card}>
                             {card.canChange ? (
                                 <>
-                                    <Button type="button" className="h-11 sm:order-2 sm:h-8" aria-label={`Reschedule session with ${card.personName} on ${card.dateLabel} at ${card.timeLabel}`} onClick={() => openReschedule(card)}>
+                                    <Button type="button" className="h-11 sm:order-2 sm:h-8" aria-label={`Reschedule session with ${card.personName} on ${card.dateLabel} at ${card.timeLabel}`} onClick={(event) => { openerRef.current = event.currentTarget; openReschedule(card); }}>
                                         Reschedule session
                                     </Button>
                                     <Button type="button" variant="outline" className="h-11 sm:order-1 sm:h-8" aria-label={`Cancel session with ${card.personName} on ${card.dateLabel} at ${card.timeLabel}`} onClick={() => { setCanceling(card); setCancelNote(""); }}>
@@ -154,10 +199,7 @@ export function StudentBoard({
 
             {view.advisorName ? (
                 <section className="flex flex-col gap-4">
-                    <header className="space-y-2">
-                        <h2 className="text-2xl font-bold">Book a session</h2>
-                        <p className="text-sm text-muted-foreground">{lengthHelper(view)}</p>
-                    </header>
+                    <h2 className="text-2xl font-bold">Book a session</h2>
                     {view.slots.length === 0 ? (
                         <Empty className="border border-dashed">
                             <EmptyHeader>
@@ -170,26 +212,30 @@ export function StudentBoard({
                             </EmptyHeader>
                         </Empty>
                     ) : (
-                        [...groups.entries()].map(([heading, slots]) => (
-                            <div key={heading} className="flex flex-col gap-2">
-                                <h3 className="text-base font-medium">{heading}</h3>
-                                <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
-                                    {slots.map((slot) => (
-                                        <Button
-                                            key={slot.id}
-                                            type="button"
-                                            variant={selected?.id === slot.id ? "default" : "outline"}
-                                            className="h-11 min-w-0 flex-col whitespace-normal sm:h-auto sm:min-h-11"
-                                            aria-label={`${slot.accessibleName}, ${slot.durationLabel}`}
-                                            onClick={() => { setSelected(slot); setTopic(""); setDialogAlert(null); }}
-                                        >
-                                            <span className="whitespace-nowrap">{slot.slotLabel}</span>
-                                            <span className="tabular-nums">{slot.durationLabel}</span>
-                                        </Button>
-                                    ))}
-                                </div>
-                            </div>
-                        ))
+                        <SlotPicker
+                            groups={[...groups.entries()].map(([heading, slots]): SlotGroup => ({
+                                heading,
+                                dateTime: slots[0]?.dateTime ?? "",
+                                slots: slots.map(slot => ({
+                                    id: slot.id,
+                                    dateHeading: slot.dateHeading,
+                                    startTime: slot.startTime,
+                                    durationLabel: slot.durationLabel,
+                                    accessibleName: slot.accessibleName,
+                                })),
+                            }))}
+                            selected={selected?.id}
+                            onSelect={(id, event) => {
+                                const slot = view.slots.find(s => s.id === id);
+                                if (slot) {
+                                    openerRef.current = event.currentTarget;
+                                    setSelected(slot);
+                                    setTopic("");
+                                    setDialogAlert(null);
+                                }
+                            }}
+                            disabled={flow.pending !== null}
+                        />
                     )}
                 </section>
             ) : (
@@ -215,7 +261,7 @@ export function StudentBoard({
             ) : null}
 
             <AlertDialog open={selected !== null} onOpenChange={(open) => { if (!open) setSelected(null); }}>
-                <MeetingAlertContent>
+                <MeetingAlertContent finalFocus={openerRef}>
                     <MeetingHeader>
                         <AlertDialogTitle className="text-lg font-semibold leading-tight">Book this session?</AlertDialogTitle>
                         <AlertDialogDescription className="text-sm text-muted-foreground">
@@ -244,10 +290,19 @@ export function StudentBoard({
                                 const slot = selected;
                                 setDialogAlert(null);
                                 flow.begin(
-                                    () => setSelected(null),
+                                    () => {
+                                        setSelected(null);
+                                        // Focus will happen after the result is processed
+                                    },
                                     { title: "Booking your session", description: "Saving your request…" },
                                     "Session booked",
-                                    () => actions.book(slot.id, topic),
+                                    async () => {
+                                        const result = await actions.book(slot.id, topic);
+                                        if (result.ok && result.sessionId) {
+                                            setPendingFocus(result.sessionId);
+                                        }
+                                        return result;
+                                    },
                                 );
                             }}
                         >
@@ -294,11 +349,11 @@ export function StudentBoard({
             </AlertDialog>
 
             <AlertDialog open={moving !== null} onOpenChange={(open) => { if (!open) setMoving(null); }}>
-                <MeetingAlertContent>
+                <MeetingAlertContent finalFocus={openerRef}>
                     <MeetingHeader>
                         <AlertDialogTitle className="text-lg font-semibold leading-tight">Pick a new time</AlertDialogTitle>
                         <AlertDialogDescription className="text-sm text-muted-foreground">
-                            Your current session is <MeetingStamp value={moving?.fullTimestamp ?? ""} />. Choose another open time with {moving?.personName}.
+                            Your current session is <MeetingStamp value={moving?.fullTimestamp ?? ""} />. Choose another open time with {moving?.personName}. All times are in Eastern Time.
                         </AlertDialogDescription>
                     </MeetingHeader>
                     <div className="flex min-h-0 flex-col gap-4 px-6 pb-4">
@@ -313,7 +368,7 @@ export function StudentBoard({
                             ) : null}
                             <div 
                                 ref={scrollRef}
-                                className="flex max-h-64 min-h-0 flex-col gap-2 overflow-y-auto rounded-lg border bg-muted/30 p-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                                className="max-h-64 min-h-0 overflow-y-auto rounded-lg border bg-muted/30 p-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                                 tabIndex={choices.length > 0 ? 0 : undefined}
                                 role={choices.length > 0 ? "region" : undefined}
                                 aria-label={choices.length > 0 ? "Open times" : undefined}
@@ -325,16 +380,34 @@ export function StudentBoard({
                                         <EmptyDescription>Cancel this session, or wait for your advisor to add more times.</EmptyDescription>
                                     </EmptyHeader>
                                 </Empty>
-                            ) : choices.map((slot) => (
-                                <Button key={slot.id} type="button" variant={nextSlot === slot.id ? "default" : "outline"} className="h-auto min-h-11 flex-col items-start gap-1 whitespace-normal px-4 py-2 text-left" aria-label={slot.accessibleName} onClick={() => setNextSlot(slot.id)}>
-                                    <span className="font-medium">{slot.dateHeading}</span>
-                                    <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
-                                        <span className="whitespace-nowrap">{slot.slotLabel}</span>
-                                        <span className="text-muted-foreground tabular-nums">·</span>
-                                        <span className="text-muted-foreground tabular-nums">{slot.durationLabel}</span>
-                                    </div>
-                                </Button>
-                            ))}
+                            ) : (
+                                <SlotPicker
+                                    groups={(() => {
+                                        const rescheduleGroups = new Map<string, OpenSlotChoice[]>();
+                                        for (const slot of choices) {
+                                            const list = rescheduleGroups.get(slot.pickerHeading) ?? [];
+                                            list.push(slot);
+                                            rescheduleGroups.set(slot.pickerHeading, list);
+                                        }
+                                        return [...rescheduleGroups.entries()].map(([heading, slots]): SlotGroup => ({
+                                            heading,
+                                            dateTime: slots[0]?.dateTime ?? "",
+                                            slots: slots.map(slot => ({
+                                                id: slot.id,
+                                                dateHeading: slot.dateHeading,
+                                                startTime: slot.startTime,
+                                                durationLabel: slot.durationLabel,
+                                                accessibleName: slot.accessibleName,
+                                            })),
+                                        }));
+                                    })()}
+                                    selected={nextSlot}
+                                    onSelect={(id) => setNextSlot(id)}
+                                    stickyHeadings={true}
+                                    variant="dialog"
+                                    disabled={flow.pending !== null}
+                                />
+                            )}
                         </div>
                         {showBottomFade ? (
                             <div className="pointer-events-none absolute bottom-0 left-0 right-0 z-10 h-8 rounded-b-lg bg-gradient-to-t from-background to-transparent" />
@@ -357,10 +430,19 @@ export function StudentBoard({
                                 const card = moving;
                                 const slotId = nextSlot;
                                 flow.begin(
-                                    () => setMoving(null),
+                                    () => {
+                                        setMoving(null);
+                                        // Focus will happen after the result is processed
+                                    },
                                     { title: "Rescheduling session…", description: "Saving your request…" },
                                     advisorRescheduleSuccess,
-                                    () => actions.reschedule(card.id, slotId, moveNote),
+                                    async () => {
+                                        const result = await actions.reschedule(card.id, slotId, moveNote);
+                                        if (result.ok) {
+                                            setPendingFocus(card.id);
+                                        }
+                                        return result;
+                                    },
                                 );
                             }}
                         >

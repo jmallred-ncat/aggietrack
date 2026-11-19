@@ -114,7 +114,9 @@ export function meetingStamp(start: Date, end: Date) {
         time,
         full: `${date}, ${time}`,
         dateHeading: `${startParts.weekday}, ${MONTHS[startParts.month - 1]} ${startParts.day}, ${startParts.year}`,
+        pickerHeading: `${startParts.weekday}, ${MONTHS[startParts.month - 1]} ${startParts.day}`,
         slotLabel: range,
+        startTime: formatClock(startParts.hour, startParts.minute),
         zone: startParts.zone,
     };
 }

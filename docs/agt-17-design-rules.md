@@ -8,6 +8,10 @@
 
 ---
 
+**AMENDMENTS (Nov 18, 2026):** Rules 24, 37, 135, 136, and the slot clauses of 180 and 182 are replaced by sections S1-S6 below. Every other rule stands as written.
+
+---
+
 ## How this gate works
 
 1. **Design approval names evidence and outstanding gaps.** An approval lists the screenshot and interaction files inspected, the rules and acceptance criteria that passed, and anything still open. It never says “looks done.”
@@ -126,7 +130,7 @@ Use these strings verbatim unless a later Wanda review amends them. `{Name}` is 
 34. Student title: **Advising**. Advisor title: **Appointments**.
 35. Student assigned intro: **Your advisor is {Name}.**
 36. Shared zone helper: **Times are shown in Eastern Time (EST or EDT).**
-37. Book section title: **Book a session**. Book section helper: **Each session is {n} minutes. Times are in Eastern Time.**
+37. Book section title: **Book a session**.
 38. Upcoming section title: **Upcoming sessions**. Canceled: **Canceled sessions**. Past: **Past sessions**.
 39. Advisor length title: **Session length**. Availability title: **Availability**.
 
@@ -457,3 +461,66 @@ Put files under `/workspace/evidence/agt17/review/` (create it when screenshots 
 ---
 
 *Prepared as Wanda’s design quality gate for AGT-17. Inspected preview sources are listed above. No repository files were changed.*
+
+---
+
+## Slot picker amendments (Nov 18, 2026)
+
+These sections replace rules 24, 37, 135, 136, and the slot clauses of 180 and 182.
+
+### S1. Tile anatomy and states
+
+1. Each slot is one `<button>`. Use `rounded-lg` (the theme radius), `min-h-16`, `px-3 py-3`, and stack the content in a centered `flex flex-col items-center justify-center gap-0.5`. Use `text-center` and set `w-full` inside its grid cell.
+2. The start time is `text-lg font-semibold leading-tight tabular-nums whitespace-nowrap`.
+3. The length is `text-sm` with the word "minutes" in lowercase, such as "30 minutes" (match rule 53). Never write "Minutes" or "min."
+4. Idle tiles are outlined: `border border-border bg-background`. The time is `text-foreground` and the length is `text-muted-foreground`.
+5. Hover uses `hover:border-primary hover:bg-muted`. The length must keep at least 4.5:1 contrast on `bg-muted`. If `muted-foreground` on `muted` falls below that in either theme, switch the length to `text-foreground` on hover.
+6. Selected tiles (reschedule only, S5) are filled: `bg-primary border-primary text-primary-foreground`. The time AND the length both use `text-primary-foreground` at full opacity. Never use `text-muted-foreground`, opacity or a gray tone on a filled tile. This fixes the unreadable "· 30 minutes."
+7. Focus reuses the theme Button ring, `focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:border-ring`, and must be visible on both the idle and the selected tile.
+8. While a booking or reschedule is saving, the tiles are `disabled:opacity-50 disabled:pointer-events-none`. Do not add a check icon, badge or extra text inside the tile. On the selected tile, the fill is the cue and its words stay the same.
+9. Keep the current semantics. Booking tiles open the confirm dialog (rule 76), and focus returns to the tile when it closes. The reschedule tiles stay the same radio-style group they are today, with the selected state announced.
+10. The accessible name stays rule 75: "Tuesday, November 24, 1:30 to 2:00 PM Eastern Time". It may add the length: "...Eastern Time, 30 minutes". Hide the visible text from assistive tech or let the aria-label win, so nothing is read twice.
+
+### S2. Grid and size (the same grid at every width and in the dialog)
+
+1. Each date group uses `grid gap-2 grid-cols-[repeat(auto-fill,minmax(9rem,1fr))]` on the page. Inside the reschedule dialog, use `grid-cols-[repeat(auto-fill,minmax(7.5rem,1fr))]` to ensure 2 columns at 390px. With `auto-fill`, every date group has the same column count and tile width, even a day with one slot.
+2. At 390px (content about 358px), the page grid gives 2 columns about 175px wide and 64px tall, so the targets are well above 44px. "10:30 AM" fits on one line. The dialog grid (254px content) gives 2 columns about 123px wide.
+3. About 6-8 columns depending on the sidebar; not capped.
+4. At 200% text size, 9rem doubles, so the grid drops to 1 column and the time never clips (rules 177 and 184). Because the tile uses `min-h`, not a fixed height, it grows with the text.
+5. Spacing: `gap-2` between tiles, `space-y-2` between a heading and its grid, and `space-y-6` between date groups.
+6. Same grid everywhere, except inside the reschedule dialog, where the minimum is 7.5rem. The dialog stays at 2 columns at 360px (123px tiles).
+
+### S3. Date heading
+
+1. Use an `h3` with `text-base font-semibold text-foreground` and the format from rule 136 above.
+2. Inside the reschedule scroll region, make the heading `sticky -top-2 z-10` (to account for the scroll region's `p-2`) with `py-1`, so the day stays visible while the list scrolls. The dialog heading uses an opaque background matching the region surface (color-mix of muted and background to match the region's `bg-muted/30`). On the page, the heading is not sticky.
+
+### S4. Helper line and time zone
+
+1. The page keeps rule 36 in the header: "Times are shown in Eastern Time (EST or EDT)."
+2. The reschedule description ends "...Choose another open time with {advisorName}. All times are in Eastern Time." Its first sentence still states the current session as a full timestamp with EST or EDT.
+3. Keep the overflow hint from the earlier review, "{n} open times. Scroll to see them all.", shown only when the list overflows.
+
+### S5. Reschedule dialog
+
+1. It uses the same picker component, with date headings and tiles (S1 to S3). The full date never repeats on a tile.
+2. It keeps the existing focusable, labeled "Open times" scroll region, its edge fades and its max height. Inside the `sm:max-w-md` dialog, the S2 grid comes out to 2 columns at both 390 and 1280.
+3. Nothing is selected when the dialog opens. "Reschedule session" keeps its current enabled and disabled behavior.
+4. Selecting a tile uses the S1.6 fill. The old full-width list rows and the "·" separator are removed.
+5. The student's current session is not in the list, because it isn't open.
+6. After a successful booking or reschedule, focus moves to the session's card in Upcoming sessions (with `focus({ preventScroll: false })` to scroll into view on mobile). If the card isn't found, focus the "Upcoming sessions" heading. Both use `tabIndex={-1}` and `focus-visible` styling (no focus ring on programmatic focus). Cancel/Escape/Keep current time return focus to the opener as before.
+
+### S6. Length on every tile
+
+1. The length shows on every tile, even when all the tiles match. James's reference shows it, and lengths can legitimately differ, because changing the session length leaves existing open times as they are (rule 54).
+
+### Replaced rule summaries
+
+- **Rule 24 (Book a session hierarchy):** The order is the h2 "Book a session", then the helper line (S4), then for each day a date heading and a tile grid. Do not show another advisor's name, email or workplace.
+- **Rule 37 (Book section helper):** Change the helper to "All times are in Eastern Time." Drop "Each session is {n} minutes," because every tile now shows its length. Rule 36's page-header line stays. The helper keeps the zone next to the picker, because on a phone the header is far above it. AGT-17 criterion 1 is met by both lines.
+- **Rule 135 (slot text):** The tile shows the start time alone, such as "1:30 PM", with no range. The end time lives only in the accessible name and in the confirm or reschedule dialog.
+- **Rule 136 (date headings):** Use "Tuesday, November 24": weekday, month name, day, and no year. Wrap it in `<time dateTime="2026-11-24">`. Don't add "Today" or "Tomorrow." The student window is 8 weeks (rule 190), so a date without a year is never ambiguous. Full timestamps (rule 134) still include the year.
+- **Rule 180 (390px), slot clause only:** Slots are tiles in a 2-column grid (S2), not `h-11 w-full` bars. The rest of rule 180 stands.
+- **Rule 182 (1280px), slot clause only:** Drop the "not a dashboard tile wall" caution for the slot picker only. The page is still one column of sections. Slots use the grid in S2, not `flex flex-wrap`.
+
+---
