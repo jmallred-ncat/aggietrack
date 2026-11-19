@@ -59,7 +59,6 @@ export function SlotPicker({
                                         ? "border-primary bg-primary text-primary-foreground"
                                         : "border-border bg-background hover:border-primary hover:bg-muted"
                                     }
-                                    ${disabled ? "opacity-50 pointer-events-none" : ""}
                                     focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50
                                 `}
                             >

@@ -56,7 +56,6 @@ export function StudentBoard({
     const [showTopFade, setShowTopFade] = useState(false);
     const [showBottomFade, setShowBottomFade] = useState(false);
     const scrollRef = useRef<HTMLDivElement>(null);
-    const selectedSlotRef = useRef<HTMLButtonElement>(null);
 
     const groups = new Map<string, OpenSlotChoice[]>();
     for (const slot of view.slots) {
@@ -137,7 +136,7 @@ export function StudentBoard({
                         <SessionCard key={card.id} card={card}>
                             {card.canChange ? (
                                 <>
-                                    <Button type="button" className="h-11 sm:order-2 sm:h-8" aria-label={`Reschedule session with ${card.personName} on ${card.dateLabel} at ${card.timeLabel}`} onClick={() => openReschedule(card)}>
+                                    <Button type="button" className="h-11 sm:order-2 sm:h-8" aria-label={`Reschedule session with ${card.personName} on ${card.dateLabel} at ${card.timeLabel}`} data-reschedule-trigger={card.id} onClick={() => openReschedule(card)}>
                                         Reschedule session
                                     </Button>
                                     <Button type="button" variant="outline" className="h-11 sm:order-1 sm:h-8" aria-label={`Cancel session with ${card.personName} on ${card.dateLabel} at ${card.timeLabel}`} onClick={() => { setCanceling(card); setCancelNote(""); }}>
@@ -215,20 +214,17 @@ export function StudentBoard({
                 </section>
             ) : null}
 
-            <AlertDialog open={selected !== null} onOpenChange={(open) => { 
-                if (!open) {
-                    const slotId = selected?.id;
-                    setSelected(null);
-                    if (slotId) {
-                        // Refocus the slot button after dialog closes
-                        setTimeout(() => {
+            <AlertDialog open={selected !== null} onOpenChange={(open) => { if (!open) setSelected(null); }}>
+                <MeetingAlertContent
+                    onCloseAutoFocus={(event) => {
+                        event.preventDefault();
+                        const slotId = selected?.id;
+                        if (slotId) {
                             const button = document.querySelector(`[data-slot-id="${slotId}"]`) as HTMLButtonElement;
                             button?.focus();
-                        }, 0);
-                    }
-                }
-            }}>
-                <MeetingAlertContent>
+                        }
+                    }}
+                >
                     <MeetingHeader>
                         <AlertDialogTitle className="text-lg font-semibold leading-tight">Book this session?</AlertDialogTitle>
                         <AlertDialogDescription className="text-sm text-muted-foreground">
@@ -307,7 +303,16 @@ export function StudentBoard({
             </AlertDialog>
 
             <AlertDialog open={moving !== null} onOpenChange={(open) => { if (!open) setMoving(null); }}>
-                <MeetingAlertContent>
+                <MeetingAlertContent
+                    onCloseAutoFocus={(event) => {
+                        event.preventDefault();
+                        const sessionId = moving?.id;
+                        if (sessionId) {
+                            const button = document.querySelector(`[data-reschedule-trigger="${sessionId}"]`) as HTMLButtonElement;
+                            button?.focus();
+                        }
+                    }}
+                >
                     <MeetingHeader>
                         <AlertDialogTitle className="text-lg font-semibold leading-tight">Pick a new time</AlertDialogTitle>
                         <AlertDialogDescription className="text-sm text-muted-foreground">
