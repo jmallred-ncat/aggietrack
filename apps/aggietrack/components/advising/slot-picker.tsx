@@ -24,7 +24,7 @@ export function SlotPicker({
 }: {
     groups: SlotGroup[];
     selected?: string;
-    onSelect: (id: string) => void;
+    onSelect: (id: string, event: React.MouseEvent<HTMLButtonElement>) => void;
     disabled?: boolean;
     stickyHeadings?: boolean;
     variant?: "page" | "dialog";
@@ -33,7 +33,7 @@ export function SlotPicker({
         ? "grid grid-cols-[repeat(auto-fill,minmax(7.5rem,1fr))] gap-2"
         : "grid grid-cols-[repeat(auto-fill,minmax(9rem,1fr))] gap-2";
     
-    const stickyHeadingBg = variant === "dialog" ? "bg-muted/30" : "bg-background";
+    const stickyHeadingBg = variant === "dialog" ? "bg-[color-mix(in_oklab,hsl(var(--muted))_30%,hsl(var(--background)))]" : "bg-background";
     
     return (
         <div className="space-y-6">
@@ -53,8 +53,7 @@ export function SlotPicker({
                                 disabled={disabled}
                                 aria-label={slot.accessibleName}
                                 aria-pressed={selected === slot.id}
-                                onClick={() => onSelect(slot.id)}
-                                data-slot-id={slot.id}
+                                onClick={(event) => onSelect(slot.id, event)}
                                 className={`
                                     group min-h-16 w-full flex-col items-center justify-center gap-0.5 rounded-lg px-3 py-3 text-center
                                     ${selected === slot.id

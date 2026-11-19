@@ -493,7 +493,7 @@ These sections replace rules 24, 37, 135, 136, and the slot clauses of 180 and 1
 ### S3. Date heading
 
 1. Use an `h3` with `text-base font-semibold text-foreground` and the format from rule 136 above.
-2. Inside the reschedule scroll region, make the heading `sticky -top-2 z-10` (to account for the scroll region's `p-2`) on the dialog surface color (`bg-background`) with `py-1`, so the day stays visible while the list scrolls. On the page, the heading is not sticky.
+2. Inside the reschedule scroll region, make the heading `sticky -top-2 z-10` (to account for the scroll region's `p-2`) with `py-1`, so the day stays visible while the list scrolls. The dialog heading uses an opaque background matching the region surface (color-mix of muted and background to match the region's `bg-muted/30`). On the page, the heading is not sticky.
 
 ### S4. Helper line and time zone
 
