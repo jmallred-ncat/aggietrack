@@ -488,7 +488,7 @@ These sections replace rules 24, 37, 135, 136, and the slot clauses of 180 and 1
 3. About 6-8 columns depending on the sidebar; not capped.
 4. At 200% text size, 9rem doubles, so the grid drops to 1 column and the time never clips (rules 177 and 184). Because the tile uses `min-h`, not a fixed height, it grows with the text.
 5. Spacing: `gap-2` between tiles, `space-y-2` between a heading and its grid, and `space-y-6` between date groups.
-6. Same grid everywhere, except inside the reschedule dialog, where the minimum is 7.5rem.
+6. Same grid everywhere, except inside the reschedule dialog, where the minimum is 7.5rem. The dialog stays at 2 columns at 360px (123px tiles).
 
 ### S3. Date heading
 

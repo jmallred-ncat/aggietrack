@@ -33,12 +33,14 @@ export function SlotPicker({
         ? "grid grid-cols-[repeat(auto-fill,minmax(7.5rem,1fr))] gap-2"
         : "grid grid-cols-[repeat(auto-fill,minmax(9rem,1fr))] gap-2";
     
+    const stickyHeadingBg = variant === "dialog" ? "bg-muted/30" : "bg-background";
+    
     return (
         <div className="space-y-6">
             {groups.map((group) => (
                 <div key={group.heading} className="space-y-2">
                     <h3
-                        className={`text-base font-semibold text-foreground ${stickyHeadings ? "sticky -top-2 z-10 bg-background py-1" : ""}`}
+                        className={`text-base font-semibold text-foreground ${stickyHeadings ? `sticky -top-2 z-10 ${stickyHeadingBg} py-1` : ""}`}
                     >
                         <time dateTime={group.dateTime}>{group.heading}</time>
                     </h3>
