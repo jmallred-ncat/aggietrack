@@ -508,6 +508,7 @@ These sections replace rules 24, 37, 135, 136, and the slot clauses of 180 and 1
 3. Nothing is selected when the dialog opens. "Reschedule session" keeps its current enabled and disabled behavior.
 4. Selecting a tile uses the S1.6 fill. The old full-width list rows and the "·" separator are removed.
 5. The student's current session is not in the list, because it isn't open.
+6. After a successful booking or reschedule, focus moves to the session's card in Upcoming sessions (with `focus({ preventScroll: false })` to scroll into view on mobile). If the card isn't found, focus the "Upcoming sessions" heading. Both use `tabIndex={-1}` and `focus-visible` styling (no focus ring on programmatic focus). Cancel/Escape/Keep current time return focus to the opener as before.
 
 ### S6. Length on every tile
 

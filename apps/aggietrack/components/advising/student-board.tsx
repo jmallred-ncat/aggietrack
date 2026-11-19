@@ -112,6 +112,19 @@ export function StudentBoard({
         void actions.choices(card.id).then(setChoices);
     }
 
+    function focusSessionCard(sessionId: string) {
+        // Focus the session card after it renders, or fallback to the heading
+        setTimeout(() => {
+            const card = document.getElementById(`session-${sessionId}`);
+            if (card) {
+                card.focus({ preventScroll: false });
+            } else {
+                const heading = document.getElementById("upcoming-sessions-heading");
+                heading?.focus({ preventScroll: false });
+            }
+        }, 100);
+    }
+
     return (
         <div className="not-typeset flex flex-col gap-6 py-6" aria-busy={flow.pending ? true : undefined}>
             <header className="space-y-2">
@@ -132,7 +145,7 @@ export function StudentBoard({
 
             {view.upcoming.length > 0 ? (
                 <section className="flex flex-col gap-4">
-                    <h2 className="text-2xl font-bold">Upcoming sessions</h2>
+                    <h2 id="upcoming-sessions-heading" tabIndex={-1} className="text-2xl font-bold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">Upcoming sessions</h2>
                     {view.upcoming.map((card) => (
                         <SessionCard key={card.id} card={card}>
                             {card.canChange ? (
@@ -246,10 +259,19 @@ export function StudentBoard({
                                 const slot = selected;
                                 setDialogAlert(null);
                                 flow.begin(
-                                    () => setSelected(null),
+                                    () => {
+                                        setSelected(null);
+                                        // Focus will happen after the result is processed
+                                    },
                                     { title: "Booking your session", description: "Saving your request…" },
                                     "Session booked",
-                                    () => actions.book(slot.id, topic),
+                                    async () => {
+                                        const result = await actions.book(slot.id, topic);
+                                        if (result.ok && result.sessionId) {
+                                            focusSessionCard(result.sessionId);
+                                        }
+                                        return result;
+                                    },
                                 );
                             }}
                         >
@@ -377,10 +399,19 @@ export function StudentBoard({
                                 const card = moving;
                                 const slotId = nextSlot;
                                 flow.begin(
-                                    () => setMoving(null),
+                                    () => {
+                                        setMoving(null);
+                                        // Focus will happen after the result is processed
+                                    },
                                     { title: "Rescheduling session…", description: "Saving your request…" },
                                     advisorRescheduleSuccess,
-                                    () => actions.reschedule(card.id, slotId, moveNote),
+                                    async () => {
+                                        const result = await actions.reschedule(card.id, slotId, moveNote);
+                                        if (result.ok) {
+                                            focusSessionCard(card.id);
+                                        }
+                                        return result;
+                                    },
                                 );
                             }}
                         >
