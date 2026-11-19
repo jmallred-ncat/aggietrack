@@ -33,7 +33,7 @@ export function SlotPicker({
         ? "grid grid-cols-[repeat(auto-fill,minmax(7.5rem,1fr))] gap-2"
         : "grid grid-cols-[repeat(auto-fill,minmax(9rem,1fr))] gap-2";
     
-    const stickyHeadingBg = variant === "dialog" ? "bg-[color-mix(in_oklab,hsl(var(--muted))_30%,hsl(var(--background)))]" : "bg-background";
+    const stickyHeadingBg = variant === "dialog" ? "bg-[color-mix(in_oklab,var(--muted)_30%,var(--background))]" : "bg-background";
     
     return (
         <div className="space-y-6">

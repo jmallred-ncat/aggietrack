@@ -349,7 +349,7 @@ export function StudentBoard({
                                         }));
                                     })()}
                                     selected={nextSlot}
-                                    onSelect={(id, _event) => setNextSlot(id)}
+                                    onSelect={(id) => setNextSlot(id)}
                                     stickyHeadings={true}
                                     variant="dialog"
                                     disabled={flow.pending !== null}
